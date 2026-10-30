@@ -1,837 +1,96 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S.A.S.P. // C.I.D. Terminal CAD/MDT</title>
-
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        tactical: {
-                            bg: '#04070c',
-                            panel: '#0b1329',
-                            panelBorder: '#1f293d',
-                            accent: '#2563eb',
-                            cyan: '#38bdf8',
-                            purple: '#7d3db7',
-                            gold: '#d97706',
-                            danger: '#ef4444',
-                            success: '#10b981'
-                        }
-                    },
-                    fontFamily: {
-                        mono: ['Share Tech Mono', 'monospace'],
-                        title: ['Syne', 'sans-serif'],
-                        sans: ['Inter', 'sans-serif']
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    tactical: {
+                        bg: '#04070c',
+                        panel: '#0b1329',
+                        panelBorder: '#1f293d',
+                        accent: '#2563eb',
+                        cyan: '#38bdf8',
+                        purple: '#7d3db7',
+                        gold: '#d97706',
+                        danger: '#ef4444',
+                        success: '#10b981'
                     }
+                },
+                fontFamily: {
+                    mono: ['Share Tech Mono', 'monospace'],
+                    title: ['Syne', 'sans-serif'],
+                    sans: ['Inter', 'sans-serif']
                 }
             }
         }
-    </script>
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Leaflet CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <!-- Vue 3 CDN -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #04070c;
-            color: #cbd5e1;
-            overflow: hidden;
-        }
-
-        .scanlines {
-            background: linear-gradient(
-                rgba(18, 16, 16, 0) 50%, 
-                rgba(0, 0, 0, 0.25) 50%
-            ), linear-gradient(
-                90deg,
-                rgba(255, 0, 0, 0.01),
-                rgba(0, 255, 0, 0.01),
-                rgba(0, 0, 255, 0.01)
-            );
-            background-size: 100% 3px, 6px 100%;
-            pointer-events: none;
-        }
-
-        .hud-panel {
-            background-color: #0b1329;
-            border: 1px solid #1f293d;
-            border-radius: 1rem;
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(12px);
-        }
-
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #04070c; }
-        ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 9999px; }
-        ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
-
-        .leaflet-container {
-            background: #000000 !important;
-            font-family: 'Share Tech Mono', monospace !important;
-        }
-
-        /* Lightbox Image Preview Overlay */
-        #lightboxModal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.92); z-index: 10000; justify-content: center; align-items: center;
-            backdrop-filter: blur(10px);
-        }
-        #lightboxModal img { max-width: 80%; max-height: 80%; border: 2px solid #38bdf8; border-radius: 12px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.4); }
-
-        .popup-container { color: #fff; text-align: center; width: 220px; padding: 4px; }
-        .popup-img { 
-            width: 100%; height: 120px; object-fit: cover; border-radius: 8px; 
-            margin-bottom: 6px; border: 1px solid #7d3db7; cursor: pointer; 
-            transition: 0.2s; background: #000;
-        }
-        .popup-img:hover { filter: brightness(1.2); }
-        .popup-title { font-size: 14px; font-weight: bold; font-family: 'Syne', sans-serif; color: #7d3db7; margin-bottom: 4px; border-bottom: 1px solid #333; padding-bottom: 4px; }
-    </style>
-</head>
-<body class="h-screen w-screen flex antialiased bg-tactical-bg select-none">
-
-    <!-- UNIVERSAL IMAGE LIGHTBOX OVERLAY WITH METADATA -->
-    <div id="lightboxModal" onclick="closeLightbox(event)">
-        <div class="relative flex flex-col items-center max-w-4xl p-4 space-y-3" onclick="event.stopPropagation()">
-            <button onclick="closeLightbox()" class="absolute -top-10 right-0 text-slate-400 hover:text-white text-xl">
-                <i class="fa-solid fa-xmark"></i> Close Zoom
-            </button>
-            <img id="lightboxImg" src="" alt="Enlarged Photo">
-            <div id="lightboxMeta" class="hud-panel p-4 w-full text-center font-mono text-xs space-y-1">
-                <p id="lightboxTitle" class="text-tactical-cyan font-title font-bold text-sm uppercase"></p>
-                <p id="lightboxDesc" class="text-slate-300"></p>
-            </div>
-        </div>
-    </div>
-
-    <div id="app" class="h-full w-full flex overflow-hidden">
-
-        <!-- SIDEBAR NAVIGATION HUD -->
-        <aside class="w-64 bg-tactical-panel/95 border-r border-slate-800 flex flex-col z-20 shrink-0">
-            <div class="p-4 border-b border-slate-800 flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-2xl bg-tactical-bg border border-tactical-cyan/40 flex items-center justify-center text-tactical-cyan shrink-0 shadow-md">
-                    <i class="fa-solid fa-shield-halved text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-sm font-title font-bold text-white tracking-widest uppercase">C.I.D. TERMINAL</h1>
-                    <p class="text-[10px] text-tactical-cyan font-mono">S.A.S.P. CAD/MDT</p>
-                </div>
-            </div>
-
-            <!-- Navigation Links -->
-            <nav class="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
-                <div class="text-[9px] font-mono text-slate-500 uppercase px-3 py-1 tracking-wider">Public Services</div>
-
-                <button @click="switchTab('dashboard')" :class="navClass('dashboard')">
-                    <i class="fa-solid fa-bullhorn w-5 text-tactical-cyan"></i>
-                    <span>Directives & News</span>
-                </button>
-
-                <button @click="switchTab('map')" :class="navClass('map')">
-                    <i class="fa-solid fa-map-location-dot w-5 text-tactical-cyan"></i>
-                    <span>Tactical Map</span>
-                </button>
-
-                <button @click="switchTab('public_warrants')" :class="navClass('public_warrants')">
-                    <i class="fa-solid fa-triangle-exclamation w-5 text-red-400"></i>
-                    <span>Most Wanted</span>
-                    <span v-if="activeWarrantsCount > 0" class="px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/40 rounded-full text-[9px] font-mono ml-auto font-bold">
-                        {{ activeWarrantsCount }}
-                    </span>
-                </button>
-
-                <button @click="switchTab('penal_code')" :class="navClass('penal_code')">
-                    <i class="fa-solid fa-gavel w-5 text-amber-400"></i>
-                    <span>Penal Code</span>
-                </button>
-
-                <!-- RESTRICTED CID AGENT TABS -->
-                <template v-if="currentUser">
-                    <div class="text-[9px] font-mono text-tactical-cyan uppercase px-3 pt-4 pb-1 tracking-wider border-t border-slate-800 mt-2">
-                        <i class="fa-solid fa-lock text-[8px] mr-1"></i>Agent MDT Operations
-                    </div>
-
-                    <button v-if="hasPermission('citizens')" @click="switchTab('citizens')" :class="navClass('citizens')">
-                        <i class="fa-solid fa-address-card w-5"></i>
-                        <span>Citizen Registry</span>
-                    </button>
-
-                    <button v-if="hasPermission('weapons')" @click="switchTab('weapons')" :class="navClass('weapons')">
-                        <i class="fa-solid fa-gun w-5 text-amber-400"></i>
-                        <span>Weapons Registry</span>
-                    </button>
-
-                    <button v-if="hasPermission('vehicles')" @click="switchTab('vehicles')" :class="navClass('vehicles')">
-                        <i class="fa-solid fa-car w-5"></i>
-                        <span>Vehicle Registry</span>
-                    </button>
-
-                    <button v-if="hasPermission('ai_matcher')" @click="switchTab('ai_matcher')" :class="navClass('ai_matcher')">
-                        <i class="fa-solid fa-wand-magic-sparkles text-purple-400 w-5"></i>
-                        <span>Face / Outfit Matcher</span>
-                    </button>
-
-                    <button v-if="hasPermission('cases')" @click="switchTab('cases')" :class="navClass('cases')">
-                        <i class="fa-solid fa-folder-open w-5"></i>
-                        <span>Case Files</span>
-                    </button>
-
-                    <button v-if="hasPermission('organizations')" @click="switchTab('organizations')" :class="navClass('organizations')">
-                        <i class="fa-solid fa-sitemap w-5 text-amber-400"></i>
-                        <span>Organisations</span>
-                    </button>
-
-                    <button v-if="hasPermission('interrogations')" @click="switchTab('interrogations')" :class="navClass('interrogations')">
-                        <i class="fa-solid fa-comments text-cyan-400 w-5"></i>
-                        <span>Interrogations</span>
-                    </button>
-
-                    <button v-if="hasPermission('roster')" @click="switchTab('roster')" :class="navClass('roster')">
-                        <i class="fa-solid fa-users w-5"></i>
-                        <span>Personnel Roster</span>
-                    </button>
-
-                    <div v-if="hasAdminAccess" class="pt-2">
-                        <button @click="switchTab('admin')" :class="navClass('admin')" class="bg-red-950/30 border-red-500/30 text-red-400 hover:text-white">
-                            <i class="fa-solid fa-user-gear w-5 text-red-400"></i>
-                            <span class="font-bold">Admin Panel</span>
-                        </button>
-                    </div>
-                </template>
-            </nav>
-
-            <!-- Agent Footer Account Switcher -->
-            <div class="p-3.5 border-t border-slate-800 bg-tactical-bg shrink-0">
-                <div v-if="!currentUser">
-                    <button @click="showLoginModal = true" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-title font-bold rounded-xl text-xs uppercase transition shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2">
-                        <i class="fa-solid fa-right-to-bracket"></i>
-                        <span>Agent Sign In</span>
-                    </button>
-                </div>
-                <div v-else class="space-y-2">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-9 h-9 rounded-2xl bg-slate-800 flex items-center justify-center text-tactical-cyan font-bold text-xs border border-slate-700 font-mono shrink-0">
-                            {{ agentProfile.name ? agentProfile.name.split(' ').map(n=>n[0]).join('') : 'AG' }}
-                        </div>
-                        <div class="overflow-hidden min-w-0 flex-1">
-                            <p class="text-xs font-bold text-white truncate">{{ agentProfile.name }}</p>
-                            <p class="text-[10px] text-slate-400 font-mono truncate">{{ agentProfile.rank }} | {{ agentProfile.badge }}</p>
-                        </div>
-                    </div>
-                    <button @click="handleLogout" class="w-full py-1.5 bg-slate-800 hover:bg-red-600/80 text-slate-300 hover:text-white rounded-xl text-xs font-mono transition flex items-center justify-center space-x-2 border border-slate-700">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>Sign Out</span>
-                    </button>
-                </div>
-            </div>
-        </aside>
-
-        <!-- MAIN VIEWPORT -->
-        <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-tactical-bg">
-            <header class="h-14 bg-tactical-panel border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
-                <div class="flex items-center space-x-3">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse"></span>
-                    <span class="text-xs font-title font-bold text-white tracking-widest uppercase">
-                        SAN ANDREAS STATE POLICE // CRIMINAL INVESTIGATION DIVISION
-                    </span>
-                </div>
-                <div class="flex items-center space-x-3 text-xs font-mono text-slate-400">
-                    <span class="text-tactical-cyan uppercase tracking-wider text-[10px] px-2.5 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded-full font-bold">
-                        TERMINAL UTC+2
-                    </span>
-                    <span class="text-slate-600">|</span>
-                    <span><i class="fa-regular fa-clock mr-1 text-tactical-cyan"></i>{{ currentTime }}</span>
-                </div>
-            </header>
-
-            <div class="flex-1 overflow-y-auto" :class="currentTab === 'map' ? 'p-0 flex flex-col' : 'p-6'">
-
-                <!-- 1. DASHBOARD -->
-                <div v-if="currentTab === 'dashboard'" class="space-y-6">
-                    <div class="hud-panel p-6 space-y-3">
-                        <div class="inline-flex items-center space-x-2 px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-tactical-cyan rounded-full text-xs font-mono">
-                            <i class="fa-solid fa-shield"></i>
-                            <span>SYSTEM OPERATIONAL</span>
-                        </div>
-                        <h2 class="text-2xl font-title font-bold text-white tracking-wider">C.I.D. Intelligence Portal</h2>
-                        <p class="text-xs text-slate-300 leading-relaxed max-w-3xl">
-                            Public operational interface for San Andreas State Police Criminal Investigation Division. Signed-in detectives gain access to active case files, criminal organisation dossiers, face recognition matching, and target registries.
-                        </p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="hud-panel p-5">
-                            <p class="text-[10px] font-mono text-slate-400 uppercase">Active Warrants</p>
-                            <p class="text-2xl font-mono font-bold text-red-500 mt-1">{{ activeWarrantsCount }}</p>
-                        </div>
-                        <div class="hud-panel p-5">
-                            <p class="text-[10px] font-mono text-slate-400 uppercase">Registered Citizens</p>
-                            <p class="text-2xl font-mono font-bold text-tactical-cyan mt-1">{{ citizensList.length }}</p>
-                        </div>
-                        <div class="hud-panel p-5">
-                            <p class="text-[10px] font-mono text-slate-400 uppercase">Registered Firearms</p>
-                            <p class="text-2xl font-mono font-bold text-amber-400 mt-1">{{ weaponsList.length }}</p>
-                        </div>
-                        <div class="hud-panel p-5">
-                            <p class="text-[10px] font-mono text-slate-400 uppercase">Active Case Files</p>
-                            <p class="text-2xl font-mono font-bold text-emerald-400 mt-1">{{ casesList.length }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. MAP -->
-                <div v-if="currentTab === 'map'" class="h-full flex relative overflow-hidden">
-                    <div id="gtaMapContainer" class="w-full h-full bg-black z-10"></div>
-                </div>
-
-                <!-- 3. PUBLIC WARRANTS -->
-                <div v-if="currentTab === 'public_warrants'" class="space-y-6">
-                    <div class="hud-panel p-5">
-                        <h2 class="text-base font-title font-bold text-red-400 uppercase flex items-center space-x-2">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span>Public Arrest Warrants & Fugitives</span>
-                        </h2>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div v-for="w in warrants" :key="w.id" class="hud-panel border-red-500/30 p-5 space-y-3">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h3 class="text-sm font-title font-bold text-white">{{ w.citizenName }}</h3>
-                                    <p class="text-xs font-mono text-red-400">ID: {{ w.citizenId }}</p>
-                                </div>
-                                <span class="px-2.5 py-0.5 bg-red-500 text-white font-mono text-[9px] uppercase font-bold rounded-full">WANTED</span>
-                            </div>
-                            <p class="text-xs text-slate-300 font-mono bg-tactical-bg p-3 rounded-xl border border-slate-800">{{ w.reason }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 4. PENAL CODE -->
-                <div v-if="currentTab === 'penal_code'" class="space-y-6">
-                    <div class="hud-panel p-5">
-                        <h2 class="text-base font-title font-bold text-amber-400 uppercase">San Andreas Penal Code</h2>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div v-for="item in penalCodeList" :key="item.id" class="hud-panel p-5 space-y-2">
-                            <span class="text-[9px] font-mono text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30 uppercase font-bold">{{ item.category }}</span>
-                            <h3 class="text-xs font-bold text-white font-title">{{ item.title }}</h3>
-                            <div class="flex justify-between items-center pt-2 border-t border-slate-800 text-xs font-mono">
-                                <span class="text-emerald-400 font-bold">${{ Number(item.fine).toLocaleString() }}</span>
-                                <span class="text-red-400 font-bold">{{ item.jail }} Months</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- RESTRICTED AGENT MODULES -->
-                <template v-if="currentUser">
-                    <!-- CITIZEN REGISTRY -->
-                    <div v-if="currentTab === 'citizens'" class="space-y-6">
-                        <div class="hud-panel p-5 flex justify-between items-center">
-                            <h2 class="text-base font-title font-bold text-white uppercase">Citizen Registry</h2>
-                            <button @click="showCreateCitizenModal = true" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold rounded-xl">+ Create Citizen Registry</button>
-                        </div>
-
-                        <!-- Search -->
-                        <input v-model="citizenSearch" placeholder="Search by name or Citizen ID..." class="w-full bg-tactical-panel border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none">
-
-                        <!-- Citizens Grid -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div v-for="c in filteredCitizens" :key="c.id" @click="selectedCitizenCard = c" class="hud-panel p-4 cursor-pointer hover:border-tactical-cyan transition space-y-3">
-                                <div class="flex items-center space-x-3">
-                                    <img :src="c.mugshot || 'https://placehold.co/100x120/0b1329/38bdf8?text=MUGSHOT'" class="w-12 h-14 object-cover rounded-xl border border-slate-700 bg-black shrink-0">
-                                    <div>
-                                        <h3 class="text-sm font-bold text-white font-title">{{ c.fullName }}</h3>
-                                        <p class="text-xs font-mono text-tactical-cyan">CID: {{ c.citizenId }}</p>
-                                        <p class="text-[10px] text-amber-400 font-mono">Gang: {{ c.gang || 'None' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- WEAPONS REGISTRY -->
-                    <div v-if="currentTab === 'weapons'" class="space-y-6">
-                        <div class="hud-panel p-5 flex justify-between items-center">
-                            <h2 class="text-base font-title font-bold text-amber-400 uppercase">Firearms & Weapon Serial Registry</h2>
-                            <button @click="showCreateWeaponModal = true" class="px-4 py-2 bg-blue-600 text-white font-mono text-xs font-bold rounded-xl">+ Register Weapon</button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div v-for="w in weaponsList" :key="w.id" class="hud-panel p-5 space-y-2 font-mono text-xs">
-                                <span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-lg font-bold">SERIAL: {{ w.serial }}</span>
-                                <h3 class="text-white font-bold text-sm font-title mt-2">{{ w.model }}</h3>
-                                <p class="text-slate-400">Registered Owner: {{ w.owner }}</p>
-                                <p :class="w.stolen ? 'text-red-400' : 'text-emerald-400'" class="font-bold">Status: {{ w.stolen ? 'STOLEN FLAG' : 'CLEAN' }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- VEHICLE REGISTRY -->
-                    <div v-if="currentTab === 'vehicles'" class="space-y-6">
-                        <div class="hud-panel p-5 flex justify-between items-center">
-                            <h2 class="text-base font-title font-bold text-white uppercase">Vehicle Registry</h2>
-                            <button @click="showCreateVehicleModal = true" class="px-4 py-2 bg-blue-600 text-white font-mono text-xs font-bold rounded-xl">+ Register Vehicle</button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div v-for="v in vehiclesList" :key="v.id" class="hud-panel p-5 space-y-2 font-mono text-xs">
-                                <div class="flex justify-between items-center">
-                                    <span class="px-2 py-0.5 bg-blue-500/20 text-tactical-cyan border border-blue-500/40 font-bold rounded-lg">{{ v.plate }}</span>
-                                    <span v-if="v.stolen" class="px-2 py-0.5 bg-red-600 text-white font-bold rounded-full text-[9px]">STOLEN</span>
-                                </div>
-                                <h3 class="text-white font-bold text-sm font-title mt-1">{{ v.model }}</h3>
-                                <p class="text-slate-400">Owner: {{ v.owner }}</p>
-                                <p class="text-slate-400">Color: {{ v.color }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- FACE / OUTFIT RECOGNITION MATCHER -->
-                    <div v-if="currentTab === 'ai_matcher'" class="space-y-6">
-                        <div class="hud-panel p-5">
-                            <h2 class="text-base font-title font-bold text-purple-400 uppercase flex items-center space-x-2">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                                <span>Face & Outfit Recognition Matcher</span>
-                            </h2>
-                            <p class="text-xs text-slate-400 font-mono mt-0.5">Scans all image galleries in the database to identify matching suspects or outfits</p>
-                        </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="hud-panel p-6 space-y-4">
-                                <h3 class="text-sm font-title font-bold text-white uppercase">Evidence Photo Input</h3>
-                                <input v-model="aiMatcherImageUrl" type="url" placeholder="Paste evidence image URL..." class="w-full bg-tactical-bg border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none">
-                                <button @click="runAiVisualMatcher" :disabled="aiMatcherLoading || !aiMatcherImageUrl" class="w-full py-3 bg-purple-600 text-white font-bold text-xs uppercase rounded-xl">
-                                    <span>{{ aiMatcherLoading ? 'Scanning Database Galleries...' : 'Execute Gallery Matcher' }}</span>
-                                </button>
-                            </div>
-
-                            <div class="hud-panel p-6">
-                                <h3 class="text-sm font-title font-bold text-white uppercase mb-3">Recognition Results</h3>
-                                <div v-if="aiMatcherResult" class="space-y-4 font-mono text-xs">
-                                    <p class="text-slate-300 bg-tactical-bg p-3.5 rounded-xl border border-slate-800 leading-relaxed">{{ aiMatcherResult.analysis }}</p>
-                                    <div class="p-4 bg-tactical-bg border border-slate-800 rounded-xl flex items-center justify-between">
-                                        <div>
-                                            <p class="text-sm font-bold text-white font-title">{{ aiMatcherResult.matchedCitizen.fullName }}</p>
-                                            <p class="text-tactical-cyan">Match Confidence: {{ aiMatcherResult.confidence }}%</p>
-                                        </div>
-                                        <button @click="selectedCitizenCard = aiMatcherResult.matchedCitizen" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl">
-                                            Go To Profile ➔
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CASE FILES WITH DYNAMIC TEMPLATES -->
-                    <div v-if="currentTab === 'cases'" class="space-y-6">
-                        <div class="hud-panel p-5 flex justify-between items-center">
-                            <h2 class="text-base font-title font-bold text-white uppercase">Case Files & Investigation Dossiers</h2>
-                            <button @click="openNewCaseModal" class="px-4 py-2 bg-blue-600 text-white font-mono text-xs font-bold rounded-xl">+ Create Case File</button>
-                        </div>
-                        <div class="space-y-4">
-                            <div v-for="c in casesList" :key="c.id" class="hud-panel p-5 space-y-3">
-                                <div class="flex justify-between items-start">
-                                    <h3 class="text-sm font-bold text-white font-title">{{ c.title }}</h3>
-                                    <span class="px-2.5 py-0.5 bg-blue-500/20 text-tactical-cyan border border-blue-500/40 text-[10px] font-mono rounded-full font-bold">{{ c.templateUsed || 'Custom' }}</span>
-                                </div>
-                                <p class="text-xs text-slate-300 font-mono bg-black/40 p-3.5 rounded-xl border border-slate-800 leading-relaxed whitespace-pre-line">{{ c.summary }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ORGANISATIONS WITH DYNAMIC TEMPLATES -->
-                    <div v-if="currentTab === 'organizations'" class="space-y-6">
-                        <div class="hud-panel p-5 flex justify-between items-center">
-                            <h2 class="text-base font-title font-bold text-amber-400 uppercase">Criminal Organisations</h2>
-                            <button @click="openNewOrgModal" class="px-4 py-2 bg-blue-600 text-white font-mono text-xs font-bold rounded-xl">+ Create Organisation</button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div v-for="org in orgsList" :key="org.id" class="hud-panel p-5 space-y-3 border-amber-500/30">
-                                <h3 class="text-base font-title font-bold text-white">{{ org.name }}</h3>
-                                <p class="text-xs text-slate-300 font-mono bg-black/40 p-3 rounded-xl border border-slate-800 whitespace-pre-line">{{ org.notes }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- INTERROGATIONS WITH DYNAMIC TEMPLATES -->
-                    <div v-if="currentTab === 'interrogations'" class="space-y-6">
-                        <div class="hud-panel p-5 flex justify-between items-center">
-                            <h2 class="text-base font-title font-bold text-cyan-400 uppercase">Interrogations</h2>
-                            <button @click="openNewInterrogationModal" class="px-4 py-2 bg-blue-600 text-white font-mono text-xs font-bold rounded-xl">+ Log Interrogation</button>
-                        </div>
-                        <div class="space-y-4">
-                            <div v-for="log in interrogationsList" :key="log.id" class="hud-panel p-5 space-y-3">
-                                <h3 class="text-sm font-bold text-white font-title">Suspect: {{ log.suspect }}</h3>
-                                <p class="text-xs text-slate-300 font-mono bg-black/40 p-3 rounded-xl border border-slate-800 whitespace-pre-line">{{ log.transcript }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ROSTER -->
-                    <div v-if="currentTab === 'roster'" class="space-y-6">
-                        <div class="hud-panel p-5">
-                            <h2 class="text-base font-title font-bold text-white uppercase mb-4">CID Personnel Roster</h2>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div v-for="a in roster" :key="a.id" class="p-3 bg-tactical-bg border border-slate-800 rounded-xl font-mono text-xs">
-                                    <p class="font-bold text-white">{{ a.name }}</p>
-                                    <p class="text-slate-400">{{ a.rank }} | {{ a.badge }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ADMIN PANEL (DIRECTOR & ASSISTANT DIRECTOR) -->
-                    <div v-if="currentTab === 'admin' && hasAdminAccess" class="space-y-6">
-                        <div class="hud-panel p-5 flex justify-between items-center">
-                            <h2 class="text-base font-title font-bold text-red-400 uppercase">Administration Panel</h2>
-                            <div class="flex space-x-2 font-mono text-xs">
-                                <button @click="adminSubTab = 'accounts'" :class="adminSubTab === 'accounts' ? 'bg-red-600 text-white font-bold' : 'text-slate-400'" class="px-3 py-1.5 rounded-lg">Accounts</button>
-                                <button @click="adminSubTab = 'permissions'" :class="adminSubTab === 'permissions' ? 'bg-red-600 text-white font-bold' : 'text-slate-400'" class="px-3 py-1.5 rounded-lg">Permissions</button>
-                                <button @click="adminSubTab = 'templates'" :class="adminSubTab === 'templates' ? 'bg-red-600 text-white font-bold' : 'text-slate-400'" class="px-3 py-1.5 rounded-lg">Templates</button>
-                            </div>
-                        </div>
-
-                        <!-- ACCOUNTS MANAGER -->
-                        <div v-if="adminSubTab === 'accounts'" class="hud-panel p-6 space-y-4">
-                            <h3 class="text-sm font-title font-bold text-white uppercase">Issue New Agent Credentials</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 font-mono text-xs">
-                                <input v-model="newAgentForm.username" placeholder="Username" class="bg-tactical-bg p-2.5 rounded-xl border border-slate-700 text-white">
-                                <input v-model="newAgentForm.badge" placeholder="Badge ID" class="bg-tactical-bg p-2.5 rounded-xl border border-slate-700 text-white">
-                                <select v-model="newAgentForm.rank" class="bg-tactical-bg p-2.5 rounded-xl border border-slate-700 text-white">
-                                    <option v-for="r in allRanksList" :key="r" :value="r">{{ r }}</option>
-                                </select>
-                                <input v-model="newAgentForm.password" type="password" placeholder="Password" class="bg-tactical-bg p-2.5 rounded-xl border border-slate-700 text-white">
-                            </div>
-                            <button @click="adminCreateAgent" class="px-5 py-2.5 bg-blue-600 text-white text-xs font-title font-bold uppercase rounded-xl">Issue Credentials</button>
-                        </div>
-
-                        <!-- PERMISSIONS MATRIX -->
-                        <div v-if="adminSubTab === 'permissions'" class="hud-panel p-6 space-y-4">
-                            <h3 class="text-sm font-title font-bold text-white uppercase">Rank Permissions Matrix</h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left font-mono text-xs">
-                                    <thead class="bg-tactical-bg text-slate-400 uppercase">
-                                        <tr>
-                                            <th class="p-3">Rank</th>
-                                            <th class="p-3 text-center">Admin</th>
-                                            <th class="p-3 text-center">Citizens</th>
-                                            <th class="p-3 text-center">Weapons</th>
-                                            <th class="p-3 text-center">Vehicles</th>
-                                            <th class="p-3 text-center">Cases</th>
-                                            <th class="p-3 text-center">Organisations</th>
-                                            <th class="p-3 text-center">Interrogations</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-800">
-                                        <tr v-for="rank in allRanksList" :key="rank">
-                                            <td class="p-3 font-bold text-white">{{ rank }}</td>
-                                            <td v-for="sec in ['admin', 'citizens', 'weapons', 'vehicles', 'cases', 'organizations', 'interrogations']" :key="sec" class="p-3 text-center">
-                                                <input type="checkbox" :checked="getRankPermission(rank, sec)" @change="toggleRankPermission(rank, sec)">
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- TEMPLATE BUILDER -->
-                        <div v-if="adminSubTab === 'templates'" class="hud-panel p-6 space-y-4">
-                            <h3 class="text-sm font-title font-bold text-white uppercase">Create Custom Template</h3>
-                            <div class="space-y-3 font-mono text-xs">
-                                <select v-model="newTemplateForm.category" class="w-full bg-tactical-bg p-2.5 rounded-xl border border-slate-700 text-white">
-                                    <option value="cases">Case Files Category</option>
-                                    <option value="organizations">Organisations Category</option>
-                                    <option value="interrogations">Interrogations Category</option>
-                                </select>
-                                <input v-model="newTemplateForm.name" placeholder="Template Name" class="w-full bg-tactical-bg p-2.5 rounded-xl border border-slate-700 text-white">
-                                <textarea v-model="newTemplateForm.body" rows="4" placeholder="Template Text Body..." class="w-full bg-tactical-bg p-2.5 rounded-xl border border-slate-700 text-white"></textarea>
-                                <button @click="saveCustomTemplate" class="px-5 py-2.5 bg-emerald-600 text-white font-title font-bold uppercase rounded-xl">Save Template</button>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </main>
-
-        <!-- AUTH LOGIN MODAL -->
-        <div v-if="showLoginModal && !currentUser" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-            <div class="w-full max-w-md hud-panel p-6 relative">
-                <button @click="showLoginModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-                <h2 class="text-xl font-title font-bold text-white uppercase text-center mb-6">C.I.D. Agent Sign In</h2>
-                <form @submit.prevent="handleLogin" class="space-y-4">
-                    <input v-model="authForm.username" type="text" required placeholder="Username" class="w-full bg-tactical-bg border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none">
-                    <input v-model="authForm.password" type="password" required placeholder="Password" class="w-full bg-tactical-bg border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none">
-                    <button type="submit" class="w-full py-2.5 bg-blue-600 text-white font-title font-bold uppercase rounded-xl">Sign In</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- CITIZEN PROFILE DOSSIER MODAL WITH ATTACHED CASES & AUTO VEHICLE MATCH -->
-        <div v-if="selectedCitizenCard" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-            <div class="w-full max-w-4xl hud-panel p-6 relative max-h-[90vh] overflow-y-auto space-y-5">
-                <button @click="selectedCitizenCard = null" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-
-                <div class="flex space-x-5 items-start">
-                    <img :src="selectedCitizenCard.mugshot || 'https://placehold.co/120x150/000000/38bdf8?text=NO+MUG'" class="w-32 h-40 object-cover rounded-xl border border-tactical-cyan">
-                    <div class="space-y-1 font-mono text-xs flex-1">
-                        <h2 class="text-xl font-title font-bold text-white uppercase">{{ selectedCitizenCard.fullName }}</h2>
-                        <p class="text-tactical-cyan">Citizen ID: {{ selectedCitizenCard.citizenId }}</p>
-                        <p class="text-slate-300">Phone: {{ selectedCitizenCard.phone || 'N/A' }}</p>
-                        <p class="text-amber-400">Gang: {{ selectedCitizenCard.gang || 'None' }}</p>
-                    </div>
-                </div>
-
-                <!-- PHOTO GALLERY WITH ZOOM & METADATA -->
-                <div class="space-y-3">
-                    <h3 class="text-xs font-title font-bold text-tactical-cyan uppercase">Photo Gallery</h3>
-                    <div class="flex space-x-2">
-                        <input v-model="newGalleryPhotoUrl" placeholder="Photo URL..." class="bg-tactical-bg border border-slate-700 text-xs px-2.5 py-1 rounded-xl text-white font-mono flex-1">
-                        <button @click="addGalleryPhoto(selectedCitizenCard)" class="px-3 py-1 bg-blue-600 text-white text-xs font-mono rounded-xl">+ Add Photo</button>
-                    </div>
-                    <div class="grid grid-cols-4 gap-3">
-                        <div v-for="(photo, pIdx) in (selectedCitizenCard.gallery || [])" :key="pIdx" class="aspect-square rounded-xl overflow-hidden border border-slate-800 bg-black cursor-pointer" @click="openLightbox(photo.url || photo, 'Citizen Photo', 'Evidence still recorded in file')">
-                            <img :src="photo.url || photo" class="w-full h-full object-cover">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- AUTOMATICALLY MATCHED VEHICLES -->
-                <div class="space-y-2 font-mono text-xs">
-                    <h3 class="text-xs font-title font-bold text-white uppercase">Matched Vehicles Registered Under Name</h3>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div v-for="v in matchedCitizenVehicles" :key="v.id" class="p-3 bg-tactical-bg border border-slate-800 rounded-xl">
-                            <p class="font-bold text-white">{{ v.model }} ({{ v.plate }})</p>
-                            <p class="text-slate-400">Color: {{ v.color }}</p>
-                        </div>
-                        <div v-if="matchedCitizenVehicles.length === 0" class="col-span-2 text-slate-500 text-center py-2">No registered vehicles matching citizen name.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- SCRIPT ENGINE -->
-    <script>
-        function openLightbox(url, title, desc) {
-            document.getElementById('lightboxImg').src = url;
-            document.getElementById('lightboxTitle').innerText = title || 'Evidence Image';
-            document.getElementById('lightboxDesc').innerText = desc || 'CID File Attachment';
-            document.getElementById('lightboxModal').style.display = 'flex';
-        }
-        function closeLightbox() {
-            document.getElementById('lightboxModal').style.display = 'none';
-        }
-
-        const { createApp, ref, computed, onMounted } = Vue;
-
-        createApp({
-            setup() {
-                const currentTab = ref('dashboard');
-                const adminSubTab = ref('accounts');
-                const currentUser = ref(null);
-                const showLoginModal = ref(false);
-                const currentTime = ref('');
-
-                const showCreateCitizenModal = ref(false);
-                const showCreateWeaponModal = ref(false);
-                const showCreateVehicleModal = ref(false);
-                const selectedCitizenCard = ref(null);
-                const newGalleryPhotoUrl = ref('');
-
-                const authForm = ref({ username: '', password: '' });
-                const agentProfile = ref({ name: '', rank: '', badge: '' });
-
-                const citizenSearch = ref('');
-                const aiMatcherImageUrl = ref('');
-                const aiMatcherLoading = ref(false);
-                const aiMatcherResult = ref(null);
-
-                const newAgentForm = ref({ username: '', badge: '', rank: 'Detective I', password: '' });
-                const newTemplateForm = ref({ category: 'cases', name: '', body: '' });
-
-                const allRanksList = ['Director', 'Assistant Director', 'High Command', 'Detective III', 'Detective II', 'Detective I', 'Probationary Detective'];
-
-                const rolePermissions = ref({
-                    'Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, roster: true, ai_matcher: true },
-                    'Assistant Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, roster: true, ai_matcher: true },
-                    'High Command': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, roster: true, ai_matcher: true },
-                    'Detective III': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, roster: true, ai_matcher: true },
-                    'Detective II': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, roster: true, ai_matcher: true },
-                    'Detective I': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, roster: true, ai_matcher: true },
-                    'Probationary Detective': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: false, roster: true, ai_matcher: false }
-                });
-
-                const customTemplates = ref({
-                    cases: [
-                        { name: 'RICO Syndicate Investigation', body: 'TARGET SYNDICATE:\nOPERATIONAL LEADS:\nPRIMARY OFFENCES:\nEVIDENCE LOG:' }
-                    ],
-                    organizations: [
-                        { name: 'Gang Hierarchy & Turf', body: 'KNOWN LEADERSHIP:\nACTIVE TURF/RADIUS:\nFEUDING FACTIONS:' }
-                    ],
-                    interrogations: [
-                        { name: 'Miranda Waiver & Suspect Polygraph', body: 'RIGHTS WAIVED: YES/NO\nPOLYGRAPH RESULT:\nSUSPECT TRANSCRIPT:' }
-                    ]
-                });
-
-                const citizensList = ref([
-                    { id: 1, fullName: 'Marcus Vance', citizenId: 'MV-8821', phone: '555-0192', gang: 'Ballas', mugshot: 'https://placehold.co/150x180/0b1329/38bdf8?text=MARCUS', gallery: ['https://placehold.co/300x300/0b1329/38bdf8?text=Evidence+Still'] }
-                ]);
-
-                const weaponsList = ref([
-                    { id: 1, serial: 'WPN-99210', model: 'Combat Pistol', owner: 'Marcus Vance', stolen: false }
-                ]);
-
-                const vehiclesList = ref([
-                    { id: 1, plate: '88ABC123', model: 'Sultan RS', owner: 'Marcus Vance', color: 'Black', stolen: false }
-                ]);
-
-                const casesList = ref([
-                    { id: 1, title: 'RICO Case - Ballas', summary: 'Ongoing investigation into drug distribution in East Los Santos.', templateUsed: 'RICO Syndicate Investigation' }
-                ]);
-
-                const orgsList = ref([
-                    { id: 1, name: 'East Side Ballas', notes: 'Active in Davis & Forum Drive.' }
-                ]);
-
-                const interrogationsList = ref([
-                    { id: 1, suspect: 'Marcus Vance', transcript: 'Suspect refused to elaborate on vehicle contents.' }
-                ]);
-
-                const roster = ref([
-                    { id: 1, name: 'CID Director', badge: 'CID-01', rank: 'Director' }
-                ]);
-
-                const warrants = ref([
-                    { id: 1, citizenName: 'Marcus Vance', citizenId: 'MV-8821', reason: 'Armed Robbery' }
-                ]);
-
-                const activeWarrantsCount = computed(() => warrants.value.length);
-
-                const filteredCitizens = computed(() => {
-                    if (!citizenSearch.value) return citizensList.value;
-                    return citizensList.value.filter(c => c.fullName.toLowerCase().includes(citizenSearch.value.toLowerCase()));
-                });
-
-                const matchedCitizenVehicles = computed(() => {
-                    if (!selectedCitizenCard.value) return [];
-                    return vehiclesList.value.filter(v => v.owner.toLowerCase() === selectedCitizenCard.value.fullName.toLowerCase());
-                });
-
-                const hasAdminAccess = computed(() => {
-                    if (!agentProfile.value) return false;
-                    return agentProfile.value.rank === 'Director' || agentProfile.value.rank === 'Assistant Director';
-                });
-
-                const handleLogin = () => {
-                    currentUser.value = { uid: 'usr_director' };
-                    agentProfile.value = { name: authForm.value.username, rank: 'Director', badge: 'CID-01' };
-                    showLoginModal.value = false;
-                };
-
-                const handleLogout = () => {
-                    currentUser.value = null;
-                    currentTab.value = 'dashboard';
-                };
-
-                const switchTab = (tab) => {
-                    currentTab.value = tab;
-                };
-
-                const navClass = (tab) => {
-                    return [
-                        'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-mono text-xs transition duration-200',
-                        currentTab.value === tab ? 'bg-blue-600/20 text-white border border-blue-500/40 font-bold' : 'text-slate-400 hover:text-white'
-                    ];
-                };
-
-                const hasPermission = (section) => {
-                    if (!agentProfile.value || !agentProfile.value.rank) return true;
-                    const perm = rolePermissions.value[agentProfile.value.rank];
-                    return perm ? perm[section] : true;
-                };
-
-                const getRankPermission = (rank, section) => {
-                    return rolePermissions.value[rank] ? rolePermissions.value[rank][section] : true;
-                };
-
-                const toggleRankPermission = (rank, section) => {
-                    if (!rolePermissions.value[rank]) rolePermissions.value[rank] = {};
-                    rolePermissions.value[rank][section] = !getRankPermission(rank, section);
-                };
-
-                const runAiVisualMatcher = () => {
-                    if (!aiMatcherImageUrl.value) return;
-                    aiMatcherLoading.value = true;
-                    setTimeout(() => {
-                        aiMatcherLoading.value = false;
-                        aiMatcherResult.value = {
-                            analysis: 'Face & Outfit match detected with high confidence in Citizen Gallery (Marcus Vance).',
-                            confidence: 96.4,
-                            matchedCitizen: citizensList.value[0]
-                        };
-                    }, 1000);
-                };
-
-                const addGalleryPhoto = (citizen) => {
-                    if (!newGalleryPhotoUrl.value) return;
-                    if (!citizen.gallery) citizen.gallery = [];
-                    citizen.gallery.push({ url: newGalleryPhotoUrl.value });
-                    newGalleryPhotoUrl.value = '';
-                };
-
-                const adminCreateAgent = () => {
-                    roster.value.push({ id: Date.now(), name: newAgentForm.value.username, badge: newAgentForm.value.badge, rank: newAgentForm.value.rank });
-                    newAgentForm.value = { username: '', badge: '', rank: 'Detective I', password: '' };
-                    alert('Credentials Issued Successfully!');
-                };
-
-                const saveCustomTemplate = () => {
-                    if (!customTemplates.value[newTemplateForm.value.category]) {
-                        customTemplates.value[newTemplateForm.value.category] = [];
-                    }
-                    customTemplates.value[newTemplateForm.value.category].push({ name: newTemplateForm.value.name, body: newTemplateForm.value.body });
-                    alert('Custom Template Saved!');
-                };
-
-                onMounted(() => {
-                    setInterval(() => {
-                        currentTime.value = new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Athens' });
-                    }, 1000);
-                });
-
-                return {
-                    currentTab, adminSubTab, currentUser, showLoginModal, currentTime,
-                    showCreateCitizenModal, showCreateWeaponModal, showCreateVehicleModal, selectedCitizenCard,
-                    authForm, agentProfile, citizenSearch, aiMatcherImageUrl, aiMatcherLoading, aiMatcherResult,
-                    newAgentForm, newTemplateForm, newGalleryPhotoUrl, allRanksList, rolePermissions, customTemplates,
-                    citizensList, weaponsList, vehiclesList, casesList, orgsList, interrogationsList, roster, warrants,
-                    activeWarrantsCount, filteredCitizens, matchedCitizenVehicles, hasAdminAccess,
-                    handleLogin, handleLogout, switchTab, navClass, hasPermission, getRankPermission, toggleRankPermission,
-                    runAiVisualMatcher, addGalleryPhoto, adminCreateAgent, saveCustomTemplate, openLightbox, closeLightbox
-                };
-            }
-        }).mount('#app');
-    </script>
-</body>
-</html>
+    }
+</script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+
+<!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Vue 3 CDN -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #04070c;
+        color: #cbd5e1;
+        overflow-x: hidden;
+    }
+
+    .hud-panel {
+        background-color: #0b1329;
+        border: 1px solid #1f293d;
+        border-radius: 1rem;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(12px);
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #04070c; }
+    ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+
+    .leaflet-container {
+        background: #000000 !important;
+        font-family: 'Share Tech Mono', monospace !important;
+    }
+
+    /* Lightbox Image Preview Overlay */
+    #lightboxModal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.92); z-index: 10000; justify-content: center; align-items: center;
+        backdrop-filter: blur(10px);
+    }
+    #lightboxModal img { max-width: 85%; max-height: 80%; border: 2px solid #38bdf8; border-radius: 12px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.4); }
+
+    .popup-container { color: #fff; text-align: center; width: 220px; padding: 4px; }
+    .popup-img { 
+        width: 100%; height: 120px; object-fit: cover; border-radius: 8px; 
+        margin-bottom: 6px; border: 1px solid #7d3db7; cursor: pointer; 
+        transition: 0.2s; background: #000;
+    }
+    .popup-img:hover { filter: brightness(1.2); }
+    .popup-title { font-size: 14px; font-weight: bold; font-family: 'Syne', sans-serif; color: #7d3db7; margin-bottom: 4px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+
+    /* Printable Warrant PDF View */
+    @media print {
+        body * { visibility: hidden; }
+        #printableWarrantModal, #printableWarrantModal * { visibility: visible; }
+        #printableWarrantModal { position: absolute; left: 0; top: 0; width: 100%; background: #fff !important; color: #000 !important; }
+        .no-print { display: none !important; }
+    }
+</style>
