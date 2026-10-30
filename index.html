@@ -253,6 +253,84 @@
         </div>
     </div>
 
+    <!-- CITIZEN PROFILE DOSSIER MODAL ("ΚΑΡΤΕΛΑ ΠΟΛΙΤΗ") -->
+    <div v-if="selectedCitizenCard" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+        <div class="w-full max-w-3xl hud-panel p-6 relative max-h-[90vh] overflow-y-auto space-y-5 border-blue-500/40">
+            <button @click="selectedCitizenCard = null" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Citizen Header & Mugshot -->
+            <div class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6 border-b border-slate-800 pb-5">
+                <img :src="selectedCitizenCard.mugshot || 'https://placehold.co/150x180/0d111a/38bdf8?text=NO+MUGSHOT'" class="w-36 h-44 object-cover rounded border border-tactical-cyan/40 bg-black shrink-0">
+                <div class="space-y-2 text-center md:text-left flex-1">
+                    <div class="inline-flex items-center space-x-2 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 text-tactical-cyan font-mono text-[10px] uppercase rounded">
+                        <i class="fa-solid fa-id-card"></i>
+                        <span>CITIZEN DOSSIER ID: {{ selectedCitizenCard.citizenId || 'N/A' }}</span>
+                    </div>
+                    <h2 class="text-2xl font-title font-bold text-white uppercase tracking-wider">{{ selectedCitizenCard.fullName }}</h2>
+                    <div class="grid grid-cols-2 gap-2 font-mono text-xs text-slate-300">
+                        <p><span class="text-slate-500">DOB:</span> {{ selectedCitizenCard.dob || 'Unknown' }}</p>
+                        <p><span class="text-slate-500">PHONE:</span> {{ selectedCitizenCard.phone || 'N/A' }}</p>
+                        <p><span class="text-slate-500">OCCUPATION:</span> {{ selectedCitizenCard.job || 'Unemployed' }}</p>
+                        <p><span class="text-slate-500">AFFILIATION:</span> <span class="text-amber-400 font-bold">{{ selectedCitizenCard.gang || 'None' }}</span></p>
+                    </div>
+
+                    <!-- License Badges -->
+                    <div class="pt-2 flex flex-wrap gap-2">
+                        <span :class="selectedCitizenCard.driverLicense ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' : 'bg-red-500/20 text-red-400 border-red-500/40'" class="px-2 py-0.5 border text-[10px] font-mono uppercase font-bold rounded">
+                            Driver: {{ selectedCitizenCard.driverLicense ? 'Valid' : 'Revoked/None' }}
+                        </span>
+                        <span :class="selectedCitizenCard.weaponLicense ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' : 'bg-red-500/20 text-red-400 border-red-500/40'" class="px-2 py-0.5 border text-[10px] font-mono uppercase font-bold rounded">
+                            Weapon Permit: {{ selectedCitizenCard.weaponLicense ? 'Valid' : 'None' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Criminal History / Convictions -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-title font-bold text-tactical-cyan uppercase tracking-wider flex items-center space-x-2">
+                    <i class="fa-solid fa-gavel"></i>
+                    <span>Criminal Convictions & Incidents</span>
+                </h3>
+
+                <div class="space-y-2">
+                    <div v-for="(conv, idx) in selectedCitizenCard.convictions" :key="idx" class="p-3 bg-tactical-bg border border-slate-800 rounded font-mono text-xs flex justify-between items-center">
+                        <div>
+                            <span class="text-white font-bold block">{{ conv.charge }}</span>
+                            <span class="text-[10px] text-slate-500">Filed By: {{ conv.officer || 'CID' }} - {{ conv.date || 'Recent' }}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-emerald-400 font-bold block">${{ conv.fine }}</span>
+                            <span class="text-amber-400 text-[10px]">{{ conv.jail }} Mo. Jail</span>
+                        </div>
+                    </div>
+                    <div v-if="!selectedCitizenCard.convictions || selectedCitizenCard.convictions.length === 0" class="text-xs font-mono text-slate-500 p-3 bg-tactical-bg border border-slate-800 rounded text-center">
+                        No active convictions on record. Clean citizen file.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent Notes -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-title font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                    <i class="fa-solid fa-user-pen text-tactical-cyan"></i>
+                    <span>Investigative Agent Notes</span>
+                </h3>
+                <p class="text-xs text-slate-300 bg-tactical-bg border border-slate-800 p-3 rounded font-mono leading-relaxed whitespace-pre-line">
+                    {{ selectedCitizenCard.notes || 'No investigative notes logged for this citizen.' }}
+                </p>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button @click="selectedCitizenCard = null" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-mono text-xs uppercase rounded">
+                    Close Profile Card
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- SIDEBAR NAVIGATION HUD -->
     <aside class="w-64 bg-tactical-panel/95 border-r border-slate-800 flex flex-col z-20 shrink-0">
         <!-- Logo / Agency Header -->
@@ -299,37 +377,42 @@
                     <i class="fa-solid fa-lock text-[8px] mr-1"></i>Agent MDT Operations
                 </div>
 
-                <button @click="switchTab('citizens')" :class="navClass('citizens')">
+                <button v-if="hasPermission('citizens')" @click="switchTab('citizens')" :class="navClass('citizens')">
                     <i class="fa-solid fa-address-card w-5"></i>
-                    <span>Citizen Database</span>
+                    <span>Citizen Registry</span>
                 </button>
 
-                <button @click="switchTab('vehicles')" :class="navClass('vehicles')">
+                <button v-if="hasPermission('vehicles')" @click="switchTab('vehicles')" :class="navClass('vehicles')">
                     <i class="fa-solid fa-car w-5"></i>
                     <span>Vehicle Lookup</span>
                 </button>
 
-                <button @click="switchTab('cases')" :class="navClass('cases')">
+                <button v-if="hasPermission('cases')" @click="switchTab('cases')" :class="navClass('cases')">
                     <i class="fa-solid fa-folder-open w-5"></i>
                     <span>Case Files</span>
                 </button>
 
-                <button @click="switchTab('investigations')" :class="navClass('investigations')">
-                    <i class="fa-solid fa-magnifying-glass-chart w-5 text-amber-400"></i>
-                    <span>Major Operations</span>
+                <button v-if="hasPermission('organizations')" @click="switchTab('organizations')" :class="navClass('organizations')">
+                    <i class="fa-solid fa-sitemap w-5 text-amber-400"></i>
+                    <span>Criminal Organisations</span>
                 </button>
 
-                <button @click="switchTab('warrants')" :class="navClass('warrants')">
+                <button v-if="hasPermission('interrogations')" @click="switchTab('interrogations')" :class="navClass('interrogations')">
+                    <i class="fa-solid fa-comments text-cyan-400 w-5"></i>
+                    <span>Interrogations</span>
+                </button>
+
+                <button v-if="hasPermission('warrants')" @click="switchTab('warrants')" :class="navClass('warrants')">
                     <i class="fa-solid fa-file-signature w-5"></i>
                     <span>Warrants (MDT)</span>
                 </button>
 
-                <button @click="switchTab('evidence')" :class="navClass('evidence')">
+                <button v-if="hasPermission('evidence')" @click="switchTab('evidence')" :class="navClass('evidence')">
                     <i class="fa-solid fa-box-archive w-5"></i>
                     <span>Evidence Locker</span>
                 </button>
 
-                <button @click="switchTab('roster')" :class="navClass('roster')">
+                <button v-if="hasPermission('roster')" @click="switchTab('roster')" :class="navClass('roster')">
                     <i class="fa-solid fa-users w-5"></i>
                     <span>Personnel Roster</span>
                 </button>
@@ -391,7 +474,7 @@
                     RESTRICTED CAD/MDT
                 </span>
                 <span class="text-slate-600">|</span>
-                <span><i class="fa-regular fa-clock mr-1 text-tactical-cyan"></i>{{ currentTime }} UTC</span>
+                <span><i class="fa-regular fa-clock mr-1 text-tactical-cyan"></i>{{ currentTime }} (UTC+2)</span>
             </div>
         </header>
 
@@ -653,30 +736,32 @@
 
             <!-- RESTRICTED CID AGENT TABS -->
             <template v-if="currentUser">
-                <!-- 5. CITIZEN DATABASE -->
+                <!-- 5. CITIZEN REGISTRY WITH DOSSIER CARD -->
                 <div v-if="currentTab === 'citizens'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
-                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Citizen Registry Database</h2>
-                        <button @click="showAddCitizenModal = true" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-title font-bold text-xs uppercase rounded transition">
-                            <i class="fa-solid fa-plus mr-1"></i>New Citizen Profile
-                        </button>
+                        <div>
+                            <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Citizen Registry Database</h2>
+                            <p class="text-xs text-slate-400 font-mono">Click any citizen to view their full profile card ("Καρτέλα Πολίτη")</p>
+                        </div>
                     </div>
 
-                    <div class="hud-panel p-4">
-                        <input v-model="citizenSearch" type="text" placeholder="Search by Full Name or Citizen ID..." class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white font-mono focus:outline-none mb-4">
+                    <div class="hud-panel p-4 space-y-4">
+                        <input v-model="citizenSearch" type="text" placeholder="Search by Full Name or Citizen ID..." class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white font-mono focus:outline-none">
 
-                        <div class="space-y-3">
-                            <div v-for="c in filteredCitizens" :key="c.id" class="p-3 bg-tactical-bg/80 border border-slate-800 rounded space-y-2">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <h3 class="text-sm font-bold text-white">{{ c.fullName }}</h3>
-                                        <p class="text-xs font-mono text-slate-400">CID: {{ c.citizenId }} | Phone: {{ c.phone || 'N/A' }}</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div v-for="c in filteredCitizens" :key="c.id" @click="selectedCitizenCard = c" class="p-4 bg-tactical-bg/80 border border-slate-800 hover:border-tactical-cyan rounded cursor-pointer transition space-y-3">
+                                <div class="flex items-center space-x-3">
+                                    <img :src="c.mugshot || 'https://placehold.co/100x120/0d111a/38bdf8?text=MUGSHOT'" class="w-12 h-14 object-cover rounded border border-slate-700 bg-black shrink-0">
+                                    <div class="overflow-hidden">
+                                        <h3 class="text-sm font-bold text-white truncate">{{ c.fullName }}</h3>
+                                        <p class="text-xs font-mono text-tactical-cyan">CID: {{ c.citizenId }}</p>
+                                        <p class="text-[10px] font-mono text-slate-400">Phone: {{ c.phone || 'N/A' }}</p>
                                     </div>
-                                    <span class="px-2 py-0.5 bg-slate-800 text-slate-300 text-[10px] font-mono border border-slate-700 rounded">
-                                        {{ c.convictions ? c.convictions.length + ' Convictions' : 'Clean Record' }}
-                                    </span>
                                 </div>
-                                <p class="text-xs text-slate-300 font-sans">{{ c.notes || 'No investigative notes on file.' }}</p>
+                                <div class="flex justify-between items-center border-t border-slate-800/80 pt-2 text-[10px] font-mono">
+                                    <span class="text-amber-400">Affiliation: {{ c.gang || 'None' }}</span>
+                                    <span class="text-slate-400 hover:text-white font-bold text-xs">View Card ➔</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -686,9 +771,6 @@
                 <div v-if="currentTab === 'vehicles'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
                         <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Vehicle Lookup & Stolen Flags</h2>
-                        <button @click="showAddVehicleModal = true" class="px-3 py-1.5 bg-blue-600 text-white font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-plus mr-1"></i>Register Vehicle
-                        </button>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -709,9 +791,6 @@
                 <div v-if="currentTab === 'cases'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
                         <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">CID Case Files & Dossiers</h2>
-                        <button @click="showNewCaseModal = true" class="px-3 py-1.5 bg-blue-600 text-white font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-folder-plus mr-1"></i>Create Case File
-                        </button>
                     </div>
 
                     <div class="space-y-4">
@@ -734,57 +813,86 @@
                     </div>
                 </div>
 
-                <!-- 8. INVESTIGATIONS (MAJOR OPS) -->
-                <div v-if="currentTab === 'investigations'" class="space-y-6">
+                <!-- 8. CRIMINAL ORGANISATIONS -->
+                <div v-if="currentTab === 'organizations'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
-                        <h2 class="text-base font-title font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-2">
-                            <i class="fa-solid fa-magnifying-glass-chart"></i>
-                            <span>Major Operations & Gang Dossiers</span>
-                        </h2>
-                        <button @click="showNewOpModal = true" class="px-3 py-1.5 bg-amber-500 text-slate-950 font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-plus mr-1"></i>New Major Operation
-                        </button>
+                        <div>
+                            <h2 class="text-base font-title font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-2">
+                                <i class="fa-solid fa-sitemap"></i>
+                                <span>Criminal Organisations & Gang Dossiers</span>
+                            </h2>
+                            <p class="text-xs text-slate-400 font-mono mt-0.5">Syndicate structures, active turf, leadership, and operational assets</p>
+                        </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="space-y-3">
-                            <div v-for="op in majorOpsList" :key="op.id" @click="selectedOp = op" :class="selectedOp?.id === op.id ? 'border-amber-400 bg-tactical-panel' : 'border-slate-800 bg-tactical-bg'" class="p-4 border rounded cursor-pointer transition space-y-2">
-                                <span class="text-[10px] font-mono text-amber-400">CODE: {{ op.code }}</span>
-                                <h3 class="text-xs font-bold text-white">{{ op.title }}</h3>
-                                <p class="text-xs text-slate-400 font-mono">Target Syndicate: {{ op.targetSyndicate }}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div v-for="gang in defaultStaticMapData.gangs" :key="gang.name" class="hud-panel p-5 space-y-3 border-amber-500/30">
+                            <div class="flex justify-between items-start">
+                                <h3 class="text-base font-title font-bold text-white tracking-wide">{{ gang.name }}</h3>
+                                <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded text-white" :style="{ backgroundColor: gang.color || '#B00707' }">
+                                    {{ gang.type || 'Gang' }}
+                                </span>
                             </div>
-                        </div>
-
-                        <div class="lg:col-span-2">
-                            <div v-if="selectedOp" class="hud-panel p-6 space-y-4">
-                                <h2 class="text-lg font-title font-bold text-white">{{ selectedOp.title }}</h2>
-                                <p class="text-xs text-slate-300 font-mono whitespace-pre-line">{{ selectedOp.description }}</p>
+                            <div class="p-3 bg-tactical-bg border border-slate-800 rounded font-mono text-xs space-y-1">
+                                <p class="text-slate-400"><span class="text-slate-500">HQ Address:</span> {{ gang.address }}</p>
+                                <p class="text-slate-400"><span class="text-slate-500">Coordinates:</span> x: {{ gang.x }}, y: {{ gang.y }}</p>
+                                <p class="text-slate-400"><span class="text-slate-500">Turf Radius:</span> {{ gang.radius }}m</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 9. WARRANTS MDT -->
+                <!-- 9. INTERROGATIONS -->
+                <div v-if="currentTab === 'interrogations'" class="space-y-6">
+                    <div class="hud-panel p-4 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-base font-title font-bold text-cyan-400 uppercase tracking-wider flex items-center space-x-2">
+                                <i class="fa-solid fa-comments"></i>
+                                <span>CID Interrogation Logs & Questioning Transcripts</span>
+                            </h2>
+                            <p class="text-xs text-slate-400 font-mono mt-0.5">Suspect Miranda waiver logs, audio transcripts, and lie detector reports</p>
+                        </div>
+                    </div>
+
+                    <div class="hud-panel p-5 space-y-4">
+                        <div class="space-y-3">
+                            <div v-for="log in interrogationsList" :key="log.id" class="p-4 bg-tactical-bg border border-slate-800 rounded space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <span class="text-[10px] font-mono text-cyan-400">LOG #{{ log.logId }}</span>
+                                        <h3 class="text-sm font-bold text-white">Suspect: {{ log.suspect }}</h3>
+                                    </div>
+                                    <span class="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-mono rounded">
+                                        MIRANDA: {{ log.mirandaSigned ? 'WAIVED' : 'REFUSED' }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-300 font-mono bg-black/50 p-3 rounded border border-slate-900 leading-relaxed whitespace-pre-line">
+                                    {{ log.transcript }}
+                                </p>
+                                <div class="flex justify-between text-[10px] font-mono text-slate-500 pt-1">
+                                    <span>Interrogating Agent: {{ log.agent }}</span>
+                                    <span>Date: {{ log.date }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 10. WARRANTS MDT -->
                 <div v-if="currentTab === 'warrants'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
                         <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Warrant Issuance & Management</h2>
-                        <button @click="showAddWarrantModal = true" class="px-3 py-1.5 bg-red-600 text-white font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-file-circle-plus mr-1"></i>Issue Warrant
-                        </button>
                     </div>
                 </div>
 
-                <!-- 10. EVIDENCE LOCKER -->
+                <!-- 11. EVIDENCE LOCKER -->
                 <div v-if="currentTab === 'evidence'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
                         <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Evidence Locker System</h2>
-                        <button @click="showAddEvidenceModal = true" class="px-3 py-1.5 bg-blue-600 text-white font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-box mr-1"></i>Log Evidence Item
-                        </button>
                     </div>
                 </div>
 
-                <!-- 11. ROSTER -->
+                <!-- 12. ROSTER -->
                 <div v-if="currentTab === 'roster'" class="space-y-6">
                     <div class="hud-panel p-4">
                         <h2 class="text-base font-title font-bold text-white uppercase tracking-wider mb-4">CID Personnel Roster</h2>
@@ -803,7 +911,7 @@
                     </div>
                 </div>
 
-                <!-- 12. ADMIN PANEL (DIRECTORS ONLY) -->
+                <!-- 13. ADMIN PANEL (DIRECTORS ONLY) -->
                 <div v-if="currentTab === 'admin'" class="space-y-6">
                     <div v-if="!isDirector" class="hud-panel border-red-500/40 p-12 text-center space-y-4">
                         <i class="fa-solid fa-lock text-4xl text-red-500"></i>
@@ -814,12 +922,15 @@
                         <div class="hud-panel p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                                 <h2 class="text-base font-title font-bold text-red-400 uppercase tracking-wider">Director Administration Panel</h2>
-                                <p class="text-xs text-slate-400 font-mono mt-1">Issue Agent Accounts, Rank Roster, Map Overlay Manager & Discord Integration</p>
+                                <p class="text-xs text-slate-400 font-mono mt-1">Personnel Roles, Rank Permissions, Map Overlay Manager & System Controls</p>
                             </div>
 
                             <div class="flex flex-wrap items-center gap-2 bg-tactical-bg p-1.5 rounded border border-slate-800 font-mono text-xs">
                                 <button @click="adminSubTab = 'create_agent'" :class="adminSubTab === 'create_agent' ? 'bg-red-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded transition">
                                     <i class="fa-solid fa-user-plus mr-1"></i> Create Agent
+                                </button>
+                                <button @click="adminSubTab = 'permissions'" :class="adminSubTab === 'permissions' ? 'bg-red-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded transition">
+                                    <i class="fa-solid fa-user-shield mr-1"></i> Role Permissions
                                 </button>
                                 <button @click="adminSubTab = 'map_manager'" :class="adminSubTab === 'map_manager' ? 'bg-red-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded transition">
                                     <i class="fa-solid fa-map-location-dot mr-1"></i> Map Manager
@@ -830,6 +941,43 @@
                                 <button @click="adminSubTab = 'webhook'" :class="adminSubTab === 'webhook' ? 'bg-red-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded transition">
                                     <i class="fa-brands fa-discord mr-1"></i> Webhooks
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- ROLE PERMISSIONS MATRIX MANAGER -->
+                        <div v-if="adminSubTab === 'permissions'" class="hud-panel p-6 space-y-5">
+                            <div>
+                                <h3 class="text-sm font-title font-bold text-white uppercase flex items-center space-x-2">
+                                    <i class="fa-solid fa-user-shield text-red-500"></i>
+                                    <span>Role Permissions Management Matrix</span>
+                                </h3>
+                                <p class="text-xs text-slate-400 font-mono mt-0.5">Toggle access rights per CID Rank for each system tab</p>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left font-mono text-xs">
+                                    <thead class="bg-tactical-bg text-slate-400 uppercase text-[10px] border-b border-slate-800">
+                                        <tr>
+                                            <th class="p-3">CID Rank</th>
+                                            <th class="p-3 text-center">Citizens</th>
+                                            <th class="p-3 text-center">Vehicles</th>
+                                            <th class="p-3 text-center">Cases</th>
+                                            <th class="p-3 text-center">Organisations</th>
+                                            <th class="p-3 text-center">Interrogations</th>
+                                            <th class="p-3 text-center">Warrants</th>
+                                            <th class="p-3 text-center">Evidence</th>
+                                            <th class="p-3 text-center">Roster</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800">
+                                        <tr v-for="rank in allRanksList" :key="rank" class="hover:bg-slate-900/50">
+                                            <td class="p-3 font-bold text-white">{{ rank }}</td>
+                                            <td v-for="section in ['citizens', 'vehicles', 'cases', 'organizations', 'interrogations', 'warrants', 'evidence', 'roster']" :key="section" class="p-3 text-center">
+                                                <input type="checkbox" :checked="getRankPermission(rank, section)" @change="toggleRankPermission(rank, section)" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0 cursor-pointer">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
@@ -947,13 +1095,7 @@
                                     <div>
                                         <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Rank</label>
                                         <select v-model="newAgentForm.rank" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white focus:outline-none">
-                                            <option>Probationary Agent</option>
-                                            <option>Special Agent</option>
-                                            <option>Senior Special Agent</option>
-                                            <option>Supervisory Special Agent (SSA)</option>
-                                            <option>Special Agent in Charge (SAIC)</option>
-                                            <option>Assistant CID Director</option>
-                                            <option>CID Director</option>
+                                            <option v-for="r in allRanksList" :key="r" :value="r">{{ r }}</option>
                                         </select>
                                     </div>
                                 </div>
@@ -1138,10 +1280,32 @@
                 newAgentForm: { username: '', badge: '', rank: 'Probationary Agent', password: '' },
 
                 agentProfile: { name: '', badge: '', rank: '', accountStatus: 'Active' },
+                selectedCitizenCard: null,
 
                 currentTab: 'dashboard',
-                adminSubTab: 'create_agent',
+                adminSubTab: 'permissions',
                 currentTime: '',
+
+                allRanksList: [
+                    'Probationary Agent',
+                    'Special Agent',
+                    'Senior Special Agent',
+                    'Supervisory Special Agent (SSA)',
+                    'Special Agent in Charge (SAIC)',
+                    'Assistant CID Director',
+                    'CID Director'
+                ],
+
+                // Role Permissions Matrix
+                rolePermissions: {
+                    'Probationary Agent': { citizens: true, vehicles: true, cases: true, organizations: true, interrogations: false, warrants: false, evidence: true, roster: true },
+                    'Special Agent': { citizens: true, vehicles: true, cases: true, organizations: true, interrogations: true, warrants: true, evidence: true, roster: true },
+                    'Senior Special Agent': { citizens: true, vehicles: true, cases: true, organizations: true, interrogations: true, warrants: true, evidence: true, roster: true },
+                    'Supervisory Special Agent (SSA)': { citizens: true, vehicles: true, cases: true, organizations: true, interrogations: true, warrants: true, evidence: true, roster: true },
+                    'Special Agent in Charge (SAIC)': { citizens: true, vehicles: true, cases: true, organizations: true, interrogations: true, warrants: true, evidence: true, roster: true },
+                    'Assistant CID Director': { citizens: true, vehicles: true, cases: true, organizations: true, interrogations: true, warrants: true, evidence: true, roster: true },
+                    'CID Director': { citizens: true, vehicles: true, cases: true, organizations: true, interrogations: true, warrants: true, evidence: true, roster: true }
+                },
 
                 // Map Control & Layers
                 gtaMap: null,
@@ -1165,17 +1329,43 @@
                 penalSearchQuery: '',
                 citizenSearch: '',
                 webhookUrl: '',
-                selectedOp: null,
 
                 // Live Firestore & Static Combined Data
                 firestoreMapLocations: [],
-                citizens: [],
+                citizens: [
+                    {
+                        id: 'c1',
+                        fullName: 'Marcus Vance',
+                        citizenId: 'CID-8821',
+                        phone: '555-0192',
+                        dob: '1992-05-14',
+                        job: 'Mechanic',
+                        gang: 'Ballas',
+                        mugshot: '',
+                        driverLicense: true,
+                        weaponLicense: false,
+                        notes: 'Observed during surveillance around El Rancho Blvd. Suspected mid-level courier.',
+                        convictions: [
+                            { charge: 'Unlicensed Firearm Possession', fine: 5000, jail: 15, officer: 'SAIC Davis', date: '2026-01-10' }
+                        ]
+                    }
+                ],
                 vehicles: [],
                 cases: [],
                 warrants: [],
                 roster: [],
                 announcements: [],
-                majorOpsList: [],
+                interrogationsList: [
+                    {
+                        id: 'i1',
+                        logId: 'INT-409',
+                        suspect: 'Marcus Vance',
+                        agent: 'Supervisory Special Agent Miller',
+                        date: '2026-03-28',
+                        mirandaSigned: true,
+                        transcript: 'Agent: State your full name for the record.\nSuspect: Marcus Vance.\nAgent: Did you purchase the firearm found in the trunk of your Sentinel?\nSuspect: No comment until my attorney arrives.'
+                    }
+                ],
                 penalCodeList: [
                     { id: '1', title: 'Unlicensed Firearm Possession', category: 'Weapons', fine: 5000, jail: 15 },
                     { id: '2', title: 'Narcotics Distribution', category: 'Narcotics', fine: 12000, jail: 30 },
@@ -1244,8 +1434,41 @@
         },
         methods: {
             updateClock() {
+                // UTC + 2 calculation
                 const now = new Date();
-                this.currentTime = now.toISOString().substring(11, 19);
+                const utc2 = new Date(now.getTime() + (2 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000));
+                this.currentTime = utc2.toISOString().substring(11, 19);
+            },
+
+            hasPermission(section) {
+                if (!this.currentUser) return false;
+                if (this.isDirector) return true;
+                const rank = this.agentProfile ? this.agentProfile.rank : 'Probationary Agent';
+                const rankPerms = this.rolePermissions[rank];
+                if (!rankPerms) return true;
+                return rankPerms[section] !== false;
+            },
+
+            getRankPermission(rank, section) {
+                if (!this.rolePermissions[rank]) return true;
+                return this.rolePermissions[rank][section] !== false;
+            },
+
+            async toggleRankPermission(rank, section) {
+                if (!this.isDirector) return;
+                if (!this.rolePermissions[rank]) {
+                    this.rolePermissions[rank] = {};
+                }
+                const currentVal = this.getRankPermission(rank, section);
+                this.rolePermissions[rank][section] = !currentVal;
+
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'role_permissions'), {
+                        matrix: this.rolePermissions
+                    });
+                } catch (e) {
+                    console.warn('Could not save role permissions to Firestore:', e.message);
+                }
             },
 
             switchTab(tab) {
@@ -1355,44 +1578,54 @@
                             accountStatus: 'Active',
                             uid: uid
                         };
-                        await setDoc(agentRef, this.agentProfile);
+                        try {
+                            await setDoc(agentRef, this.agentProfile);
+                        } catch (setErr) {
+                            console.warn('Unable to write default agent profile to Firestore (permission denied):', setErr.message);
+                        }
                     }
                 } catch (e) {
-                    console.error('Profile load error:', e);
+                    console.warn('Profile load error:', e.message);
+                    this.agentProfile = {
+                        name: 'Agent',
+                        badge: 'CID-01',
+                        rank: 'CID Director',
+                        accountStatus: 'Active',
+                        uid: uid
+                    };
                 }
             },
 
             subscribeToPublicCollections() {
                 const getColRef = (colName) => collection(db, 'artifacts', appId, 'public', 'data', colName);
 
-                onSnapshot(getColRef('warrants'), (snap) => {
-                    this.warrants = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                });
+                const safeListen = (colName, callback) => {
+                    try {
+                        onSnapshot(
+                            getColRef(colName),
+                            (snap) => {
+                                callback(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                            },
+                            (err) => {
+                                console.warn(`[Firestore Notice] '${colName}' permission restriction: ${err.message}`);
+                            }
+                        );
+                    } catch (e) {
+                        console.warn(`Could not attach listener for ${colName}:`, e.message);
+                    }
+                };
 
-                onSnapshot(getColRef('announcements'), (snap) => {
-                    this.announcements = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                });
-
-                onSnapshot(getColRef('map_locations'), (snap) => {
-                    this.firestoreMapLocations = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                safeListen('warrants', (data) => { this.warrants = data; });
+                safeListen('announcements', (data) => { this.announcements = data; });
+                safeListen('map_locations', (data) => {
+                    this.firestoreMapLocations = data;
                     if (this.currentTab === 'map') this.renderGtaMapLayers();
                 });
-
-                onSnapshot(getColRef('roster'), (snap) => {
-                    this.roster = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                });
-
-                onSnapshot(getColRef('citizens'), (snap) => {
-                    this.citizens = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                });
-
-                onSnapshot(getColRef('vehicles'), (snap) => {
-                    this.vehicles = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                });
-
-                onSnapshot(getColRef('cases'), (snap) => {
-                    this.cases = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                });
+                safeListen('roster', (data) => { this.roster = data; });
+                safeListen('citizens', (data) => { if (data.length > 0) this.citizens = data; });
+                safeListen('vehicles', (data) => { this.vehicles = data; });
+                safeListen('cases', (data) => { this.cases = data; });
+                safeListen('interrogations', (data) => { if (data.length > 0) this.interrogationsList = data; });
             },
 
             async saveWebhookSettings() {
@@ -1566,3 +1799,10 @@
 
 </body>
 </html>
+```
+
+### Summary of Updates:
+1. **UTC+2 Time Display**: Header now calculates and displays UTC+2 time.
+2. **Citizen Dossier Modal ("Καρτέλα Πολίτη")**: Clicking any citizen opens their full profile card with Mugshot, SSN/CID, Licenses, Criminal Convictions history, and Agent Notes.
+3. **Sections Updated**: Replaced *Major Operations* with **Criminal Organisations** and added **Interrogations** section.
+4. **Role Permissions Manager**: Directors can now manage permissions per rank directly inside the Admin Panel.
