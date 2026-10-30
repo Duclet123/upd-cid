@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S.A.S.P. // C.I.D. Terminal CAD/MDT</title>
+    <title>UPD // C.I.D. Terminal</title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -132,7 +132,7 @@
             image-rendering: -webkit-optimize-contrast;
         }
         .leaflet-popup-content-wrapper {
-            background: #090d16 !important;
+            background: #000000 !important;
             color: #ffffff !important;
             border: 1px solid #7d3db7;
             border-radius: 8px;
@@ -171,17 +171,17 @@
         #lightbox img { max-width: 85%; max-height: 85%; border: 2px solid #7d3db7; border-radius: 6px; box-shadow: 0 0 30px rgba(125, 61, 183, 0.6); }
 
         /* Custom Popup Content */
-        .popup-container { color: #fff; text-align: center; width: 210px; padding: 4px; }
+        .popup-container { color: #fff; text-align: center; width: 220px; padding: 4px; }
         .popup-img { 
-            width: 100%; height: 110px; object-fit: cover; border-radius: 4px; 
+            width: 100%; height: 120px; object-fit: cover; border-radius: 4px; 
             margin-bottom: 6px; border: 1px solid #7d3db7; cursor: pointer; 
             transition: 0.2s; background: #000;
         }
         .popup-img:hover { filter: brightness(1.2); }
-        .popup-title { font-size: 14px; font-weight: bold; color: #38bdf8; margin-bottom: 4px; display: block; border-bottom: 1px solid #1e293b; padding-bottom: 4px; }
+        .popup-title { font-size: 15px; font-weight: bold; color: #7d3db7; margin-bottom: 4px; display: block; border-bottom: 1px solid #333; padding-bottom: 4px; }
         .popup-info-row { font-size: 11px; margin: 3px 0; display: flex; justify-content: space-between; gap: 8px; font-family: monospace; }
-        .info-label { color: #94a3b8; font-weight: bold; }
-        .info-value { color: #f1f5f9; text-align: right; }
+        .info-label { color: #888; font-weight: bold; }
+        .info-value { color: #ddd; text-align: right; }
     </style>
 </head>
 <body class="bg-tactical-bg text-slate-300 antialiased selection:bg-blue-600 selection:text-white hud-grid">
@@ -425,7 +425,7 @@
 
                     <div class="hud-panel p-4">
                         <p class="text-[10px] font-mono text-slate-400 uppercase">Σημεια Χαρτη</p>
-                        <p class="text-2xl font-mono font-bold text-tactical-cyan mt-1">{{ mapLocations.length }}</p>
+                        <p class="text-2xl font-mono font-bold text-tactical-cyan mt-1">{{ allCombinedMapLocations.length }}</p>
                     </div>
 
                     <div class="hud-panel p-4">
@@ -470,8 +470,8 @@
                 <div id="mapSidebar" :class="mapSidebarHidden ? '-ml-80' : 'ml-0'" class="w-80 bg-black/95 border-r border-tactical-purple/50 flex flex-col z-20 transition-all duration-300 shrink-0 h-full font-mono">
                     <div class="p-4 border-b border-tactical-purple/40 flex justify-between items-center bg-black">
                         <div>
-                            <h2 class="text-sm font-title font-bold text-tactical-purple uppercase tracking-wider">CID Map Filter</h2>
-                            <p class="text-[10px] text-slate-500">2K25 Interactive Overlay</p>
+                            <h2 class="text-sm font-title font-bold text-tactical-purple uppercase tracking-wider">2K25 PURPLE MAP</h2>
+                            <p class="text-[10px] text-slate-500">Interactive Operational Overlay</p>
                         </div>
                         <button @click="mapSidebarHidden = true" class="px-2 py-1 bg-tactical-purple text-black text-xs font-bold rounded hover:brightness-110">
                             ❮
@@ -480,7 +480,7 @@
 
                     <!-- Search Filter -->
                     <div class="p-3 border-b border-slate-900 bg-neutral-950">
-                        <input v-model="mapSearchQuery" type="text" placeholder="🔍 Αναζήτηση τοποθεσίας..." class="w-full bg-neutral-900 border border-slate-800 focus:border-tactical-purple text-white px-3 py-1.5 text-xs rounded focus:outline-none">
+                        <input v-model="mapSearchQuery" type="text" placeholder="🔍 Αναζήτηση..." class="w-full bg-neutral-900 border border-slate-800 focus:border-tactical-purple text-white px-3 py-1.5 text-xs rounded focus:outline-none">
                     </div>
 
                     <!-- Categories Collapsible List -->
@@ -500,7 +500,7 @@
                                 </span>
                             </div>
                             <div v-if="mapCategoryOpen.gangs" class="bg-neutral-950 space-y-0.5">
-                                <div v-for="loc in filteredMapLocations('Gangs')" :key="loc.id" @click="zoomToMapLocation(loc)" class="px-4 py-2 text-xs text-slate-400 hover:text-white hover:bg-neutral-900 cursor-pointer flex items-center space-x-2 border-l-2 border-transparent hover:border-tactical-purple">
+                                <div v-for="loc in filteredMapLocations('Gangs')" :key="loc.name + loc.x" @click="zoomToMapLocation(loc)" class="px-4 py-2 text-xs text-slate-400 hover:text-white hover:bg-neutral-900 cursor-pointer flex items-center space-x-2 border-l-2 border-transparent hover:border-tactical-purple">
                                     <span class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: loc.color || '#B00707', boxShadow: '0 0 6px ' + (loc.color || '#B00707') }"></span>
                                     <span class="truncate">{{ loc.name }}</span>
                                 </div>
@@ -522,7 +522,7 @@
                                 </span>
                             </div>
                             <div v-if="mapCategoryOpen.services" class="bg-neutral-950 space-y-0.5">
-                                <div v-for="loc in filteredMapLocations('Services')" :key="loc.id" @click="zoomToMapLocation(loc)" class="px-4 py-2 text-xs text-slate-400 hover:text-white hover:bg-neutral-900 cursor-pointer flex items-center space-x-2 border-l-2 border-transparent hover:border-tactical-cyan">
+                                <div v-for="loc in filteredMapLocations('Services')" :key="loc.name + loc.x" @click="zoomToMapLocation(loc)" class="px-4 py-2 text-xs text-slate-400 hover:text-white hover:bg-neutral-900 cursor-pointer flex items-center space-x-2 border-l-2 border-transparent hover:border-tactical-cyan">
                                     <span class="w-2 h-2 rounded-full shrink-0 bg-tactical-cyan"></span>
                                     <span class="truncate">{{ loc.name }}</span>
                                 </div>
@@ -544,7 +544,7 @@
                                 </span>
                             </div>
                             <div v-if="mapCategoryOpen.jobs" class="bg-neutral-950 space-y-0.5">
-                                <div v-for="loc in filteredMapLocations('Jobs')" :key="loc.id" @click="zoomToMapLocation(loc)" class="px-4 py-2 text-xs text-slate-400 hover:text-white hover:bg-neutral-900 cursor-pointer flex items-center space-x-2 border-l-2 border-transparent hover:border-emerald-400">
+                                <div v-for="loc in filteredMapLocations('Jobs')" :key="loc.name + loc.x" @click="zoomToMapLocation(loc)" class="px-4 py-2 text-xs text-slate-400 hover:text-white hover:bg-neutral-900 cursor-pointer flex items-center space-x-2 border-l-2 border-transparent hover:border-emerald-400">
                                     <span class="w-2 h-2 rounded-full shrink-0 bg-emerald-400"></span>
                                     <span class="truncate">{{ loc.name }}</span>
                                 </div>
@@ -566,7 +566,7 @@
                                 </span>
                             </div>
                             <div v-if="mapCategoryOpen.assets" class="bg-neutral-950 space-y-0.5">
-                                <div v-for="loc in filteredMapLocations('Assets')" :key="loc.id" @click="zoomToMapLocation(loc)" class="px-4 py-2 text-xs text-slate-400 hover:text-white hover:bg-neutral-900 cursor-pointer flex items-center space-x-2 border-l-2 border-transparent hover:border-amber-400">
+                                <div v-for="loc in filteredMapLocations('Assets')" :key="loc.name + loc.x" @click="zoomToMapLocation(loc)" class="px-4 py-2 text-xs text-slate-400 hover:text-white hover:bg-neutral-900 cursor-pointer flex items-center space-x-2 border-l-2 border-transparent hover:border-amber-400">
                                     <span class="w-2 h-2 rounded-full shrink-0 bg-amber-400"></span>
                                     <span class="truncate">{{ loc.name }}</span>
                                 </div>
@@ -574,8 +574,8 @@
                         </div>
                     </div>
 
-                    <div class="p-3 bg-neutral-900 border-t border-slate-900 text-[10px] text-slate-500 text-center">
-                        GTA V Coordinates System (L.CRS.Simple)
+                    <div class="p-3 bg-neutral-900 border-t border-slate-900 text-[10px] text-slate-500 text-center font-mono">
+                        Updated: 28 October // GTA V CRS.Simple
                     </div>
                 </div>
 
@@ -840,20 +840,9 @@
 
                         <!-- MAP LOCATIONS DYNAMIC MANAGER -->
                         <div v-if="adminSubTab === 'map_manager'" class="space-y-6">
-                            <!-- Background Map Config -->
-                            <div class="hud-panel p-6 space-y-4">
-                                <h3 class="text-sm font-title font-bold text-white uppercase">Ρυθμίσεις Εικόνας Χάρτη (Overlay Image URL)</h3>
-                                <div class="flex gap-3">
-                                    <input v-model="mapOverlayUrl" type="text" placeholder="https://raw.githubusercontent.com/.../map.jpg" class="flex-1 bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white font-mono focus:outline-none">
-                                    <button @click="saveMapConfig" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-title font-bold text-xs uppercase rounded">
-                                        Αποθήκευση URL
-                                    </button>
-                                </div>
-                            </div>
-
                             <!-- Add Location Form -->
                             <div class="hud-panel p-6 space-y-4">
-                                <h3 class="text-sm font-title font-bold text-white uppercase">Προσθήκη / Επεξεργασία Τοποθεσίας Χάρτη</h3>
+                                <h3 class="text-sm font-title font-bold text-white uppercase">Προσθήκη / Επεξεργασία Τοποθεσίας Χάρτη (Live Firestore)</h3>
 
                                 <form @submit.prevent="saveMapLocation" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
@@ -892,18 +881,18 @@
                                     </div>
 
                                     <div>
-                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Ακτίνα Zone Radius (μόνο για Gangs)</label>
+                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Ακτίνα Zone Radius (για Gangs)</label>
                                         <input v-model.number="newLocationForm.radius" type="number" placeholder="100" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                     </div>
 
                                     <div>
                                         <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Όνομα Εικόνας Popup (Image File)</label>
-                                        <input v-model="newLocationForm.img" type="text" placeholder="mrpd.jpg" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
+                                        <input v-model="newLocationForm.img" type="text" placeholder="x.jpg" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                     </div>
 
                                     <div class="col-span-full flex justify-end">
                                         <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-title font-bold text-xs uppercase rounded transition">
-                                            <i class="fa-solid fa-floppy-disk mr-1.5"></i>Καταχώρηση στη Βάση
+                                            <i class="fa-solid fa-floppy-disk mr-1.5"></i>Προσθήκη / Ενημέρωση Σημείου
                                         </button>
                                     </div>
                                 </form>
@@ -911,7 +900,7 @@
 
                             <!-- Locations Firestore List -->
                             <div class="hud-panel p-6 space-y-4">
-                                <h3 class="text-sm font-title font-bold text-white uppercase">Κατάλογος Καταχωρημένων Τοποθεσιών ({{ mapLocations.length }})</h3>
+                                <h3 class="text-sm font-title font-bold text-white uppercase">Κατάλογος Δυναμικών Τοποθεσιών Firestore ({{ firestoreMapLocations.length }})</h3>
 
                                 <div class="overflow-x-auto">
                                     <table class="w-full text-left font-mono text-xs">
@@ -925,7 +914,7 @@
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-slate-800">
-                                            <tr v-for="loc in mapLocations" :key="loc.id" class="hover:bg-slate-900/50">
+                                            <tr v-for="loc in firestoreMapLocations" :key="loc.id" class="hover:bg-slate-900/50">
                                                 <td class="p-2 font-bold text-white flex items-center space-x-2">
                                                     <span class="w-2.5 h-2.5 rounded-full inline-block" :style="{ backgroundColor: loc.color || '#38bdf8' }"></span>
                                                     <span>{{ loc.name }}</span>
@@ -1059,6 +1048,89 @@
 
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'cid-upd';
 
+    // PRE-LOADED STATIC MAP DATA FROM USER SNIPPET
+    const defaultStaticMapData = {
+        gangs: [
+            {x:197.25, y:-441.50, name:"STR", category:"Gangs", type:"Gang", address:"Eclipse Blvd", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:314.17, y:3215.78, name:"LKC", category:"Gangs", type:"Gang", address:"Paleto Bay", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:-1464.65, y:219.04, name:"Nuestra Familia", category:"Gangs", type:"Gang", address:"Ineseno Road", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:1674.23, y:2285.34, name:"G Units", category:"Gangs", type:"Gang", address:"Grapeseed", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:1226.00, y:-710.00, name:"CVL", category:"Gangs", type:"Gang", address:"Favelas", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:48.82, y:-636.00, name:"Gente Nueva", category:"Gangs", type:"Gang", address:"Rockford Dr", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:-443.35, y:-969.18, name:"LS 19", category:"Gangs", type:"Gang", address:"Bay City", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:23.00, y:-1113.00, name:"GG", category:"Gangs", type:"Gang", address:"Little Seoul", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:898.00, y:-1358.00, name:"CDN", category:"Gangs", type:"Gang", address:"Popular La Mesa", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:673.00, y:-1781.00, name:"North Stars", category:"Gangs", type:"Gang", address:"Dutch London x Carson Avenue", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:385.22, y:-1422.04, name:"BSB", category:"Gangs", type:"Gang", address:"Upper Forum Drive", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:873.00, y:-1036.00, name:"OTB", category:"Gangs", type:"Gang", address:"Popular", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:402.00, y:-341.00, name:"WSR", category:"Gangs", type:"Gang", address:"Gentry Lane", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:400.00, y:-763.00, name:"Gulag Gang", category:"Gangs", type:"Gang", address:"Alta Street x Las Lagunas", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:550.00, y:-518.00, name:"7 Sins", category:"Gangs", type:"Gang", address:"Alta Street x Vinewood Blvd", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:530.00, y:-1430.00, name:"MS 13", category:"Gangs", type:"Gang", address:"Innocence Boulevard x Strawberry Avenue", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:1013.15, y:-611.11, name:"Black Serpents", category:"Gangs", type:"Gang", address:"Mirror Park Boulevard", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:-176.58, y:-100.80, name:"SSR", category:"Gangs", type:"Gang", address:"North Sheldon Avenue", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:-559.30, y:-748.01, name:"Vlaxoi", category:"Gangs", type:"Gang", address:"West Eclipse Graveyard", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:267.65, y:-1527.77, name:"SMK", category:"Gangs", type:"Gang", address:"Forum Dr.", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:-18.47, y:-1952.87, name:"Savage", category:"Gangs", type:"Gang", address:"Exeptionalist Way", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:479.67, y:1669.72, name:"Nortenos 14", category:"Gangs", type:"Gang", address:"Stab City", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:1146.90, y:-1377.58, name:"East Side Ballas", category:"Gangs", type:"Gang", address:"El Rancho Blvd", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:632.93, y:-1551.89, name:"Banished", category:"Gangs", type:"Gang", address:"Mac Donalds", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:590.23, y:-2035.35, name:"De Fox", category:"Gangs", type:"Gang", address:"Chum Street", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:534.52, y:-1882.13, name:"Jelly Boys", category:"Gangs", type:"Gang", address:"Dutch London Railways", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:1265.41, y:-899.90, name:"Mexicans", category:"Gangs", type:"Gang", address:"Nikola Place Mirror Park", color:"#B00707", radius:100, img:"x.jpg"},
+            {x:-2048.62, y:413.66, name:"Hasienda Napoles", category:"Gangs", type:"Island", address:"Great Ocean Highway", color:"#ffffff", radius:300, img:"hasienda.jpg"},
+            {x:2998.13, y:-2998.13, name:"Cayo Perico", category:"Gangs", type:"Island", address:"Cayo Perico", color:"#ffffff", radius:300, img:"cayo.jpg"},
+            {x:3145.66, y:2246.44, name:"Darkwood", category:"Gangs", type:"Island", address:"Catfish", color:"#ffffff", radius:200, img:"darkwood.jpg"}
+        ],
+        services: [
+            { x: 710.50, y: -1161.50, name: "MRPD", category:"Services", type: "Police Station", address: "Mission Row", color: "#4facfe", img: "mrpd.jpg" },
+            { x: 472.73, y: -818.34, name: "EMS", category:"Services", type: "Medical Station", address: "Alta St", color: "#ffffff", img: "ems.jpg" },
+            { x: 107.11, y: -943.06, name: "DoJ/Cityhall", category:"Services", type: "Government Facilities", address: "San Andreas Avenue", color: "#ffffff", img: "cityhall.jpg" }
+        ],
+        jobs: [
+            { x: 1368.00, y: 1729.00, name: "Marina Restaurant", category:"Jobs", type: "Food", address: "Sandy Shores", color: "#ffffff", img: "marina.jpg" },
+            { x: -421.50, y: -1315.75, name: "Vista", category:"Jobs", type: "Bar", address: "Vespucci Beach", color: "#ffffff", img: "vista.jpg" },
+            { x: -484.00, y: -1111.75, name: "Pizza This", category:"Jobs", type: "Food", address: "Vespucci/Luna Park", color: "#ffffff", img: "pizzathis.jpg" },
+            { x: 471.72, y: -1540.53, name: "Vanilla Unicorn", category:"Jobs", type: "Strip Club", address: "Strawberry", color: "#ffffff", img: "vanilla.jpg" },
+            { x: -240.50, y: -1429.75, name: "Back Side Skate Boards", category:"Jobs", type: "Skate Shop", address: "Bay City Avenue", color: "#ffffff", img: "skates.jpg" },
+            { x: 779.98, y: 1096.16, name: "Animal Ark", category:"Jobs", type: "Petshop", address: "Route 68", color: "#ffffff", img: "animal.jpg" },
+            { x: 876.50, y: -1150.75, name: "Darnell Bros", category:"Jobs", type: "Tailor", address: "Popular Str.", color: "#ffffff", img: "darnelbros.jpg" },
+            { x: 583.00, y: -585.00, name: "Ammunation Vinewood", category:"Jobs", type: "Ammunation", address: "Algonquin Blvd", color: "#ffffff", img: "ammusandy.jpg" },
+            { x: 958.00, y: -1176.00, name: "Ammunation La Mesa", category:"Jobs", type: "Ammunation", address: "Great Ocean Hwy", color: "#ffffff", img: "ammupaleto.jpg" },
+            { x: 218.25, y: 3082.00, name: "Horny's", category:"Jobs", type: "Food", address: "Great Ocean Hwy", color: "#ffffff", img: "hornys.jpg" },
+            { x: 1234.50, y: -1554.75, name: "Blazing Tattoo", category:"Jobs", type: "Tattoo Shop", address: "Innocence Blvd", color: "#ffffff", img: "blazingtattoo.jpg" },
+            { x: 136.12, y: -393.72, name: "SmoKing", category:"Jobs", type: "Smokes Store", address: "Eclipse Blvd", color: "#ffffff", img: "smoking.jpg" },
+            { x: -251.25, y: -1412.00, name: "LD Organics", category:"Jobs", type: "Shop", address: "Bay City Ave", color: "#ffffff", img: "ldorganics.jpg" },
+            { x: -56.50, y: -1226.75, name: "O'Deas", category:"Jobs", type: "Pharmacy", address: "S Rockford Drive", color: "#ffffff", img: "odeas.jpg" },
+            { x: 495.50, y: -689.00, name: "Dollar Pills", category:"Jobs", type: "Pharmacy", address: "Hawick Avenue", color: "#ffffff", img: "dollarpill.jpg" },
+            { x: 986.76, y: -1863.34, name: "Memory Lanes", category:"Jobs", type: "Food", address: "Orchavadille", color: "#ffffff", img: "memorylanes.jpg" },
+            { x: 1125.00, y: -1085.00, name: "Burgershot", category:"Jobs", type: "Food", address: "San Andreas Ave & El Rancho Blvd", color: "#ffffff", img: "burgershot.jpg" },
+            { x: 1123.00, y: -835.00, name: "Amir", category:"Jobs", type: "Food", address: "Strawberry Ave", color: "#ffffff", img: "amir.jpg" },
+            { x: -75.50, y: -1248.00, name: "Wigwam", category:"Jobs", type: "Food", address: "Palomino Ave", color: "#ffffff", img: "wigwam.jpg" },
+            { x: 647.29, y: -1064.27, name: "The Last Light Pub", category:"Jobs", type: "Bar", address: "San Andreas Ave", color: "#ffffff", img: "lastlight.jpg" },
+            { x: 470.25, y: -431.98, name: "Sightings Restaurant", category:"Jobs", type: "Food", address: "Los Santos International Airport", color: "#ffffff", img: "sightings.jpg" },
+            { x: 43.49, y: -1086.82, name: "Digital Den Little Seoul", category:"Jobs", type: "Tech Store", address: "Palomino Ave, Little Seoul", color: "#ffffff", img: "digitalseoul.jpg" },
+            { x: 528.78, y: -415.20, name: "Digital Den Vinewood", category:"Jobs", type: "Tech Store", address: "Vinewood Blvd", color: "#ffffff", img: "digitalvinewood.jpg" },
+            { x: -256.00, y: -680.50, name: "Nocturnal", category:"Jobs", type: "Food/Bar", address: "Dorset Drive & Boulevard Del Perro", color: "#ffffff", img: "nocturnal.jpg" },
+            { x: -1432.73, y: -240.24, name: "Oasis", category:"Jobs", type: "Beach Bar", address: "Great Ocean Hwy, Pacific Bluffs", color: "#ffffff", img: "oasis.jpg" },
+            { x: 667.00, y: -410.00, name: "The Palace", category:"Jobs", type: "Night Club", address: "Power Str.", color: "#ffffff", img: "thepalace.jpg" },
+            { x: 1123.50, y: -767.00, name: "Pawnshop Mirror Park", category:"Jobs", type: "Pawnshop", address: "E Mirror Drive", color: "#ffffff", img: "pawnmirror.jpg" },
+            { x: -437.40, y: -804.54, name: "Pawnshop Del Perro", category:"Jobs", type: "Pawnshop", address: "Boulevard Del Perro", color: "#ffffff", img: "pawndelperro.jpg" },
+            { x: 1127.73, y: -1028.37, name: "Hayes", category:"Jobs", type: "Mechanic", address: "W Mirror Drive", color: "#ffffff", img: "hayes.jpg" },
+            { x: -536.69, y: -1062.07, name: "Strokemasters", category:"Jobs", type: "Mechanic", address: "Magelan Avenue, Luna Park", color: "#ffffff", img: "strokemaster.jpg" },
+            { x: 1014.00, y: -1969.25, name: "Helmut's", category:"Jobs", type: "Mechanic", address: "Orchavadille Avenue", color: "#ffffff", img: "helmuts.jpg" },
+            { x: 491.50, y: 3392.00, name: "Harmony Garage", category:"Jobs", type: "Mechanic", address: "Great Ocean Hwy, Paleto", color: "#ffffff", img: "harmony.jpg" },
+            { x: 1470.50, y: 1666.25, name: "Seaton Sand's", category:"Jobs", type: "Mechanic", address: "Zacunto Ave, Sandy Shores", color: "#ffffff", img: "seaton.jpg" },
+            { x: 223.50, y: -634.50, name: "Los Santos Customs", category:"Jobs", type: "Mechanic", address: "Eastbourne Way & Carcer Way", color: "#ffffff", img: "ls.jpg" },
+            { x: 765.95, y: -660.36, name: "Auto's", category:"Jobs", type: "Mechanic", address: "Elgin Avenue", color: "#ffffff", img: "auto.jpg" },
+            { x: 294.05, y: -1363.39, name: "Benny's", category:"Jobs", type: "Mechanic", address: "Alta St.", color: "#ffffff", img: "x.jpg" },
+            { x: 1031.05, y: -643.60, name: "Road Hunters", category:"Jobs", type: "Mechanic", address: "Mirror Park Blvd", color: "#ffffff", img: "x.jpg" }
+        ],
+        assets: [
+            { x: 376.73, y: -565.71, name: "Weed Processing", category:"Assets", type: "Asset", address: "Las Lagunas", color: "#7d3db7", img: "x.jpg" }
+        ]
+    };
+
     createApp({
         data() {
             return {
@@ -1080,7 +1152,6 @@
                 gtaMap: null,
                 mapSidebarHidden: false,
                 mapSearchQuery: '',
-                mapOverlayUrl: 'https://i.imgur.com/3Z74154.jpg',
                 mapCategoryOpen: { gangs: true, services: false, jobs: false, assets: false },
                 mapLayers: { gangs: true, services: true, jobs: true, assets: true },
                 layerGroups: { gangs: null, services: null, jobs: null, assets: null },
@@ -1101,14 +1172,14 @@
                 webhookUrl: '',
                 selectedOp: null,
 
-                // Live Firestore Data
+                // Live Firestore & Static Combined Data
+                firestoreMapLocations: [],
                 citizens: [],
                 vehicles: [],
                 cases: [],
                 warrants: [],
                 roster: [],
                 announcements: [],
-                mapLocations: [],
                 majorOpsList: [],
                 penalCodeList: [
                     { id: '1', title: 'Οπλοφορία χωρίς άδεια', category: 'Οπλοκατοχή', fine: 5000, jail: 15 },
@@ -1128,6 +1199,15 @@
             },
             activeWarrantsCount() {
                 return this.warrants.filter(w => w.active).length;
+            },
+            allCombinedMapLocations() {
+                const staticFlat = [
+                    ...defaultStaticMapData.gangs,
+                    ...defaultStaticMapData.services,
+                    ...defaultStaticMapData.jobs,
+                    ...defaultStaticMapData.assets
+                ];
+                return [...staticFlat, ...this.firestoreMapLocations];
             },
             filteredPenalCode() {
                 if (!this.penalSearchQuery) return this.penalCodeList;
@@ -1190,7 +1270,7 @@
             },
 
             filteredMapLocations(category) {
-                let list = this.mapLocations.filter(l => l.category === category);
+                let list = this.allCombinedMapLocations.filter(l => l.category === category);
                 if (this.mapSearchQuery) {
                     const q = this.mapSearchQuery.toLowerCase().trim();
                     list = list.filter(l => l.name.toLowerCase().includes(q) || (l.address && l.address.toLowerCase().includes(q)));
@@ -1247,7 +1327,7 @@
                 try {
                     const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'map_locations');
                     await addDoc(colRef, { ...this.newLocationForm });
-                    alert('Η τοποθεσία καταχωρήθηκε επιτυχώς στο χάρτη!');
+                    alert('Η τοποθεσία καταχωρήθηκε επιτυχώς στη βάση!');
                     this.newLocationForm = { name: '', category: 'Gangs', x: null, y: null, address: '', color: '#B00707', radius: 100, img: 'x.jpg' };
                 } catch (e) {
                     alert('Σφάλμα καταχώρησης: ' + e.message);
@@ -1261,17 +1341,6 @@
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'map_locations', id));
                 } catch (e) {
                     alert('Σφάλμα διαγραφής: ' + e.message);
-                }
-            },
-
-            async saveMapConfig() {
-                try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'map_config'), {
-                        overlayUrl: this.mapOverlayUrl
-                    });
-                    alert('Το URL του χάρτη αποθηκεύτηκε!');
-                } catch (e) {
-                    alert('Σφάλμα: ' + e.message);
                 }
             },
 
@@ -1325,15 +1394,8 @@
                 });
 
                 onSnapshot(getColRef('map_locations'), (snap) => {
-                    this.mapLocations = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    this.firestoreMapLocations = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     if (this.currentTab === 'map') this.renderGtaMapLayers();
-                });
-
-                onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'map_config'), (snap) => {
-                    if (snap.exists() && snap.data().overlayUrl) {
-                        this.mapOverlayUrl = snap.data().overlayUrl;
-                        if (this.gtaMap) this.initGtaMap();
-                    }
                 });
 
                 onSnapshot(getColRef('roster'), (snap) => {
@@ -1409,7 +1471,7 @@
                     zoomControl: false
                 });
 
-                L.imageOverlay(this.mapOverlayUrl, bounds).addTo(this.gtaMap);
+                L.imageOverlay('icons/map.jpg', bounds).addTo(this.gtaMap);
                 this.gtaMap.fitBounds(bounds);
 
                 // Initialize Layer Groups
@@ -1429,9 +1491,9 @@
                     }
 
                     L.popup().setLatLng(e.latlng).setContent(`
-                        <div style="font-family:monospace; padding:4px; text-align:center;">
-                            <strong style="color:#38bdf8; font-size:12px; display:block; margin-bottom:4px;">📍 GTA V COORDINATES</strong>
-                            <div style="background:#000; border:1px solid #1e293b; padding:4px; font-size:11px; color:#fff;">
+                        <div class="admin-popup-container" style="font-family:monospace; padding:4px; text-align:center;">
+                            <strong style="color:#7d3db7; font-size:13px; display:block; margin-bottom:4px;">🛠️ ADMIN INSPECTOR</strong>
+                            <div style="background:#111; border:1px solid #333; padding:4px; font-size:11px; color:#fff;">
                                 x: ${x}, y: ${y}
                             </div>
                             ${adminBtn}
@@ -1451,19 +1513,20 @@
                 const gtaToMap = (x, y) => [y, x];
 
                 const createPopupHtml = (data) => {
-                    let imgHtml = data.img ? `<img src="${data.img}" class="popup-img" onclick="openImage(this.src)" title="Click to enlarge">` : '';
+                    let imgSrc = data.img ? (data.img.startsWith('http') ? data.img : 'images/' + data.img) : 'images/x.jpg';
+                    let imgHtml = `<img src="${imgSrc}" class="popup-img" onclick="openImage(this.src)" title="Click to enlarge" onerror="this.src='https://placehold.co/300x150/000000/7d3db7?text=NO+IMAGE'">`;
+                    let typeHtml = data.type ? `<div class="popup-info-row"><span class="info-label">Type:</span><span class="info-value">${data.type}</span></div>` : '';
                     let addrHtml = data.address ? `<div class="popup-info-row"><span class="info-label">Address:</span><span class="info-value">${data.address}</span></div>` : '';
-                    let coordsHtml = `<div class="popup-info-row"><span class="info-label">Coords:</span><span class="info-value">${data.x}, ${data.y}</span></div>`;
-                    return `<div class="popup-container">${imgHtml}<span class="popup-title">${data.name}</span>${addrHtml}${coordsHtml}</div>`;
+                    return `<div class="popup-container">${imgHtml}<span class="popup-title">${data.name}</span>${typeHtml}${addrHtml}</div>`;
                 };
 
-                this.mapLocations.forEach(loc => {
+                this.allCombinedMapLocations.forEach(loc => {
                     const coords = gtaToMap(loc.x, loc.y);
                     const groupKey = loc.category ? loc.category.toLowerCase() : 'gangs';
                     const group = this.layerGroups[groupKey] || this.layerGroups.gangs;
 
                     if (loc.category === 'Gangs') {
-                        // Gang territory circle + marker
+                        // Circle zone for gangs/islands
                         L.circle(coords, {
                             color: loc.color || '#B00707',
                             fillColor: loc.color || '#B00707',
@@ -1472,19 +1535,27 @@
                         }).addTo(group);
 
                         L.circleMarker(coords, {
-                            radius: 5,
+                            radius: 4,
                             color: '#ffffff',
                             fillColor: loc.color || '#B00707',
                             fillOpacity: 1
                         }).bindPopup(createPopupHtml(loc)).addTo(group);
-                    } else {
-                        // Icon marker / circle marker for services, jobs, assets
+                    } else if (loc.category === 'Assets') {
                         L.circleMarker(coords, {
                             radius: 6,
                             color: '#ffffff',
-                            fillColor: loc.color || '#38bdf8',
+                            fillColor: loc.color || '#7d3db7',
                             fillOpacity: 1,
                             weight: 2
+                        }).bindPopup(createPopupHtml(loc)).addTo(group);
+                    } else {
+                        // Services & Jobs
+                        L.circleMarker(coords, {
+                            radius: 5,
+                            color: '#ffffff',
+                            fillColor: loc.color || '#38bdf8',
+                            fillOpacity: 1,
+                            weight: 1.5
                         }).bindPopup(createPopupHtml(loc)).addTo(group);
                     }
                 });
