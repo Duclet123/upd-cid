@@ -112,7 +112,7 @@
         <!-- LOGO & BRANDING HEADER -->
         <div class="p-4 border-b border-slate-800/80 flex items-center space-x-3 cursor-pointer" @click="go('welcome'); mobileMenuOpen=false">
             <div class="w-12 h-12 rounded-2xl bg-bg border border-tc/40 flex items-center justify-center text-tc shadow-md shrink-0 overflow-hidden p-1">
-                <img :src="db.logoUrl || 'images/CID Logo.png'" @error="handleImgErr" class="w-full h-full object-contain">
+                <img src="images/CID Logo.png" @error="handleImgErr" class="w-full h-full object-contain">
                 <svg class="w-full h-full hidden" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M50 5 L90 20 V55 C90 80 50 110 50 110 C50 110 10 80 10 55 V20 L50 5 Z" fill="#0f0b1a" stroke="#c084fc" stroke-width="4" />
                     <path d="M50 10 L85 23 V53 C85 75 50 102 50 102 C50 102 15 75 15 53 V23 L50 10 Z" fill="#1a102f" stroke="#a855f7" stroke-width="2" />
@@ -216,39 +216,29 @@
         <div class="flex-1 overflow-y-auto" :class="tab==='map' ? 'p-0 flex flex-col' : 'p-6'">
 
             <!-- WELCOME LANDING VIEW (DEFAULTS ON LOAD) -->
-            <div v-if="tab==='welcome'" class="h-full flex flex-col items-center justify-center p-8 text-center space-y-6">
-                <div class="relative group">
-                    <img :src="db.logoUrl || 'images/CID Logo.png'" @error="handleImgErr" class="w-48 h-48 object-contain drop-shadow-[0_0_35px_rgba(192,132,252,0.4)] transition duration-500 transform hover:scale-105">
-                    <div class="w-48 h-48 rounded-2xl bg-panel border-2 border-tc/50 flex items-center justify-center text-tc shadow-2xl hidden p-2">
-                        <svg class="w-full h-full" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M50 5 L90 20 V55 C90 80 50 110 50 110 C50 110 10 80 10 55 V20 L50 5 Z" fill="#0f0b1a" stroke="#c084fc" stroke-width="4" />
-                            <path d="M50 10 L85 23 V53 C85 75 50 102 50 102 C50 102 15 75 15 53 V23 L50 10 Z" fill="#1a102f" stroke="#a855f7" stroke-width="2" />
-                            <polygon points="50,22 55,35 68,30 62,42 75,48 62,54 68,66 55,61 50,74 45,61 32,66 38,54 25,48 38,42 32,30 45,35" fill="#c084fc" opacity="0.85"/>
-                            <circle cx="50" cy="48" r="14" fill="#06040a" stroke="#e9d5ff" stroke-width="2"/>
-                            <text x="50" y="45" font-family="Syne, sans-serif" font-size="7" font-weight="900" fill="#ffffff" text-anchor="middle">U.P.D.</text>
-                            <text x="50" y="53" font-family="Share Tech Mono, monospace" font-size="6" font-weight="bold" fill="#c084fc" text-anchor="middle">C.I.D.</text>
-                            <path d="M22 82 L50 76 L78 82 L70 90 L50 85 L30 90 Z" fill="#9333ea" stroke="#c084fc" stroke-width="1.5"/>
-                            <text x="50" y="85" font-family="Syne, sans-serif" font-size="5" font-weight="bold" fill="#ffffff" text-anchor="middle">OFFICIAL POLICE</text>
-                        </svg>
+            <div v-if="tab==='welcome'" class="h-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden rounded-2xl">
+                <!-- BACKGROUND IMAGE WITH OVERLAY -->
+                <div class="absolute inset-0 bg-center bg-no-repeat bg-contain opacity-20 pointer-events-none transition-all duration-500" :style="{ backgroundImage: 'url(' + (db.logoUrl || 'images/CID Logo.png') + ')' }"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-bg via-bg/80 to-transparent pointer-events-none"></div>
+
+                <div class="relative z-10 hud p-8 md:p-12 max-w-2xl border-tc/30 backdrop-blur-md bg-panel/75 space-y-6 shadow-2xl">
+                    <div class="space-y-2">
+                        <h1 class="text-2xl md:text-3xl font-title font-extrabold text-white tracking-widest uppercase">
+                            UNIFIED POLICE DEPARTMENT
+                        </h1>
+                        <h2 class="text-sm md:text-base font-title font-bold text-tc tracking-widest uppercase">
+                            CRIMINAL INVESTIGATION DIVISION // CAD & MDT
+                        </h2>
+                        <p class="text-xs font-mono text-slate-300 leading-relaxed pt-2">
+                            Welcome to the official U.P.D. C.I.D. Terminal database interface. Access restricted intelligence dossiers, criminal organisation tracking, ballistics registries, warrants, and real-time tactical grid maps.
+                        </p>
                     </div>
-                </div>
 
-                <div class="space-y-2 max-w-xl">
-                    <h1 class="text-2xl font-title font-extrabold text-white tracking-widest uppercase">
-                        UNIFIED POLICE DEPARTMENT
-                    </h1>
-                    <h2 class="text-base font-title font-bold text-tc tracking-widest uppercase">
-                        CRIMINAL INVESTIGATION DIVISION // CAD & MDT
-                    </h2>
-                    <p class="text-xs font-mono text-slate-400 leading-relaxed pt-2">
-                        Welcome to the official U.P.D. C.I.D. Terminal database interface. Access restricted intelligence dossiers, criminal organisation tracking, ballistics registries, warrants, and real-time tactical grid maps.
-                    </p>
-                </div>
-
-                <div class="flex flex-wrap justify-center gap-4 pt-4 font-mono text-xs">
-                    <button @click="go('map')" class="btn px-6 py-3 text-sm uppercase"><i class="fa-solid fa-map-location-dot mr-2"></i> Launch Tactical Map</button>
-                    <button v-if="!user" @click="showLogin=true" class="btn bg-slate-800 border border-slate-700 px-6 py-3 text-sm uppercase hover:bg-slate-700"><i class="fa-solid fa-right-to-bracket mr-2"></i> Agent Access Login</button>
-                    <button v-else @click="go('cases')" class="btn bg-amber-600 px-6 py-3 text-sm uppercase"><i class="fa-solid fa-folder-open mr-2"></i> Access Active Case Files</button>
+                    <div class="flex flex-wrap justify-center gap-4 pt-2 font-mono text-xs">
+                        <button @click="go('map')" class="btn px-6 py-3 text-sm uppercase"><i class="fa-solid fa-map-location-dot mr-2"></i> Launch Tactical Map</button>
+                        <button v-if="!user" @click="showLogin=true" class="btn bg-slate-800 border border-slate-700 px-6 py-3 text-sm uppercase hover:bg-slate-700"><i class="fa-solid fa-right-to-bracket mr-2"></i> Agent Access Login</button>
+                        <button v-else @click="go('cases')" class="btn bg-amber-600 px-6 py-3 text-sm uppercase"><i class="fa-solid fa-folder-open mr-2"></i> Access Active Case Files</button>
+                    </div>
                 </div>
             </div>
 
@@ -543,22 +533,6 @@
                 </div>
 
                 <div v-if="atab==='accounts'" class="hud p-6 space-y-4 font-mono text-xs">
-                    <!-- LOGO & BRANDING MANAGEMENT -->
-                    <div class="p-4 bg-bg border border-tc/30 rounded-xl space-y-3">
-                        <h4 class="text-tc font-bold uppercase text-xs flex items-center gap-2">
-                            <i class="fa-solid fa-image"></i> Department Logo Settings
-                        </h4>
-                        <div class="flex flex-wrap items-center gap-3">
-                            <input v-model="db.logoUrl" placeholder="Paste Logo Image URL (e.g. https://... or images/CID Logo.png)" class="inp flex-1">
-                            <label class="btn bg-purple-600 cursor-pointer">
-                                Upload Logo File
-                                <input type="file" accept="image/*" class="hidden" @change="handleLogoUpload">
-                            </label>
-                            <button @click="db.logoUrl='images/CID Logo.png'" class="btn bg-slate-800 border border-slate-700">Reset Default</button>
-                        </div>
-                        <p class="text-[10px] text-slate-400">Uploading a logo here embeds it directly into your database so it displays across all devices and in PDF document exports.</p>
-                    </div>
-
                     <div class="flex justify-between items-center pt-2">
                         <h3 class="text-sm font-title font-bold text-white uppercase">Issue Agent Credentials</h3>
                         <button @click="ensureDefaultAccounts(true)" class="btn bg-amber-600 !py-1 text-[11px]">
@@ -703,7 +677,7 @@
         <div class="w-full max-w-md hud p-6 relative">
             <button @click="showLogin=false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             <div class="flex justify-center mb-3">
-                <img :src="db.logoUrl || 'images/CID Logo.png'" @error="handleImgErr" class="h-16 w-auto object-contain">
+                <img src="images/CID Logo.png" @error="handleImgErr" class="h-16 w-auto object-contain">
                 <div class="h-16 w-16 hidden">
                     <svg class="w-full h-full" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M50 5 L90 20 V55 C90 80 50 110 50 110 C50 110 10 80 10 55 V20 L50 5 Z" fill="#0f0b1a" stroke="#c084fc" stroke-width="4" />
@@ -941,7 +915,7 @@
             <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4">
                 <div class="flex items-center gap-4">
                     <div class="w-16 h-16 shrink-0 flex items-center justify-center">
-                        <img :src="db.logoUrl || 'images/CID Logo.png'" @error="handleImgErr" class="w-16 h-16 object-contain">
+                        <img src="images/CID Logo.png" @error="handleImgErr" class="w-16 h-16 object-contain">
                         <div class="w-16 h-16 hidden">
                             <svg class="w-full h-full" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M50 5 L90 20 V55 C90 80 50 110 50 110 C50 110 10 80 10 55 V20 L50 5 Z" fill="#0f0b1a" stroke="#231938" stroke-width="4" />
@@ -1039,7 +1013,7 @@ const fileToData = f => new Promise(res => {
 const COL = (label, icon, fields) => ({ label, icon, fields, items: [], builtin: true });
 
 const defaults = () => ({
-    logoUrl: 'images/CID Logo.png',
+    logoUrl: 'images/CID%20Logo.png',
     accounts: [],
     perms: { 'Probationary Detective': { interrogations: 'none' } },
     templates: {
@@ -1187,14 +1161,6 @@ const app = createApp({
             e.target.style.display = 'none';
             if (e.target.nextElementSibling) {
                 e.target.nextElementSibling.classList.remove('hidden');
-            }
-        };
-
-        const handleLogoUpload = async e => {
-            const f = e.target.files[0]; e.target.value = '';
-            if (f) {
-                const dataUrl = await fileToData(f);
-                if (dataUrl) db.logoUrl = dataUrl;
             }
         };
 
@@ -1372,6 +1338,11 @@ const app = createApp({
         const uploadVideoFile = e => {
             const f = e.target.files[0]; e.target.value = '';
             if (f && rec.value) {
+                // Check if video file size exceeds 2MB to prevent local storage quota overflow
+                if (f.size > 2 * 1024 * 1024) {
+                    alert('Video file is too large (>2MB) to store directly in browser memory. Please use a direct Video URL link (e.g., Streamable, Discord, YouTube, Imgur) for larger footage.');
+                    return;
+                }
                 const fr = new FileReader();
                 fr.onload = () => { rec.value.obj.videoUrl = fr.result; };
                 fr.readAsDataURL(f);
@@ -1637,14 +1608,26 @@ const app = createApp({
         watch(db, () => {
             clearTimeout(st);
             st = setTimeout(() => {
+                let localStorageSuccess = false;
                 try {
                     localStorage.setItem(DB_KEY, JSON.stringify(db));
+                    localStorageSuccess = true;
                     saveError.value = '';
-                    if (firebaseConnected.value && typeof firebase !== 'undefined') {
-                        firebase.firestore().collection('cid_terminal').doc('master_db').set(JSON.parse(JSON.stringify(db)));
-                    }
                 } catch (e) {
-                    saveError.value = 'Local storage full. Delete heavy photos/videos or Export backup.';
+                    saveError.value = 'Local browser storage full (5MB limit). Photos/Videos saved via Live Firebase Sync if online. Use URL links for heavy media.';
+                }
+
+                // Always push to Firebase if live connection is active
+                if (firebaseConnected.value && typeof firebase !== 'undefined') {
+                    try {
+                        firebase.firestore().collection('cid_terminal').doc('master_db').set(JSON.parse(JSON.stringify(db)));
+                        if (!localStorageSuccess) {
+                            // If saved to Firebase successfully, downgrade save error warning
+                            saveError.value = 'Saved to Cloud Database (Local cache full). Recommend using image/video URL links for heavy files.';
+                        }
+                    } catch (fbErr) {
+                        console.warn('Firebase push error:', fbErr);
+                    }
                 }
             }, 300);
         }, { deep: true });
@@ -1663,7 +1646,7 @@ const app = createApp({
             firebaseConnected, fbStatusMessage, firebaseConfigRaw, auth, na, nt, nr, nl, rec, recErr, gal, zoom, zs, pdfExportItem,
             caseCodeNum, newVideoUrl, showReportModal, newReportForm, showUploadDocModal, newDocForm, showPenalEditModal, penalForm,
             mImg, mUrl, mMode, mBusy, mStatus, mResults, RANKS, isTop, isAdmin, rankLevel, level, setPerm, permKeys,
-            permLabel, col, go, nav, subFields, shown, listItems, penalList, tplCols, tplFor, allGalleryPhotos, handleImgErr, handleLogoUpload,
+            permLabel, col, go, nav, subFields, shown, listItems, penalList, tplCols, tplFor, allGalleryPhotos, handleImgErr,
             citizenListForSelect, vehicleListForSelect, filteredMapItems, login, logout, addAgent, resetPw, delAgent, ensureDefaultAccounts,
             canEditRec, openRec, newRec, closeRec, saveNew, delRec, applyTpl, caseById, caseTitle, freeCases, attachCase,
             detachCase, attachCitizen, detachCitizen, attachVehicle, detachVehicle, attachVideoUrl, uploadVideoFile,
