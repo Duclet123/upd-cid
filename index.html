@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="el" class="dark">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UPD // C.I.D. Terminal</title>
+    <title>S.A.S.P. // C.I.D. Terminal CAD/MDT</title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,7 +16,7 @@
                         tactical: {
                             bg: '#04070c',
                             panel: '#0a0f1d',
-                            panelBorder: '#1e293b',
+                            panelBorder: '#1f293d',
                             accent: '#2563eb',
                             cyan: '#38bdf8',
                             purple: '#7d3db7',
@@ -80,7 +80,7 @@
         /* HUD Panels */
         .hud-panel {
             background-color: #0a0f1d;
-            border: 1px solid #1e293b;
+            border: 1px solid #1f293d;
             position: relative;
         }
 
@@ -106,7 +106,7 @@
             border-right: 2px solid #38bdf8;
         }
 
-        /* Scrollbar */
+        /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 5px;
             height: 5px;
@@ -115,7 +115,7 @@
             background: #04070c;
         }
         ::-webkit-scrollbar-thumb {
-            background: #1e293b;
+            background: #1f293d;
             border-radius: 2px;
         }
         ::-webkit-scrollbar-thumb:hover {
@@ -188,7 +188,7 @@
 
 <!-- Lightbox Modal for Map Popup Images -->
 <div id="lightbox" onclick="this.style.display='none'">
-    <img src="" id="lightbox-img">
+    <img src="" id="lightbox-img" alt="Enlarged View">
 </div>
 
 <div class="fixed inset-0 scanlines z-50 pointer-events-none opacity-30"></div>
@@ -206,18 +206,18 @@
                 <div class="inline-flex items-center justify-center w-14 h-14 rounded bg-tactical-bg border border-tactical-cyan/40 text-tactical-cyan mb-3">
                     <i class="fa-solid fa-shield-halved text-2xl"></i>
                 </div>
-                <h2 class="text-xl font-title font-bold tracking-wider text-white uppercase">C.I.D. Terminal Login</h2>
-                <p class="text-[11px] font-mono text-slate-400 mt-0.5 uppercase tracking-widest">Είσοδος Εξουσιοδοτημένου Πράκτορα</p>
+                <h2 class="text-xl font-title font-bold tracking-wider text-white uppercase">C.I.D. Agent Sign In</h2>
+                <p class="text-[11px] font-mono text-slate-400 mt-0.5 uppercase tracking-widest">Authorized Personnel Access Only</p>
             </div>
 
             <form @submit.prevent="handleLogin" class="space-y-4">
                 <div>
-                    <label class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Όνομα Χρήστη (Username)</label>
+                    <label class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Username</label>
                     <input v-model="authForm.username" type="text" required placeholder="John_Doe" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white focus:outline-none font-mono">
                 </div>
 
                 <div>
-                    <label class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Κωδικός Ασφαλείας</label>
+                    <label class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Security Password</label>
                     <input v-model="authForm.password" type="password" required placeholder="••••••••" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white focus:outline-none">
                 </div>
 
@@ -228,7 +228,7 @@
                 <button type="submit" :disabled="authLoading" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-title font-bold uppercase tracking-wider rounded transition flex items-center justify-center space-x-2 disabled:opacity-50">
                     <i v-if="!authLoading" class="fa-solid fa-right-to-bracket"></i>
                     <i v-else class="fa-solid fa-spinner animate-spin"></i>
-                    <span>{{ authLoading ? 'Σύνδεση...' : 'Είσοδος στο Σύστημα CID' }}</span>
+                    <span>{{ authLoading ? 'Authenticating...' : 'Sign In To Terminal' }}</span>
                 </button>
             </form>
         </div>
@@ -240,15 +240,15 @@
             <div class="w-14 h-14 rounded bg-red-500/10 border border-red-500/40 text-red-500 flex items-center justify-center mx-auto text-2xl">
                 <i class="fa-solid fa-user-slash"></i>
             </div>
-            <h2 class="text-lg font-title font-bold text-white uppercase tracking-wider">Πρόσβαση Δεν Επιτρέπεται</h2>
+            <h2 class="text-lg font-title font-bold text-white uppercase tracking-wider">Access Restricted</h2>
             <p v-if="agentProfile.accountStatus === 'Pending Approval'" class="text-xs text-slate-300 leading-relaxed">
-                Ο λογαριασμός σας (<strong class="text-tactical-cyan font-mono">{{ agentProfile.name }}</strong>) εκκρεμεί για έγκριση από τον <strong class="text-white">CID Director</strong>.
+                Your account (<strong class="text-tactical-cyan font-mono">{{ agentProfile.name }}</strong>) is pending approval by the <strong class="text-white">CID Director</strong>.
             </p>
             <p v-else class="text-xs text-red-400 leading-relaxed font-mono">
-                Ο λογαριασμός σας έχει τεθεί σε **Αναστολή (Suspended)**.
+                Your account has been placed under **Suspension**. Contact CID Leadership.
             </p>
             <button @click="handleLogout" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-mono font-bold text-xs uppercase rounded transition">
-                Αποσύνδεση
+                Sign Out
             </button>
         </div>
     </div>
@@ -266,47 +266,23 @@
             </div>
         </div>
 
-        <!-- User Profile Status Box (When Logged In) -->
-        <div v-if="currentUser" class="p-3 m-3 bg-tactical-bg/90 border border-slate-800 rounded">
-            <div class="flex items-center space-x-2.5 mb-2">
-                <div class="w-7 h-7 rounded bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs border border-slate-700 font-mono">
-                    {{ agentProfile.name ? agentProfile.name.split(' ').map(n=>n[0]).join('') : 'AG' }}
-                </div>
-                <div class="overflow-hidden">
-                    <p class="text-xs font-bold text-white truncate">{{ agentProfile.name || 'Πράκτορας' }}</p>
-                    <p class="text-[10px] text-slate-400 font-mono">{{ agentProfile.rank || 'Agent' }} | {{ agentProfile.badge || 'CID' }}</p>
-                </div>
-            </div>
-            
-            <!-- Duty Status Switcher -->
-            <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
-                <span class="text-[10px] text-slate-400 font-mono">DUTY STATUS:</span>
-                <select v-model="agentProfile.status" @change="updateAgentDutyStatus" class="bg-tactical-panel border border-slate-700 rounded text-[10px] text-white px-1.5 py-0.5 focus:outline-none font-mono" :class="statusColorClass(agentProfile.status)">
-                    <option value="10-8">10-8 (On Duty)</option>
-                    <option value="10-6">10-6 (Busy / Ops)</option>
-                    <option value="10-97">10-97 (Arrived)</option>
-                    <option value="10-7">10-7 (Off Duty)</option>
-                </select>
-            </div>
-        </div>
-
         <!-- Navigation Tabs -->
         <nav class="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-            <div class="text-[9px] font-mono text-slate-500 uppercase px-2 py-1 tracking-wider">Δημοσιες Ενοτητες</div>
+            <div class="text-[9px] font-mono text-slate-500 uppercase px-2 py-1 tracking-wider">Public Services</div>
 
             <button @click="switchTab('dashboard')" :class="navClass('dashboard')">
                 <i class="fa-solid fa-bullhorn w-5 text-tactical-cyan"></i>
-                <span>Ανακοινώσεις & Οδηγίες</span>
+                <span>Directives & News</span>
             </button>
 
             <button @click="switchTab('map')" :class="navClass('map')">
                 <i class="fa-solid fa-map-location-dot w-5 text-tactical-cyan"></i>
-                <span>Επιχειρησιακός Χάρτης</span>
+                <span>Tactical Map</span>
             </button>
 
             <button @click="switchTab('public_warrants')" :class="navClass('public_warrants')">
                 <i class="fa-solid fa-triangle-exclamation w-5 text-red-400"></i>
-                <span>Καταζητούμενοι</span>
+                <span>Most Wanted</span>
                 <span v-if="activeWarrantsCount > 0" class="px-1.5 py-0.2 bg-red-500/20 text-red-400 border border-red-500/40 rounded-full text-[9px] font-mono ml-auto">
                     {{ activeWarrantsCount }}
                 </span>
@@ -314,59 +290,89 @@
 
             <button @click="switchTab('penal_code')" :class="navClass('penal_code')">
                 <i class="fa-solid fa-gavel w-5 text-amber-400"></i>
-                <span>Ποινικός Κώδικας</span>
+                <span>Penal Code</span>
             </button>
 
             <!-- RESTRICTED CID AGENT TABS -->
             <template v-if="currentUser">
                 <div class="text-[9px] font-mono text-tactical-cyan uppercase px-2 pt-3 pb-1 tracking-wider border-t border-slate-800 mt-2">
-                    <i class="fa-solid fa-lock text-[8px] mr-1"></i>Περιοχη Πρακτορων (MDT)
+                    <i class="fa-solid fa-lock text-[8px] mr-1"></i>Agent MDT Operations
                 </div>
 
                 <button @click="switchTab('citizens')" :class="navClass('citizens')">
                     <i class="fa-solid fa-address-card w-5"></i>
-                    <span>Μητρώο Πολιτών</span>
+                    <span>Citizen Database</span>
                 </button>
 
                 <button @click="switchTab('vehicles')" :class="navClass('vehicles')">
                     <i class="fa-solid fa-car w-5"></i>
-                    <span>Αναζήτηση Οχημάτων</span>
+                    <span>Vehicle Lookup</span>
                 </button>
 
                 <button @click="switchTab('cases')" :class="navClass('cases')">
                     <i class="fa-solid fa-folder-open w-5"></i>
-                    <span>Φάκελοι Υποθέσεων</span>
+                    <span>Case Files</span>
                 </button>
 
                 <button @click="switchTab('investigations')" :class="navClass('investigations')">
                     <i class="fa-solid fa-magnifying-glass-chart w-5 text-amber-400"></i>
-                    <span>Ερευνητικές Υποθέσεις</span>
+                    <span>Major Operations</span>
                 </button>
 
                 <button @click="switchTab('warrants')" :class="navClass('warrants')">
                     <i class="fa-solid fa-file-signature w-5"></i>
-                    <span>Εντάλματα (MDT)</span>
+                    <span>Warrants (MDT)</span>
                 </button>
 
                 <button @click="switchTab('evidence')" :class="navClass('evidence')">
                     <i class="fa-solid fa-box-archive w-5"></i>
-                    <span>Αποθήκη Πειστηρίων</span>
+                    <span>Evidence Locker</span>
                 </button>
 
                 <button @click="switchTab('roster')" :class="navClass('roster')">
                     <i class="fa-solid fa-users w-5"></i>
-                    <span>Δύναμη Υπηρεσίας</span>
+                    <span>Personnel Roster</span>
                 </button>
 
                 <!-- ADMIN PANEL BUTTON -->
                 <div v-if="isDirector" class="pt-2">
                     <button @click="switchTab('admin')" :class="navClass('admin')" class="bg-red-950/30 border-red-500/30 text-red-400 hover:text-white">
                         <i class="fa-solid fa-user-gear w-5 text-red-400"></i>
-                        <span class="font-bold">Πίνακας Διαχείρισης</span>
+                        <span class="font-bold">Director Admin Panel</span>
                     </button>
                 </div>
             </template>
         </nav>
+
+        <!-- USER ACCOUNT SECTION (BOTTOM LEFT OF SIDEBAR) -->
+        <div class="p-3 border-t border-slate-800 bg-tactical-bg/90 shrink-0">
+            <!-- LOGGED OUT STATE -->
+            <div v-if="!currentUser">
+                <button @click="showLoginModal = true" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-title font-bold rounded text-xs uppercase transition shadow flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Agent Sign In</span>
+                </button>
+            </div>
+
+            <!-- LOGGED IN STATE -->
+            <div v-else class="space-y-2">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-tactical-cyan font-bold text-xs border border-slate-700 font-mono shrink-0">
+                        {{ agentProfile.name ? agentProfile.name.split(' ').map(n=>n[0]).join('') : 'AG' }}
+                    </div>
+                    <div class="overflow-hidden min-w-0 flex-1">
+                        <p class="text-xs font-bold text-white truncate">{{ agentProfile.name || 'Agent' }}</p>
+                        <p class="text-[10px] text-slate-400 font-mono truncate">{{ agentProfile.rank || 'Agent' }}</p>
+                        <p class="text-[9px] text-tactical-cyan font-mono truncate">{{ agentProfile.badge || 'BADGE' }}</p>
+                    </div>
+                </div>
+
+                <button @click="handleLogout" class="w-full py-1.5 bg-slate-800 hover:bg-red-600/80 text-slate-300 hover:text-white rounded text-xs font-mono transition flex items-center justify-center space-x-1.5 border border-slate-700">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Sign Out</span>
+                </button>
+            </div>
+        </div>
     </aside>
 
     <!-- MAIN CONTENT HUD AREA -->
@@ -378,25 +384,14 @@
                 <span class="text-xs font-title font-bold text-white tracking-widest uppercase">
                     SAN ANDREAS STATE POLICE // CRIMINAL INVESTIGATION DIVISION
                 </span>
-                <span class="text-slate-600">|</span>
-                <span class="text-xs text-slate-400 font-mono"><i class="fa-regular fa-clock mr-1 text-tactical-cyan"></i>{{ currentTime }} UTC</span>
             </div>
 
-            <!-- Single Clean Action Button -->
-            <div class="flex items-center space-x-3">
-                <button v-if="!currentUser" @click="showLoginModal = true" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-title font-bold rounded text-xs uppercase transition shadow-lg flex items-center space-x-1.5">
-                    <i class="fa-solid fa-lock text-xs"></i>
-                    <span>Σύνδεση</span>
-                </button>
-
-                <div v-else class="flex items-center space-x-3">
-                    <span class="text-xs text-slate-300 font-mono">
-                        {{ agentProfile.name }} (<strong class="text-tactical-cyan">{{ agentProfile.badge }}</strong>)
-                    </span>
-                    <button @click="handleLogout" class="px-3 py-1 bg-slate-800 hover:bg-red-600/80 text-slate-300 hover:text-white rounded text-xs font-mono transition">
-                        <i class="fa-solid fa-right-from-bracket mr-1"></i>Αποσύνδεση
-                    </button>
-                </div>
+            <div class="flex items-center space-x-3 text-xs font-mono text-slate-400">
+                <span class="text-tactical-cyan uppercase tracking-wider text-[10px] px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded">
+                    RESTRICTED CAD/MDT
+                </span>
+                <span class="text-slate-600">|</span>
+                <span><i class="fa-regular fa-clock mr-1 text-tactical-cyan"></i>{{ currentTime }} UTC</span>
             </div>
         </header>
 
@@ -410,32 +405,32 @@
                         <i class="fa-solid fa-shield"></i>
                         <span>OFFICIAL AGENCY TERMINAL</span>
                     </div>
-                    <h2 class="text-2xl font-title font-bold text-white tracking-wider">Τμήμα Εγκληματολογικών Ερευνών (C.I.D.)</h2>
+                    <h2 class="text-2xl font-title font-bold text-white tracking-wider">Criminal Investigation Division (C.I.D.)</h2>
                     <p class="text-xs text-slate-300 leading-relaxed max-w-3xl">
-                        Καλώς ήρθατε στην επίσημη επιχειρησιακή πύλη του CID. Εδώ παρέχεται δημόσια πρόσβαση στον Ποινικό Κώδικα της Πολιτείας San Andreas, τον κατάλογο επικίνδυνων καταζητούμενων, καθώς και τον διαδραστικό επιχειρησιακό χάρτη.
+                        Welcome to the official tactical intelligence portal of the Criminal Investigation Division. Public access provides active arrest warrant tracking, penal code schedules, public directives, and the interactive tactical map of San Andreas.
                     </p>
                 </div>
 
                 <!-- Stats Overview HUD Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="hud-panel p-4">
-                        <p class="text-[10px] font-mono text-slate-400 uppercase">Ενεργα Ενταλματα</p>
+                        <p class="text-[10px] font-mono text-slate-400 uppercase">Active Warrants</p>
                         <p class="text-2xl font-mono font-bold text-red-500 mt-1">{{ activeWarrantsCount }}</p>
                     </div>
 
                     <div class="hud-panel p-4">
-                        <p class="text-[10px] font-mono text-slate-400 uppercase">Σημεια Χαρτη</p>
+                        <p class="text-[10px] font-mono text-slate-400 uppercase">Mapped Locations</p>
                         <p class="text-2xl font-mono font-bold text-tactical-cyan mt-1">{{ allCombinedMapLocations.length }}</p>
                     </div>
 
                     <div class="hud-panel p-4">
-                        <p class="text-[10px] font-mono text-slate-400 uppercase">Ποινικος Κωδικας</p>
+                        <p class="text-[10px] font-mono text-slate-400 uppercase">Penal Offences</p>
                         <p class="text-2xl font-mono font-bold text-amber-400 mt-1">{{ penalCodeList.length }}</p>
                     </div>
 
                     <div class="hud-panel p-4">
-                        <p class="text-[10px] font-mono text-slate-400 uppercase">Δυναμη On Duty</p>
-                        <p class="text-2xl font-mono font-bold text-emerald-400 mt-1">{{ activeAgentsCount }}</p>
+                        <p class="text-[10px] font-mono text-slate-400 uppercase">CID Personnel</p>
+                        <p class="text-2xl font-mono font-bold text-emerald-400 mt-1">{{ roster.length }}</p>
                     </div>
                 </div>
 
@@ -444,7 +439,7 @@
                     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                         <h3 class="text-sm font-title font-bold text-white uppercase tracking-wider flex items-center space-x-2">
                             <i class="fa-solid fa-bullhorn text-tactical-cyan"></i>
-                            <span>Επίσημες Οδηγίες & Ανακοινώσεις</span>
+                            <span>Official Directives & Announcements</span>
                         </h3>
                         <span class="text-[10px] font-mono text-slate-500">SYSTEM FEED</span>
                     </div>
@@ -458,7 +453,7 @@
                             <p class="text-xs text-slate-300 leading-relaxed font-sans">{{ ann.content }}</p>
                         </div>
                         <div v-if="announcements.length === 0" class="text-center py-6 text-xs font-mono text-slate-500">
-                            Δεν υπάρχουν δημοσιευμένες ανακοινώσεις.
+                            No directives published.
                         </div>
                     </div>
                 </div>
@@ -470,8 +465,8 @@
                 <div id="mapSidebar" :class="mapSidebarHidden ? '-ml-80' : 'ml-0'" class="w-80 bg-black/95 border-r border-tactical-purple/50 flex flex-col z-20 transition-all duration-300 shrink-0 h-full font-mono">
                     <div class="p-4 border-b border-tactical-purple/40 flex justify-between items-center bg-black">
                         <div>
-                            <h2 class="text-sm font-title font-bold text-tactical-purple uppercase tracking-wider">2K25 PURPLE MAP</h2>
-                            <p class="text-[10px] text-slate-500">Interactive Operational Overlay</p>
+                            <h2 class="text-sm font-title font-bold text-tactical-purple uppercase tracking-wider">TACTICAL MAP OVERLAY</h2>
+                            <p class="text-[10px] text-slate-500">Interactive Territory & POI Filter</p>
                         </div>
                         <button @click="mapSidebarHidden = true" class="px-2 py-1 bg-tactical-purple text-black text-xs font-bold rounded hover:brightness-110">
                             ❮
@@ -480,7 +475,7 @@
 
                     <!-- Search Filter -->
                     <div class="p-3 border-b border-slate-900 bg-neutral-950">
-                        <input v-model="mapSearchQuery" type="text" placeholder="🔍 Αναζήτηση..." class="w-full bg-neutral-900 border border-slate-800 focus:border-tactical-purple text-white px-3 py-1.5 text-xs rounded focus:outline-none">
+                        <input v-model="mapSearchQuery" type="text" placeholder="🔍 Search location..." class="w-full bg-neutral-900 border border-slate-800 focus:border-tactical-purple text-white px-3 py-1.5 text-xs rounded focus:outline-none">
                     </div>
 
                     <!-- Categories Collapsible List -->
@@ -575,7 +570,7 @@
                     </div>
 
                     <div class="p-3 bg-neutral-900 border-t border-slate-900 text-[10px] text-slate-500 text-center font-mono">
-                        Updated: 28 October // GTA V CRS.Simple
+                        GTA V Map Engine // CRS.Simple Coordinate System
                     </div>
                 </div>
 
@@ -594,9 +589,9 @@
                     <div>
                         <h2 class="text-base font-title font-bold text-red-400 uppercase tracking-wider flex items-center space-x-2">
                             <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span>Δημόσια Εντάλματα & Καταζητούμενοι (Most Wanted)</span>
+                            <span>Public Arrest Warrants & Fugitives (Most Wanted)</span>
                         </h2>
-                        <p class="text-xs text-slate-400 font-mono mt-0.5">Κατάλογος επικίνδυνων φυγόδικων με ενεργά εντάλματα σύλληψης</p>
+                        <p class="text-xs text-slate-400 font-mono mt-0.5">Official public notice for wanted individuals in San Andreas</p>
                     </div>
                 </div>
 
@@ -612,17 +607,17 @@
                             </span>
                         </div>
                         <div class="p-3 bg-tactical-bg border border-slate-800 rounded text-xs text-slate-300 font-mono">
-                            <span class="text-slate-500 block text-[9px] uppercase mb-1">ΑΙΤΙΟΛΟΓΙΑ ΕΝΤΑΛΜΑΤΟΣ</span>
+                            <span class="text-slate-500 block text-[9px] uppercase mb-1">WARRANT REASON</span>
                             {{ w.reason }}
                         </div>
                         <div class="text-[10px] font-mono text-slate-500 flex justify-between border-t border-slate-800 pt-2">
-                            <span>Έκδοση: {{ w.issuedBy || 'CID' }}</span>
+                            <span>Issued By: {{ w.issuedBy || 'CID' }}</span>
                             <span>{{ w.date || 'Active' }}</span>
                         </div>
                     </div>
 
                     <div v-if="warrants.filter(w=>w.active).length === 0" class="col-span-full text-center py-12 text-slate-500 font-mono text-xs">
-                        Δεν υπάρχουν ενεργά δημόσια εντάλματα.
+                        No active public warrants on record.
                     </div>
                 </div>
             </div>
@@ -633,24 +628,24 @@
                     <div>
                         <h2 class="text-base font-title font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-2">
                             <i class="fa-solid fa-gavel"></i>
-                            <span>Ποινικός Κώδικας San Andreas</span>
+                            <span>San Andreas Penal Code Schedule</span>
                         </h2>
-                        <p class="text-xs text-slate-400 font-mono">Αναζήτηση αδικημάτων, προστίμων ($) και ποινών φυλάκισης (μήνες)</p>
+                        <p class="text-xs text-slate-400 font-mono">Official schedule of fines ($) and jail time (months)</p>
                     </div>
-                    <input v-model="penalSearchQuery" type="text" placeholder="Αναζήτηση αδικήματος..." class="bg-tactical-bg border border-slate-700 focus:border-amber-400 rounded px-3 py-1.5 text-xs text-white w-72 focus:outline-none font-mono">
+                    <input v-model="penalSearchQuery" type="text" placeholder="Search charge..." class="bg-tactical-bg border border-slate-700 focus:border-amber-400 rounded px-3 py-1.5 text-xs text-white w-72 focus:outline-none font-mono">
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div v-for="item in filteredPenalCode" :key="item.id" class="hud-panel p-4 space-y-2">
                         <div class="flex justify-between items-start">
                             <span class="text-[9px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 uppercase">
-                                {{ item.category || 'Γενικό' }}
+                                {{ item.category || 'General' }}
                             </span>
                         </div>
                         <h3 class="text-xs font-bold text-white">{{ item.title }}</h3>
                         <div class="flex justify-between items-center pt-2 border-t border-slate-800 text-xs font-mono">
-                            <span class="text-emerald-400 font-bold">${{ Number(item.fine).toLocaleString() }}</span>
-                            <span class="text-red-400 font-bold">{{ item.jail }} Μήνες</span>
+                            <span class="text-emerald-400 font-bold">${{ Number(item.fine).toLocaleString() }} Fine</span>
+                            <span class="text-red-400 font-bold">{{ item.jail }} Months</span>
                         </div>
                     </div>
                 </div>
@@ -661,27 +656,27 @@
                 <!-- 5. CITIZEN DATABASE -->
                 <div v-if="currentTab === 'citizens'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
-                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Μητρώο Πολιτών (Citizen Database)</h2>
+                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Citizen Registry Database</h2>
                         <button @click="showAddCitizenModal = true" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-title font-bold text-xs uppercase rounded transition">
-                            <i class="fa-solid fa-plus mr-1"></i>Νέος Πολίτης
+                            <i class="fa-solid fa-plus mr-1"></i>New Citizen Profile
                         </button>
                     </div>
 
                     <div class="hud-panel p-4">
-                        <input v-model="citizenSearch" type="text" placeholder="Αναζήτηση με Όνομα ή ΑΔΤ..." class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white font-mono focus:outline-none mb-4">
+                        <input v-model="citizenSearch" type="text" placeholder="Search by Full Name or Citizen ID..." class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white font-mono focus:outline-none mb-4">
 
                         <div class="space-y-3">
                             <div v-for="c in filteredCitizens" :key="c.id" class="p-3 bg-tactical-bg/80 border border-slate-800 rounded space-y-2">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <h3 class="text-sm font-bold text-white">{{ c.fullName }}</h3>
-                                        <p class="text-xs font-mono text-slate-400">ID: {{ c.citizenId }} | Τηλ: {{ c.phone || 'N/A' }}</p>
+                                        <p class="text-xs font-mono text-slate-400">CID: {{ c.citizenId }} | Phone: {{ c.phone || 'N/A' }}</p>
                                     </div>
                                     <span class="px-2 py-0.5 bg-slate-800 text-slate-300 text-[10px] font-mono border border-slate-700 rounded">
-                                        {{ c.convictions ? c.convictions.length + ' Καταδίκες' : 'Καθαρό Μητρώο' }}
+                                        {{ c.convictions ? c.convictions.length + ' Convictions' : 'Clean Record' }}
                                     </span>
                                 </div>
-                                <p class="text-xs text-slate-300 font-sans">{{ c.notes || 'Δεν υπάρχουν σημειώσεις.' }}</p>
+                                <p class="text-xs text-slate-300 font-sans">{{ c.notes || 'No investigative notes on file.' }}</p>
                             </div>
                         </div>
                     </div>
@@ -690,9 +685,9 @@
                 <!-- 6. VEHICLE SEARCH -->
                 <div v-if="currentTab === 'vehicles'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
-                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Αναζήτηση Οχημάτων & Σημάνσεις</h2>
+                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Vehicle Lookup & Stolen Flags</h2>
                         <button @click="showAddVehicleModal = true" class="px-3 py-1.5 bg-blue-600 text-white font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-plus mr-1"></i>Καταχώρηση Οχήματος
+                            <i class="fa-solid fa-plus mr-1"></i>Register Vehicle
                         </button>
                     </div>
 
@@ -702,10 +697,10 @@
                                 <span class="font-mono font-bold text-sm text-tactical-cyan bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/30">
                                     {{ v.plate }}
                                 </span>
-                                <span v-if="v.stolen" class="px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-mono font-bold rounded">STOLEN</span>
+                                <span v-if="v.stolen" class="px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-mono font-bold rounded">STOLEN FLAG</span>
                             </div>
                             <p class="text-xs font-bold text-white">{{ v.model }}</p>
-                            <p class="text-xs font-mono text-slate-400">Ιδιοκτήτης: {{ v.owner }}</p>
+                            <p class="text-xs font-mono text-slate-400">Owner: {{ v.owner }}</p>
                         </div>
                     </div>
                 </div>
@@ -713,9 +708,9 @@
                 <!-- 7. CASE FILES -->
                 <div v-if="currentTab === 'cases'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
-                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Φάκελοι Υποθέσεων CID</h2>
+                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">CID Case Files & Dossiers</h2>
                         <button @click="showNewCaseModal = true" class="px-3 py-1.5 bg-blue-600 text-white font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-folder-plus mr-1"></i>Νέος Φάκελος
+                            <i class="fa-solid fa-folder-plus mr-1"></i>Create Case File
                         </button>
                     </div>
 
@@ -732,8 +727,8 @@
                             </div>
                             <p class="text-xs text-slate-300 font-sans">{{ c.summary }}</p>
                             <div class="flex justify-between text-[11px] font-mono text-slate-500 border-t border-slate-800 pt-2">
-                                <span>Ύποπτος: {{ c.suspect }}</span>
-                                <span>Πράκτορας: {{ c.agent }}</span>
+                                <span>Target Suspect: {{ c.suspect }}</span>
+                                <span>Lead Agent: {{ c.agent }}</span>
                             </div>
                         </div>
                     </div>
@@ -744,10 +739,10 @@
                     <div class="hud-panel p-4 flex justify-between items-center">
                         <h2 class="text-base font-title font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-2">
                             <i class="fa-solid fa-magnifying-glass-chart"></i>
-                            <span>Ερευνητικές Υποθέσεις & Συμμορίες (Major Operations)</span>
+                            <span>Major Operations & Gang Dossiers</span>
                         </h2>
                         <button @click="showNewOpModal = true" class="px-3 py-1.5 bg-amber-500 text-slate-950 font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-plus mr-1"></i>Νέα Επιχείρηση
+                            <i class="fa-solid fa-plus mr-1"></i>New Major Operation
                         </button>
                     </div>
 
@@ -756,7 +751,7 @@
                             <div v-for="op in majorOpsList" :key="op.id" @click="selectedOp = op" :class="selectedOp?.id === op.id ? 'border-amber-400 bg-tactical-panel' : 'border-slate-800 bg-tactical-bg'" class="p-4 border rounded cursor-pointer transition space-y-2">
                                 <span class="text-[10px] font-mono text-amber-400">CODE: {{ op.code }}</span>
                                 <h3 class="text-xs font-bold text-white">{{ op.title }}</h3>
-                                <p class="text-xs text-slate-400 font-mono">Στόχος: {{ op.targetSyndicate }}</p>
+                                <p class="text-xs text-slate-400 font-mono">Target Syndicate: {{ op.targetSyndicate }}</p>
                             </div>
                         </div>
 
@@ -772,9 +767,9 @@
                 <!-- 9. WARRANTS MDT -->
                 <div v-if="currentTab === 'warrants'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
-                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Διαχείριση Ενταλμάτων (MDT Mode)</h2>
+                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Warrant Issuance & Management</h2>
                         <button @click="showAddWarrantModal = true" class="px-3 py-1.5 bg-red-600 text-white font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-file-circle-plus mr-1"></i>Έκδοση Εντάλματος
+                            <i class="fa-solid fa-file-circle-plus mr-1"></i>Issue Warrant
                         </button>
                     </div>
                 </div>
@@ -782,9 +777,9 @@
                 <!-- 10. EVIDENCE LOCKER -->
                 <div v-if="currentTab === 'evidence'" class="space-y-6">
                     <div class="hud-panel p-4 flex justify-between items-center">
-                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Αποθήκη Πειστηρίων</h2>
+                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider">Evidence Locker System</h2>
                         <button @click="showAddEvidenceModal = true" class="px-3 py-1.5 bg-blue-600 text-white font-title font-bold text-xs uppercase rounded">
-                            <i class="fa-solid fa-box mr-1"></i>Καταχώρηση Πειστηρίου
+                            <i class="fa-solid fa-box mr-1"></i>Log Evidence Item
                         </button>
                     </div>
                 </div>
@@ -792,7 +787,7 @@
                 <!-- 11. ROSTER -->
                 <div v-if="currentTab === 'roster'" class="space-y-6">
                     <div class="hud-panel p-4">
-                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider mb-4">Δύναμη Υπηρεσίας CID</h2>
+                        <h2 class="text-base font-title font-bold text-white uppercase tracking-wider mb-4">CID Personnel Roster</h2>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             <div v-for="agent in roster" :key="agent.id" class="p-3 bg-tactical-bg border border-slate-800 rounded flex items-center justify-between font-mono text-xs">
@@ -800,8 +795,8 @@
                                     <p class="font-bold text-white">{{ agent.name }}</p>
                                     <p class="text-[10px] text-slate-400">{{ agent.rank }} | {{ agent.badge }}</p>
                                 </div>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="statusColorClass(agent.status)">
-                                    {{ agent.status }}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-tactical-cyan border border-blue-500/30">
+                                    {{ agent.accountStatus || 'Active' }}
                                 </span>
                             </div>
                         </div>
@@ -812,25 +807,25 @@
                 <div v-if="currentTab === 'admin'" class="space-y-6">
                     <div v-if="!isDirector" class="hud-panel border-red-500/40 p-12 text-center space-y-4">
                         <i class="fa-solid fa-lock text-4xl text-red-500"></i>
-                        <h2 class="text-xl font-title font-bold text-white uppercase">403 - Μη Εξουσιοδοτημένη Πρόσβαση</h2>
+                        <h2 class="text-xl font-title font-bold text-white uppercase">403 - Unauthorized Access</h2>
                     </div>
 
                     <template v-else>
                         <div class="hud-panel p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
-                                <h2 class="text-base font-title font-bold text-red-400 uppercase tracking-wider">Πίνακας Διαχείρισης CID</h2>
-                                <p class="text-xs text-slate-400 font-mono mt-1">Έκδοση Λογαριασμών, Ranks, Χάρτης & Discord Webhooks</p>
+                                <h2 class="text-base font-title font-bold text-red-400 uppercase tracking-wider">Director Administration Panel</h2>
+                                <p class="text-xs text-slate-400 font-mono mt-1">Issue Agent Accounts, Rank Roster, Map Overlay Manager & Discord Integration</p>
                             </div>
 
                             <div class="flex flex-wrap items-center gap-2 bg-tactical-bg p-1.5 rounded border border-slate-800 font-mono text-xs">
                                 <button @click="adminSubTab = 'create_agent'" :class="adminSubTab === 'create_agent' ? 'bg-red-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded transition">
-                                    <i class="fa-solid fa-user-plus mr-1"></i> Έκδοση Λογαριασμού
+                                    <i class="fa-solid fa-user-plus mr-1"></i> Create Agent
                                 </button>
                                 <button @click="adminSubTab = 'map_manager'" :class="adminSubTab === 'map_manager' ? 'bg-red-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded transition">
-                                    <i class="fa-solid fa-map-location-dot mr-1"></i> Διαχείριση Χάρτη
+                                    <i class="fa-solid fa-map-location-dot mr-1"></i> Map Manager
                                 </button>
                                 <button @click="adminSubTab = 'agents'" :class="adminSubTab === 'agents' ? 'bg-red-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded transition">
-                                    <i class="fa-solid fa-users-gear mr-1"></i> Προσωπικό
+                                    <i class="fa-solid fa-users-gear mr-1"></i> Roster Ranks
                                 </button>
                                 <button @click="adminSubTab = 'webhook'" :class="adminSubTab === 'webhook' ? 'bg-red-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded transition">
                                     <i class="fa-brands fa-discord mr-1"></i> Webhooks
@@ -842,16 +837,16 @@
                         <div v-if="adminSubTab === 'map_manager'" class="space-y-6">
                             <!-- Add Location Form -->
                             <div class="hud-panel p-6 space-y-4">
-                                <h3 class="text-sm font-title font-bold text-white uppercase">Προσθήκη / Επεξεργασία Τοποθεσίας Χάρτη (Live Firestore)</h3>
+                                <h3 class="text-sm font-title font-bold text-white uppercase">Add / Edit Map Location (Live Firestore Sync)</h3>
 
                                 <form @submit.prevent="saveMapLocation" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
-                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Όνομα Τοποθεσίας</label>
-                                        <input v-model="newLocationForm.name" type="text" required placeholder="π.χ. STR, MRPD, Pizza This" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
+                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Location Name</label>
+                                        <input v-model="newLocationForm.name" type="text" required placeholder="e.g. STR, MRPD, Pizza This" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                     </div>
 
                                     <div>
-                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Κατηγορία</label>
+                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Category</label>
                                         <select v-model="newLocationForm.category" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                             <option value="Gangs">Criminal Organizations (Gangs)</option>
                                             <option value="Services">Public Services</option>
@@ -861,38 +856,38 @@
                                     </div>
 
                                     <div>
-                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Συντεταγμένη X</label>
+                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">X Coordinate</label>
                                         <input v-model.number="newLocationForm.x" type="number" step="0.01" required placeholder="197.25" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                     </div>
 
                                     <div>
-                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Συντεταγμένη Y</label>
+                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Y Coordinate</label>
                                         <input v-model.number="newLocationForm.y" type="number" step="0.01" required placeholder="-441.50" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                     </div>
 
                                     <div>
-                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Διεύθυνση / Περιοχή</label>
+                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Address / Street</label>
                                         <input v-model="newLocationForm.address" type="text" placeholder="Eclipse Blvd" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                     </div>
 
                                     <div>
-                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Χρώμα (Hex)</label>
+                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Color (Hex Code)</label>
                                         <input v-model="newLocationForm.color" type="text" placeholder="#B00707" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                     </div>
 
                                     <div>
-                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Ακτίνα Zone Radius (για Gangs)</label>
+                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Territory Radius (Gangs)</label>
                                         <input v-model.number="newLocationForm.radius" type="number" placeholder="100" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                     </div>
 
                                     <div>
-                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Όνομα Εικόνας Popup (Image File)</label>
+                                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Popup Image File</label>
                                         <input v-model="newLocationForm.img" type="text" placeholder="x.jpg" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none">
                                     </div>
 
                                     <div class="col-span-full flex justify-end">
                                         <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-title font-bold text-xs uppercase rounded transition">
-                                            <i class="fa-solid fa-floppy-disk mr-1.5"></i>Προσθήκη / Ενημέρωση Σημείου
+                                            <i class="fa-solid fa-floppy-disk mr-1.5"></i>Save Location To Map
                                         </button>
                                     </div>
                                 </form>
@@ -900,17 +895,17 @@
 
                             <!-- Locations Firestore List -->
                             <div class="hud-panel p-6 space-y-4">
-                                <h3 class="text-sm font-title font-bold text-white uppercase">Κατάλογος Δυναμικών Τοποθεσιών Firestore ({{ firestoreMapLocations.length }})</h3>
+                                <h3 class="text-sm font-title font-bold text-white uppercase">Firestore Map Locations Directory ({{ firestoreMapLocations.length }})</h3>
 
                                 <div class="overflow-x-auto">
                                     <table class="w-full text-left font-mono text-xs">
                                         <thead class="bg-tactical-bg text-slate-400 uppercase text-[10px]">
                                             <tr>
-                                                <th class="p-2">Όνομα</th>
-                                                <th class="p-2">Κατηγορία</th>
+                                                <th class="p-2">Name</th>
+                                                <th class="p-2">Category</th>
                                                 <th class="p-2">X, Y</th>
-                                                <th class="p-2">Διεύθυνση</th>
-                                                <th class="p-2 text-right">Ενέργειες</th>
+                                                <th class="p-2">Address</th>
+                                                <th class="p-2 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-slate-800">
@@ -924,7 +919,7 @@
                                                 <td class="p-2 text-slate-400">{{ loc.address || '-' }}</td>
                                                 <td class="p-2 text-right">
                                                     <button @click="deleteMapLocation(loc.id)" class="px-2 py-1 bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600 hover:text-white rounded text-[10px]">
-                                                        Διαγραφή
+                                                        Delete
                                                     </button>
                                                 </td>
                                             </tr>
@@ -936,11 +931,11 @@
 
                         <!-- CREATE AGENT FORM -->
                         <div v-if="adminSubTab === 'create_agent'" class="hud-panel p-6 max-w-xl space-y-4">
-                            <h3 class="text-sm font-title font-bold text-white uppercase">Δημιουργία Νέου Λογαριασμού Πράκτορα</h3>
+                            <h3 class="text-sm font-title font-bold text-white uppercase">Issue New Agent Account</h3>
 
                             <form @submit.prevent="adminCreateAgent" class="space-y-4">
                                 <div>
-                                    <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Όνομα Χρήστη / Username</label>
+                                    <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Agent Username</label>
                                     <input v-model="newAgentForm.username" type="text" required placeholder="John_Miller" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white font-mono focus:outline-none">
                                 </div>
 
@@ -950,7 +945,7 @@
                                         <input v-model="newAgentForm.badge" type="text" required placeholder="CID-05" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white font-mono focus:outline-none">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Βαθμός (Rank)</label>
+                                        <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Rank</label>
                                         <select v-model="newAgentForm.rank" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white focus:outline-none">
                                             <option>Probationary Agent</option>
                                             <option>Special Agent</option>
@@ -964,12 +959,12 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Προσωρινός Κωδικός</label>
+                                    <label class="block text-xs font-mono uppercase text-slate-400 mb-1">Temporary Password</label>
                                     <input v-model="newAgentForm.password" type="password" required placeholder="••••••••" class="w-full bg-tactical-bg border border-slate-700 focus:border-tactical-cyan rounded px-3 py-2 text-xs text-white focus:outline-none">
                                 </div>
 
                                 <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-title font-bold text-xs uppercase rounded">
-                                    Έκδοση Λογαριασμού
+                                    Issue Credentials
                                 </button>
                             </form>
                         </div>
@@ -978,7 +973,7 @@
                         <div v-if="adminSubTab === 'webhook'" class="hud-panel p-6 max-w-xl space-y-4">
                             <h3 class="text-sm font-title font-bold text-white uppercase flex items-center space-x-2">
                                 <i class="fa-brands fa-discord text-indigo-400"></i>
-                                <span>Ρυθμίσεις Discord Dispatch Webhook</span>
+                                <span>Discord Dispatch Webhook Settings</span>
                             </h3>
 
                             <div class="space-y-3">
@@ -989,10 +984,10 @@
 
                                 <div class="flex space-x-3">
                                     <button @click="saveWebhookSettings" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-title font-bold text-xs uppercase rounded">
-                                        Αποθήκευση
+                                        Save Configuration
                                     </button>
                                     <button @click="testDiscordWebhook" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-title font-bold text-xs uppercase rounded">
-                                        Test Dispatch
+                                        Send Test Dispatch
                                     </button>
                                 </div>
                             </div>
@@ -1048,7 +1043,7 @@
 
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'cid-upd';
 
-    // PRE-LOADED STATIC MAP DATA FROM USER SNIPPET
+    // PRE-LOADED STATIC MAP DATA
     const defaultStaticMapData = {
         gangs: [
             {x:197.25, y:-441.50, name:"STR", category:"Gangs", type:"Gang", address:"Eclipse Blvd", color:"#B00707", radius:100, img:"x.jpg"},
@@ -1142,7 +1137,7 @@
                 authForm: { username: '', password: '' },
                 newAgentForm: { username: '', badge: '', rank: 'Probationary Agent', password: '' },
 
-                agentProfile: { name: '', badge: '', rank: '', status: '10-8', accountStatus: 'Active' },
+                agentProfile: { name: '', badge: '', rank: '', accountStatus: 'Active' },
 
                 currentTab: 'dashboard',
                 adminSubTab: 'create_agent',
@@ -1182,9 +1177,9 @@
                 announcements: [],
                 majorOpsList: [],
                 penalCodeList: [
-                    { id: '1', title: 'Οπλοφορία χωρίς άδεια', category: 'Οπλοκατοχή', fine: 5000, jail: 15 },
-                    { id: '2', title: 'Εμπορία Ναρκωτικών', category: 'Ναρκωτικά', fine: 12000, jail: 30 },
-                    { id: '3', title: 'Ένοπλη Ληστεία', category: 'Κακουργήματα', fine: 20000, jail: 45 }
+                    { id: '1', title: 'Unlicensed Firearm Possession', category: 'Weapons', fine: 5000, jail: 15 },
+                    { id: '2', title: 'Narcotics Distribution', category: 'Narcotics', fine: 12000, jail: 30 },
+                    { id: '3', title: 'Armed Robbery', category: 'Felonies', fine: 20000, jail: 45 }
                 ]
             }
         },
@@ -1193,9 +1188,6 @@
                 if (!this.agentProfile || !this.agentProfile.rank) return false;
                 const r = this.agentProfile.rank.toLowerCase();
                 return r.includes('director') || r.includes('assistant cid director');
-            },
-            activeAgentsCount() {
-                return this.roster.filter(r => r.status === '10-8' || r.status === '10-6' || r.status === '10-97').length;
             },
             activeWarrantsCount() {
                 return this.warrants.filter(w => w.active).length;
@@ -1286,7 +1278,7 @@
                     const internalEmail = `${cleanUsername}@cid.local`;
                     await signInWithEmailAndPassword(auth, internalEmail, this.authForm.password);
                 } catch (err) {
-                    this.authError = 'Σφάλμα σύνδεσης: Ελέγξτε το Όνομα Χρήστη & τον Κωδικό σας.';
+                    this.authError = 'Authentication Error: Invalid username or password.';
                 } finally {
                     this.authLoading = false;
                 }
@@ -1307,7 +1299,6 @@
                         username: cleanUsername,
                         badge: this.newAgentForm.badge,
                         rank: this.newAgentForm.rank,
-                        status: '10-7',
                         accountStatus: 'Active',
                         uid: uid
                     };
@@ -1315,10 +1306,10 @@
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'roster', uid), profileData);
                     await signOut(secondaryAuth);
 
-                    alert(`Ο λογαριασμός για τον ${rawName} δημιουργήθηκε επιτυχώς!`);
+                    alert(`Agent account created successfully for ${rawName}!`);
                     this.newAgentForm = { username: '', badge: '', rank: 'Probationary Agent', password: '' };
                 } catch (err) {
-                    alert('Σφάλμα δημιουργίας λογαριασμού: ' + err.message);
+                    alert('Error creating agent account: ' + err.message);
                 }
             },
 
@@ -1327,20 +1318,20 @@
                 try {
                     const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'map_locations');
                     await addDoc(colRef, { ...this.newLocationForm });
-                    alert('Η τοποθεσία καταχωρήθηκε επιτυχώς στη βάση!');
+                    alert('Map location saved successfully to Firestore!');
                     this.newLocationForm = { name: '', category: 'Gangs', x: null, y: null, address: '', color: '#B00707', radius: 100, img: 'x.jpg' };
                 } catch (e) {
-                    alert('Σφάλμα καταχώρησης: ' + e.message);
+                    alert('Error saving location: ' + e.message);
                 }
             },
 
             async deleteMapLocation(id) {
                 if (!this.isDirector) return;
-                if (!confirm('Είστε σίγουροι για τη διαγραφή της τοποθεσίας;')) return;
+                if (!confirm('Are you sure you want to delete this map location?')) return;
                 try {
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'map_locations', id));
                 } catch (e) {
-                    alert('Σφάλμα διαγραφής: ' + e.message);
+                    alert('Error deleting location: ' + e.message);
                 }
             },
 
@@ -1361,7 +1352,6 @@
                             name: 'Director',
                             badge: 'CID-01',
                             rank: 'CID Director',
-                            status: '10-8',
                             accountStatus: 'Active',
                             uid: uid
                         };
@@ -1369,16 +1359,6 @@
                     }
                 } catch (e) {
                     console.error('Profile load error:', e);
-                }
-            },
-
-            async updateAgentDutyStatus() {
-                if (!this.currentUser) return;
-                try {
-                    const agentRef = doc(db, 'artifacts', appId, 'public', 'data', 'roster', this.currentUser.uid);
-                    await updateDoc(agentRef, { status: this.agentProfile.status });
-                } catch (e) {
-                    console.error("Duty status error:", e);
                 }
             },
 
@@ -1420,15 +1400,15 @@
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'webhook'), {
                         url: this.webhookUrl
                     });
-                    alert('Το Webhook URL αποθηκεύτηκε επιτυχώς!');
+                    alert('Webhook URL saved successfully!');
                 } catch (e) {
-                    alert('Σφάλμα αποθήκευσης Webhook: ' + e.message);
+                    alert('Error saving Webhook: ' + e.message);
                 }
             },
 
             async testDiscordWebhook() {
                 if (!this.webhookUrl) {
-                    alert('Παρακαλώ εισάγετε πρώτα ένα Discord Webhook URL!');
+                    alert('Please enter a valid Discord Webhook URL first!');
                     return;
                 }
                 try {
@@ -1439,15 +1419,15 @@
                             username: "S.A.S.P. CID Dispatch",
                             embeds: [{
                                 title: "🚨 C.I.D. SYSTEM TEST DISPATCH",
-                                description: "Το σύστημα ειδοποιήσεων του C.I.D. Terminal συνδέθηκε επιτυχώς με το Discord!",
+                                description: "The C.I.D. Terminal dispatch link has been successfully tested and connected to Discord!",
                                 color: 2424219,
                                 timestamp: new Date().toISOString()
                             }]
                         })
                     });
-                    alert('Δοκιμαστικό Dispatch στάλθηκε στο Discord!');
+                    alert('Test Dispatch sent to Discord!');
                 } catch (e) {
-                    alert('Σφάλμα αποστολής Webhook: ' + e.message);
+                    alert('Error sending Webhook dispatch: ' + e.message);
                 }
             },
 
@@ -1487,7 +1467,7 @@
 
                     let adminBtn = '';
                     if (this.isDirector) {
-                        adminBtn = `<button onclick="fillAdminCoordinates(${x}, ${y})" style="margin-top:8px; padding:4px 8px; background:#7d3db7; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:10px; width:100%;">🛠️ Καταχώρηση στο Admin Panel</button>`;
+                        adminBtn = `<button onclick="fillAdminCoordinates(${x}, ${y})" style="margin-top:8px; padding:4px 8px; background:#7d3db7; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:10px; width:100%;">🛠️ Copy To Admin Map Form</button>`;
                     }
 
                     L.popup().setLatLng(e.latlng).setContent(`
@@ -1579,14 +1559,6 @@
                     return base + "bg-blue-600/20 text-tactical-cyan border border-blue-500/40 font-bold";
                 }
                 return base + "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200";
-            },
-            statusColorClass(status) {
-                switch (status) {
-                    case '10-8': return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
-                    case '10-6': return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40';
-                    case '10-97': return 'bg-blue-500/20 text-blue-400 border border-blue-500/40';
-                    case '10-7': default: return 'bg-slate-800 text-slate-400 border border-slate-700';
-                }
             }
         }
     }).mount('#app');
