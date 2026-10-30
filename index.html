@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>S.A.S.P. // C.I.D. Terminal CAD/MDT</title>
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -164,12 +165,16 @@
     </style>
 </head>
 <body class="bg-tactical-bg text-slate-300 antialiased selection:bg-blue-600 selection:text-white hud-grid">
+
 <!-- Lightbox Modal for Map Popup Images -->
 <div id="lightbox" onclick="this.style.display='none'">
     <img src="" id="lightbox-img" alt="Enlarged View">
 </div>
+
 <div class="fixed inset-0 scanlines z-50 pointer-events-none opacity-20"></div>
+
 <div id="app" class="flex h-screen overflow-hidden relative z-10">
+
     <!-- LOGIN MODAL (AGENT AUTHENTICATION POPUP) -->
     <div v-if="showLoginModal && !currentUser" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
         <div class="w-full max-w-md hud-panel p-6 shadow-2xl relative border-blue-500/30">
@@ -1269,6 +1274,7 @@
     </main>
 
 </div>
+
 <!-- FIREBASE & VUE 3 ESM INTEGRATION -->
 <script type="module">
     import { createApp } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
@@ -2072,5 +2078,7 @@
             }
         }
     }).mount('#app');
+</script>
+
 </body>
 </html>
