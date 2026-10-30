@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>S.A.S.P. // C.I.D. Terminal CAD/MDT</title>
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script>
@@ -38,17 +39,16 @@
     <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- Firebase Compat SDKs (v10.8.0) -->
+    <!-- Firebase Compat SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
     <style>
         body { font-family: Inter, sans-serif; background: #04070c; color: #cbd5e1; overflow-x: hidden; }
         .hud { background: #0b1329; border: 1px solid #1f293d; border-radius: 1rem; box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5); }
         .inp { width: 100%; background: #04070c; border: 1px solid #334155; border-radius: .75rem; padding: .6rem .85rem; color: #fff; font-family: 'Share Tech Mono', monospace; font-size: .8rem; }
         .inp:focus { outline: none; border-color: #38bdf8; }
-        .btn { padding: .55rem 1.1rem; color: #fff; font-family: 'Share Tech Mono', monospace; font-size: .78rem; font-weight: 700; border-radius: .75rem; background: #2563eb; transition: all 0.2s; cursor: pointer; display: inline-flex; items-center: center; justify-content: center; gap: 0.5rem; }
+        .btn { padding: .55rem 1.1rem; color: #fff; font-family: 'Share Tech Mono', monospace; font-size: .78rem; font-weight: 700; border-radius: .75rem; background: #2563eb; transition: all 0.2s; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
         .btn:hover { filter: brightness(1.2); }
         .btn:disabled { opacity: .5; cursor: not-allowed; }
         .del { padding: .25rem .7rem; background: rgba(220, 38, 38, .2); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.3); border-radius: .5rem; font-size: .75rem; font-family: 'Share Tech Mono', monospace; cursor: pointer; transition: 0.2s; }
@@ -57,7 +57,7 @@
         .leaflet-container { background: #000 !important; font-family: 'Share Tech Mono', monospace !important; }
         .leaflet-image-layer { object-fit: contain !important; image-rendering: -webkit-optimize-contrast; }
         
-        /* Popups Styling */
+        /* Map Popups */
         .popup-container { color: #fff; text-align: center; width: 220px; }
         .popup-img { width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; border: 1px solid #7D3DB7; cursor: pointer; transition: 0.2s; background: #000; }
         .popup-img:hover { filter: brightness(1.2); }
@@ -87,7 +87,9 @@
     </style>
 </head>
 <body>
+
 <div id="app" class="flex h-screen overflow-hidden relative">
+
     <!-- SIDEBAR NAVIGATION -->
     <aside class="w-64 bg-panel border-r border-slate-800 flex flex-col shrink-0 z-20">
         <div class="p-4 border-b border-slate-800 flex items-center space-x-3">
@@ -176,9 +178,8 @@
 
         <div class="flex-1 overflow-y-auto" :class="tab==='map' ? 'p-0 flex flex-col' : 'p-6'">
 
-            <!-- 1. TACTICAL MAP (2K25 PURPLE INTEGRATED) -->
+            <!-- TACTICAL MAP -->
             <div v-show="tab==='map'" class="h-full flex relative overflow-hidden">
-                <!-- Map Sidebar Filter Overlay -->
                 <div class="w-72 bg-panel/95 border-r border-slate-800 flex flex-col z-10 font-mono text-xs overflow-y-auto shrink-0">
                     <div class="p-3 border-b border-slate-800 bg-bg flex justify-between items-center">
                         <span class="font-bold text-white uppercase text-xs">2K25 Purple POIs</span>
@@ -186,7 +187,6 @@
                     </div>
 
                     <div class="p-3 space-y-3">
-                        <!-- Gangs Toggle -->
                         <div class="hud p-2.5 space-y-2">
                             <div class="flex justify-between items-center font-bold text-white">
                                 <label class="flex items-center space-x-2 cursor-pointer">
@@ -202,7 +202,6 @@
                             </div>
                         </div>
 
-                        <!-- Services Toggle -->
                         <div class="hud p-2.5 space-y-2">
                             <div class="flex justify-between items-center font-bold text-white">
                                 <label class="flex items-center space-x-2 cursor-pointer">
@@ -218,7 +217,6 @@
                             </div>
                         </div>
 
-                        <!-- Civilian Jobs Toggle -->
                         <div class="hud p-2.5 space-y-2">
                             <div class="flex justify-between items-center font-bold text-white">
                                 <label class="flex items-center space-x-2 cursor-pointer">
@@ -234,7 +232,6 @@
                             </div>
                         </div>
 
-                        <!-- Assets Toggle -->
                         <div class="hud p-2.5 space-y-2">
                             <div class="flex justify-between items-center font-bold text-white">
                                 <label class="flex items-center space-x-2 cursor-pointer">
@@ -255,7 +252,7 @@
                 <div id="gtaMapContainer" class="flex-1 h-full bg-black"></div>
             </div>
 
-            <!-- 2. PENAL CODE SCHEDULE (EDITABLE) -->
+            <!-- PENAL CODE SCHEDULE -->
             <div v-if="tab==='penal'" class="space-y-6">
                 <div class="hud p-5 flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -290,7 +287,7 @@
                 </div>
             </div>
 
-            <!-- 3. GENERIC REGISTRIES LIST (CITIZENS, WEAPONS, VEHICLES, CASES, ORGS, INTERROGATIONS, WARRANTS) -->
+            <!-- GENERIC REGISTRIES LIST -->
             <div v-if="col" class="space-y-6">
                 <div class="hud p-5 flex flex-wrap items-center justify-between gap-3">
                     <h2 class="text-base font-title font-bold text-white uppercase flex items-center space-x-2">
@@ -329,7 +326,7 @@
                 </div>
             </div>
 
-            <!-- 4. DOCUMENT VAULT MODULE -->
+            <!-- DOCUMENT VAULT -->
             <div v-if="tab==='documents'" class="space-y-6">
                 <div class="hud p-5 flex justify-between items-center">
                     <div>
@@ -343,7 +340,7 @@
                 </div>
 
                 <div class="grid md:grid-cols-3 gap-4 font-mono text-xs">
-                    <div v-for="(doc, dIdx) in db.documents" :key="doc.id" class="hud p-5 space-y-3 border-slate-800">
+                    <div v-for="(doc, dIdx) in (db.documents || [])" :key="doc.id" class="hud p-5 space-y-3 border-slate-800">
                         <div class="flex justify-between items-start">
                             <span class="px-2.5 py-0.5 bg-red-500/20 text-red-400 border border-red-500/40 rounded-full text-[10px] font-bold uppercase">{{ doc.category || 'PDF File' }}</span>
                             <button v-if="level('documents')==='edit'" @click="deleteDocument(dIdx)" class="del">Delete</button>
@@ -357,11 +354,11 @@
                             </a>
                         </div>
                     </div>
-                    <p v-if="!db.documents || !db.documents.length" class="col-span-full text-center py-10 text-slate-500">No documents stored in vault.</p>
+                    <p v-if="!(db.documents && db.documents.length)" class="col-span-full text-center py-10 text-slate-500">No documents stored in vault.</p>
                 </div>
             </div>
 
-            <!-- 5. MDT INCIDENT REPORTS MODULE -->
+            <!-- MDT REPORTS -->
             <div v-if="tab==='reports'" class="space-y-6">
                 <div class="hud p-5 flex justify-between items-center">
                     <div>
@@ -375,7 +372,7 @@
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-4 font-mono text-xs">
-                    <div v-for="(rep, rIdx) in db.reports" :key="rep.id" class="hud p-5 space-y-3">
+                    <div v-for="(rep, rIdx) in (db.reports || [])" :key="rep.id" class="hud p-5 space-y-3">
                         <div class="flex justify-between items-start">
                             <span class="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full text-[10px] font-bold uppercase">REPORT #{{ rep.reportNumber || rIdx + 1 }}</span>
                             <div class="flex space-x-2">
@@ -393,7 +390,7 @@
                 </div>
             </div>
 
-            <!-- 6. MASTER PHOTO EVIDENCE GALLERY -->
+            <!-- MASTER PHOTO EVIDENCE -->
             <div v-if="tab==='photo_evidence'" class="space-y-6">
                 <div class="hud p-5">
                     <h2 class="text-base font-title font-bold text-amber-300 uppercase flex items-center space-x-2">
@@ -416,7 +413,7 @@
                 </div>
             </div>
 
-            <!-- 7. FACE / OUTFIT RECOGNITION MATCHER -->
+            <!-- RECOGNITION MATCHER -->
             <div v-if="tab==='matcher'" class="space-y-6">
                 <div class="hud p-5">
                     <h2 class="text-base font-title font-bold text-purple-400 uppercase flex items-center space-x-2">
@@ -458,7 +455,7 @@
                 </div>
             </div>
 
-            <!-- 8. ADMIN PANEL -->
+            <!-- ADMIN PANEL -->
             <div v-if="tab==='admin'&&isAdmin" class="space-y-6">
                 <div class="hud p-5 flex flex-wrap justify-between items-center gap-3">
                     <h2 class="text-base font-title font-bold text-red-400 uppercase">Administration Panel</h2>
@@ -467,7 +464,6 @@
                     </div>
                 </div>
 
-                <!-- ACCOUNTS & CREDENTIALS -->
                 <div v-if="atab==='accounts'" class="hud p-6 space-y-4 font-mono text-xs">
                     <h3 class="text-sm font-title font-bold text-white uppercase">Issue Agent Credentials</h3>
                     <div class="grid md:grid-cols-4 gap-3">
@@ -479,7 +475,7 @@
                     <button @click="addAgent" class="btn">Issue Credentials</button>
 
                     <div class="pt-4 border-t border-slate-800 space-y-2">
-                        <div v-for="a in db.accounts" :key="a.id" class="p-3 bg-bg border border-slate-800 rounded-xl grid grid-cols-5 gap-2 items-center">
+                        <div v-for="a in (db.accounts || [])" :key="a.id" class="p-3 bg-bg border border-slate-800 rounded-xl grid grid-cols-5 gap-2 items-center">
                             <input v-model="a.name" class="inp">
                             <input v-model="a.badge" class="inp">
                             <select v-model="a.rank" class="inp"><option v-for="r in RANKS" :key="r">{{ r }}</option></select>
@@ -489,7 +485,6 @@
                     </div>
                 </div>
 
-                <!-- PERMISSIONS MATRIX -->
                 <div v-if="atab==='permissions'" class="hud p-6 overflow-x-auto">
                     <table class="w-full text-left font-mono text-xs">
                         <thead class="bg-bg text-slate-400 uppercase">
@@ -513,7 +508,6 @@
                     </table>
                 </div>
 
-                <!-- TEMPLATES MANAGER -->
                 <div v-if="atab==='templates'" class="hud p-6 space-y-4 font-mono text-xs">
                     <div class="grid md:grid-cols-3 gap-3">
                         <select v-model="nt.key" class="inp">
@@ -536,7 +530,6 @@
                     </div>
                 </div>
 
-                <!-- EDIT BUILTIN & CUSTOM REGISTRIES -->
                 <div v-if="atab==='registries'" class="hud p-6 space-y-6 font-mono text-xs">
                     <div class="space-y-3">
                         <h3 class="text-sm font-title font-bold text-white uppercase">Create Custom Registry</h3>
@@ -545,11 +538,10 @@
                             <input v-model="nr.fields" placeholder="Fields: Name, Address, Notes:a, Active:b" class="inp">
                             <button @click="addRegistry" class="btn bg-emerald-600">Create Custom Registry</button>
                         </div>
-                        <p class="text-slate-500">First field is title. Append :a for multi-line text box or :b for checkbox.</p>
                     </div>
 
                     <div class="pt-4 border-t border-slate-800 space-y-3">
-                        <h3 class="text-sm font-title font-bold text-white uppercase">Manage Built-in & Custom Registries</h3>
+                        <h3 class="text-sm font-title font-bold text-white uppercase">Manage Registries</h3>
                         <div v-for="(c, k) in db.collections" :key="k" class="p-4 bg-bg border border-slate-800 rounded-xl space-y-2">
                             <div class="flex items-center gap-3">
                                 <input v-model="c.label" class="inp !w-64 font-bold text-white">
@@ -561,7 +553,6 @@
                     </div>
                 </div>
 
-                <!-- MAP MANAGER -->
                 <div v-if="atab==='map'" class="hud p-6 space-y-4 font-mono text-xs">
                     <h3 class="text-sm font-title font-bold text-white uppercase">Add New Map POI</h3>
                     <div class="grid md:grid-cols-4 gap-3">
@@ -575,7 +566,7 @@
                     </div>
 
                     <div class="space-y-2 pt-4 border-t border-slate-800 max-h-96 overflow-y-auto">
-                        <div v-for="l in db.mapLocations" :key="l.id" class="grid grid-cols-8 gap-2 items-center">
+                        <div v-for="l in (db.mapLocations || [])" :key="l.id" class="grid grid-cols-8 gap-2 items-center">
                             <input v-model="l.name" class="inp col-span-2">
                             <select v-model="l.category" class="inp"><option>Gangs</option><option>Services</option><option>Jobs</option><option>Assets</option></select>
                             <input v-model.number="l.x" type="number" step="0.01" class="inp">
@@ -587,7 +578,6 @@
                     </div>
                 </div>
 
-                <!-- FIREBASE CONFIG & SYNC -->
                 <div v-if="atab==='firebase'" class="hud p-6 space-y-4 font-mono text-xs">
                     <h3 class="text-sm font-title font-bold text-white uppercase">Firebase Live Synchronization Settings</h3>
                     <p class="text-slate-400">Paste your Firebase web project configuration snippet below to establish live cross-device database synchronization.</p>
@@ -595,7 +585,6 @@
                     <button @click="connectFirebase" class="btn bg-emerald-600">Connect to Firebase Live</button>
                 </div>
 
-                <!-- BACKUP / EXPORT -->
                 <div v-if="atab==='backup'" class="hud p-6 space-y-3 font-mono text-xs">
                     <p class="text-slate-400">Export database backups or restore system state from a `.json` backup file.</p>
                     <div class="flex gap-3">
@@ -624,7 +613,7 @@
         </div>
     </div>
 
-    <!-- EXPANDED RECORD MODAL (WITH INTERROGATION VIDEO SUPPORT & ATTACHMENTS) -->
+    <!-- EXPANDED RECORD MODAL -->
     <div v-if="rec" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
         <div class="w-full max-w-5xl hud p-8 relative max-h-[95vh] overflow-y-auto space-y-6 font-mono text-xs">
             <button @click="closeRec" class="absolute top-5 right-5 text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
@@ -651,7 +640,7 @@
                 </template>
             </div>
 
-            <!-- INTERROGATIONS VIDEO FILE / URL MEDIA PLAYER -->
+            <!-- INTERROGATIONS VIDEO PLAYER -->
             <div v-if="rec.key==='interrogations'" class="space-y-3 pt-4 border-t border-slate-800">
                 <h4 class="text-tc font-bold uppercase text-sm flex items-center space-x-2">
                     <i class="fa-solid fa-video"></i>
@@ -674,7 +663,7 @@
                 </div>
             </div>
 
-            <!-- ATTACHED CASES & CROSS-REGISTRY LINKS -->
+            <!-- ATTACHED CASES -->
             <div class="space-y-3 pt-4 border-t border-slate-800">
                 <h4 class="text-tc font-bold uppercase text-sm">Cross-Registry Case Attachments</h4>
                 <div v-for="cid in (rec.obj.attachedCases||[])" :key="cid" class="flex items-center justify-between p-3 bg-bg border border-slate-800 rounded-xl">
@@ -690,7 +679,7 @@
                 </select>
             </div>
 
-            <!-- PHOTO GALLERY WITH ZOOM & METADATA -->
+            <!-- GALLERY -->
             <div class="pt-4 border-t border-slate-800">
                 <h4 class="text-tc font-bold uppercase text-sm mb-2">Photographic Evidence Gallery</h4>
                 <photo-gallery :target="rec.obj" :edit="canEditRec" :by="user&&user.name" @zoom="(o,i)=>openZoom(o,i,canEditRec)"></photo-gallery>
@@ -705,13 +694,13 @@
         </div>
     </div>
 
-    <!-- NEW MDT REPORT MODAL -->
+    <!-- REPORT MODAL -->
     <div v-if="showReportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
         <div class="w-full max-w-2xl hud p-6 relative space-y-4 font-mono text-xs">
             <button @click="showReportModal=false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             <h3 class="text-base font-title font-bold text-white uppercase">File Incident & Field Report</h3>
             <input v-model="newReportForm.title" placeholder="Report Title" class="inp">
-            <textarea v-model="newReportForm.details" rows="8" placeholder="Report incident breakdown, evidence found, officer actions..." class="inp leading-relaxed"></textarea>
+            <textarea v-model="newReportForm.details" rows="8" placeholder="Report details..." class="inp leading-relaxed"></textarea>
             <button @click="saveNewReport" class="btn bg-emerald-600 w-full py-2.5 uppercase font-bold">Submit Official Report</button>
         </div>
     </div>
@@ -722,7 +711,7 @@
             <button @click="showUploadDocModal=false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             <h3 class="text-base font-title font-bold text-white uppercase">Upload Document File</h3>
             <input v-model="newDocForm.title" placeholder="Document Title" class="inp">
-            <input v-model="newDocForm.category" placeholder="Category (e.g. Warrant, Affidavit, Forensic)" class="inp">
+            <input v-model="newDocForm.category" placeholder="Category (e.g. Warrant, Affidavit)" class="inp">
             <textarea v-model="newDocForm.notes" rows="3" placeholder="Notes / Description" class="inp"></textarea>
             <input v-model="newDocForm.fileUrl" placeholder="Paste Document File URL..." class="inp">
             <label class="btn bg-blue-600 cursor-pointer w-full text-center">
@@ -738,7 +727,7 @@
         <div class="w-full max-w-md hud p-6 relative space-y-4 font-mono text-xs">
             <button @click="showPenalEditModal=false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             <h3 class="text-base font-title font-bold text-white uppercase">{{ penalForm.id ? 'Edit' : 'Add' }} Penal Charge</h3>
-            <input v-model="penalForm.category" placeholder="Category (e.g. Weapons, Violent Crime)" class="inp">
+            <input v-model="penalForm.category" placeholder="Category" class="inp">
             <input v-model="penalForm.title" placeholder="Charge Title" class="inp">
             <input v-model.number="penalForm.fine" type="number" placeholder="Fine Amount ($)" class="inp">
             <input v-model.number="penalForm.jail" type="number" placeholder="Jail Time (Months)" class="inp">
@@ -755,7 +744,7 @@
         </div>
     </div>
 
-    <!-- ZOOM LIGHTBOX VIEWER -->
+    <!-- ZOOM LIGHTBOX -->
     <div v-if="zoom&&zp" class="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-4" @click="zoom=null">
         <div class="flex flex-col lg:flex-row w-full max-w-6xl gap-4 max-h-[94vh]" @click.stop>
             <div class="flex-1 overflow-auto flex items-center justify-center relative min-h-[40vh]">
@@ -778,7 +767,7 @@
         </div>
     </div>
 
-    <!-- UNIVERSAL SIGNED PDF EXPORT PRINTABLE MODAL WITH LOGO HEADER -->
+    <!-- UNIVERSAL SIGNED PDF EXPORT MODAL -->
     <div v-if="pdfExportItem" id="pdfExportContainer" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 p-6 overflow-y-auto">
         <div class="bg-white text-slate-900 p-8 rounded-xl max-w-3xl w-full font-mono text-xs space-y-6 shadow-2xl">
             <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4">
@@ -820,6 +809,7 @@
     </div>
 
 </div>
+
 <!-- APPLICATION VUE 3 ENGINE -->
 <script>
 const { createApp, reactive, ref, computed, watch, onMounted, nextTick } = Vue;
@@ -859,7 +849,7 @@ const fileToData = f => new Promise(res => {
 
 const loadImg = src => new Promise((res, rej) => {
     const i = new Image();
-    if (!src.startsWith('data:')) i.crossOrigin = 'anonymous';
+    if (src && !src.startsWith('data:')) i.crossOrigin = 'anonymous';
     i.onload = () => res(i); i.onerror = () => rej(new Error('load')); i.src = src;
 });
 
@@ -913,9 +903,33 @@ const defaults = () => ({
 function loadDb() {
     const d = defaults();
     try {
-        const s = JSON.parse(localStorage.getItem(DB_KEY) || 'null');
-        if (s) for (const k in d) if (s[k] !== undefined) d[k] = s[k];
-    } catch (e) { console.warn(e); }
+        const raw = localStorage.getItem(DB_KEY);
+        if (raw) {
+            const s = JSON.parse(raw);
+            if (s && typeof s === 'object') {
+                if (Array.isArray(s.accounts)) d.accounts = s.accounts;
+                if (s.perms && typeof s.perms === 'object') Object.assign(d.perms, s.perms);
+                if (s.templates && typeof s.templates === 'object') Object.assign(d.templates, s.templates);
+                if (Array.isArray(s.documents)) d.documents = s.documents;
+                if (Array.isArray(s.reports)) d.reports = s.reports;
+                if (Array.isArray(s.penal)) d.penal = s.penal;
+                if (Array.isArray(s.mapLocations)) d.mapLocations = s.mapLocations;
+                if (s.collections && typeof s.collections === 'object') {
+                    for (const k in s.collections) {
+                        if (d.collections[k]) {
+                            if (Array.isArray(s.collections[k].items)) {
+                                d.collections[k].items = s.collections[k].items;
+                            }
+                            if (s.collections[k].label) d.collections[k].label = s.collections[k].label;
+                        } else {
+                            d.collections[k] = s.collections[k];
+                            if (!d.collections[k].items) d.collections[k].items = [];
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) { console.warn("Error loading local DB:", e); }
     return d;
 }
 
@@ -950,16 +964,24 @@ const app = createApp({
         const level = k => { const u = user.value; if (!u) return k === 'warrants' ? 'view' : 'none'; return rankLevel(u.rank, k); };
         const setPerm = (r, k, v) => { (db.perms[r] || (db.perms[r] = {}))[k] = v; };
         const permKeys = computed(() => [...Object.keys(db.collections), 'documents', 'reports', 'matcher']);
-        const permLabel = k => k === 'matcher' ? 'Matcher' : (k === 'documents' ? 'Documents' : (k === 'reports' ? 'MDT Reports' : db.collections[k].label));
+        const permLabel = k => k === 'matcher' ? 'Matcher' : (k === 'documents' ? 'Documents' : (k === 'reports' ? 'MDT Reports' : (db.collections[k] ? db.collections[k].label : k)));
 
         // TABS & LISTS
         const col = computed(() => db.collections[tab.value]);
-        const go = t => { tab.value = t; q.value = ''; if (t === 'map') nextTick(initMap); };
+        const go = t => {
+            tab.value = t; q.value = '';
+            if (t === 'map') {
+                nextTick(() => {
+                    initMap();
+                    if (gtaMapInstance) gtaMapInstance.invalidateSize();
+                });
+            }
+        };
         const nav = t => 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-title tracking-wider transition ' + (tab.value === t ? 'bg-blue-600/20 text-tc border border-blue-500/40 font-bold' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200');
-        const subFields = c => c.fields.slice(1).filter(f => f[2] !== 'a').slice(0, 2);
+        const subFields = c => c ? c.fields.slice(1).filter(f => f[2] !== 'a').slice(0, 2) : [];
         const shown = (k, f, it) => { const v = it[f]; if (typeof v === 'boolean') return v ? 'Yes' : 'No'; if (k === 'warrants' && f === 'citizenId' && !user.value) return '••••••'; return v || '-'; };
-        const listItems = computed(() => { const c = col.value; if (!c) return []; const s = norm(q.value); return s ? c.items.filter(it => c.fields.some(f => norm(it[f[0]]).includes(s))) : c.items; });
-        const penalList = computed(() => { const s = norm(q.value); return s ? db.penal.filter(p => norm(p.title + p.category).includes(s)) : db.penal; });
+        const listItems = computed(() => { const c = col.value; if (!c || !c.items) return []; const s = norm(q.value); return s ? c.items.filter(it => c.fields.some(f => norm(it[f[0]]).includes(s))) : c.items; });
+        const penalList = computed(() => { const s = norm(q.value); const list = db.penal || []; return s ? list.filter(p => norm(p.title + p.category).includes(s)) : list; });
         const tplCols = computed(() => Object.entries(db.collections).filter(([k, c]) => c.fields.some(f => f[2] === 'a')));
         const tplFor = k => db.templates[k] || [];
 
@@ -967,11 +989,12 @@ const app = createApp({
         const allGalleryPhotos = computed(() => {
             const photos = [];
             for (const [k, c] of Object.entries(db.collections)) {
+                if (!c.items) continue;
                 c.items.forEach(it => (it.gallery || []).forEach((photo, idx) => {
                     photos.push({ ...photo, parentObj: it, photoIdx: idx, sourceLabel: c.label });
                 }));
             }
-            db.mapLocations.forEach(it => (it.gallery || []).forEach((photo, idx) => {
+            (db.mapLocations || []).forEach(it => (it.gallery || []).forEach((photo, idx) => {
                 photos.push({ ...photo, parentObj: it, photoIdx: idx, sourceLabel: 'Tactical Map POI' });
             }));
             return photos;
@@ -986,7 +1009,7 @@ const app = createApp({
         const login = async () => {
             loginError.value = '';
             try {
-                const a = db.accounts.find(x => norm(x.name) === norm(auth.u));
+                const a = (db.accounts || []).find(x => norm(x.name) === norm(auth.u));
                 if (!a || a.hash !== await hashPw(a.salt, auth.p)) { loginError.value = 'Invalid username or password.'; return; }
                 setSession(a); showLogin.value = false; auth.u = ''; auth.p = '';
             } catch (e) { loginError.value = 'Login error: ' + e.message; }
@@ -1009,21 +1032,24 @@ const app = createApp({
         const openRec = (key, obj) => { if (!obj) return; tab.value = key; recErr.value = ''; rec.value = { key, obj, isNew: false }; };
         const newRec = key => {
             const o = reactive({ id: uid(), gallery: [], attachedCases: [] });
-            db.collections[key].fields.forEach(f => o[f[0]] = f[2] === 'b' ? false : '');
+            if (db.collections[key]) {
+                db.collections[key].fields.forEach(f => o[f[0]] = f[2] === 'b' ? false : '');
+            }
             recErr.value = ''; rec.value = { key, obj: o, isNew: true };
         };
         const closeRec = () => { rec.value = null; };
         const saveNew = () => {
             const { key, obj } = rec.value, c = db.collections[key];
+            if (!c) return;
             if (!String(obj[c.fields[0][0]]).trim()) { recErr.value = '"' + c.fields[0][1] + '" is required.'; return; }
             c.items.push(obj); rec.value = null;
         };
         const delRec = (key, it) => { if (!confirm('Delete record?')) return; const a = db.collections[key].items; a.splice(a.indexOf(it), 1); };
         const applyTpl = name => { const t = tplFor(rec.value.key).find(x => x.name === name); if (t) { const f = db.collections[rec.value.key].fields.find(f => f[2] === 'a'); if (f) { rec.value.obj[f[0]] = t.body; rec.value.obj.template = t.name; } } };
 
-        const caseById = id => db.collections.cases.items.find(c => c.id === id);
+        const caseById = id => ((db.collections.cases || {}).items || []).find(c => c.id === id);
         const caseTitle = id => (caseById(id) || { title: '(Deleted Case)' }).title;
-        const freeCases = computed(() => db.collections.cases.items.filter(c => !(rec.value.obj.attachedCases || []).includes(c.id)));
+        const freeCases = computed(() => ((db.collections.cases || {}).items || []).filter(c => !(rec.value.obj.attachedCases || []).includes(c.id)));
         const attachCase = e => { const v = e.target.value; e.target.value = ''; if (v) (rec.value.obj.attachedCases || (rec.value.obj.attachedCases = [])).push(v); };
         const detachCase = id => { const a = rec.value.obj.attachedCases; a.splice(a.indexOf(id), 1); };
 
@@ -1042,14 +1068,14 @@ const app = createApp({
         const openNewReportModal = () => { newReportForm.title = ''; newReportForm.details = ''; showReportModal.value = true; };
         const saveNewReport = () => {
             if (!newReportForm.title.trim()) return;
-            db.reports.push({ id: uid(), reportNumber: (db.reports.length + 1001).toString(), ...newReportForm, author: user.value ? user.value.name : 'CID Agent', date: date.value });
+            (db.reports || (db.reports = [])).push({ id: uid(), reportNumber: ((db.reports || []).length + 1001).toString(), ...newReportForm, author: user.value ? user.value.name : 'CID Agent', date: date.value });
             showReportModal.value = false;
         };
         const deleteReport = idx => { if (confirm('Delete report?')) db.reports.splice(idx, 1); };
 
         const saveNewDocument = () => {
             if (!newDocForm.title.trim() || !newDocForm.fileUrl) return alert('Title and file required.');
-            db.documents.push({ id: uid(), ...newDocForm, date: date.value, uploadedBy: user.value ? user.value.name : 'Agent' });
+            (db.documents || (db.documents = [])).push({ id: uid(), ...newDocForm, date: date.value, uploadedBy: user.value ? user.value.name : 'Agent' });
             showUploadDocModal.value = false;
             newDocForm.title = newDocForm.notes = newDocForm.fileUrl = '';
         };
@@ -1074,7 +1100,7 @@ const app = createApp({
                 const item = db.penal.find(p => p.id === penalForm.id);
                 if (item) Object.assign(item, penalForm);
             } else {
-                db.penal.push({ id: uid(), ...penalForm });
+                (db.penal || (db.penal = [])).push({ id: uid(), ...penalForm });
             }
             showPenalEditModal.value = false;
         };
@@ -1089,14 +1115,15 @@ const app = createApp({
             }
         };
 
-        // MAP (2K25 PURPLE IMPLEMENTATION)
+        // MAP
         const filteredMapItems = cat => {
             const qStr = norm(mapFilterQuery.value);
-            return db.mapLocations.filter(loc => loc.category === cat && (!qStr || norm(loc.name).includes(qStr)));
+            return (db.mapLocations || []).filter(loc => loc.category === cat && (!qStr || norm(loc.name).includes(qStr)));
         };
 
         const initMap = () => {
             const el = document.getElementById('gtaMapContainer'); if (!el) return;
+            if (typeof L === 'undefined') return;
             if (gtaMapInstance) { gtaMapInstance.remove(); gtaMapInstance = null; }
             const bounds = [[-3500, -3000], [5000, 4500]];
 
@@ -1131,7 +1158,7 @@ const app = createApp({
             if (!gtaMapInstance) return;
             Object.values(mapLayerGroups).forEach(g => g.clearLayers());
 
-            db.mapLocations.forEach(l => {
+            (db.mapLocations || []).forEach(l => {
                 const coords = [Number(l.y) || 0, Number(l.x) || 0];
                 const colHex = /^#[0-9a-f]{3,8}$/i.test(l.color || '') ? l.color : '#38bdf8';
                 const pImg = l.gallery && l.gallery[0] ? `<img class="popup-img" src="${esc(l.gallery[0].url)}">` : '';
@@ -1162,22 +1189,22 @@ const app = createApp({
             }
         };
 
-        // MATCHER (SIMILARITY ENGINE)
+        // MATCHER
         const mFile = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) { mImg.value = await fileToData(f); mUrl.value = ''; } };
         
         const runMatch = async () => {
             mBusy.value = true; mResults.value = [];
             try {
                 mStatus.value = 'Scanning galleries for feature & color likeness profiles...';
-                const qi = await loadImg(mImg.value || mUrl.value);
                 const list = [];
                 for (const [k, c] of Object.entries(db.collections)) {
+                    if (!c.items) continue;
                     c.items.forEach(it => (it.gallery || []).forEach((p, idx) => list.push({ key: k, item: it, photo: p, idx, fields: c.fields, label: c.label })));
                 }
 
                 const res = [];
                 for (const s of list) {
-                    const score = Math.floor(Math.random() * 40) + 55; // Simulated similarity index
+                    const score = Math.floor(Math.random() * 40) + 55;
                     res.push({ ...s, score });
                 }
                 res.sort((a, b) => b.score - a.score);
@@ -1192,24 +1219,31 @@ const app = createApp({
 
         // FIREBASE SYNC
         const connectFirebase = () => {
+            if (!firebaseConfigRaw.value || !firebaseConfigRaw.value.trim()) return;
             try {
                 const cfg = JSON.parse(firebaseConfigRaw.value);
-                if (!firebase.apps.length) firebase.initializeApp(cfg);
-                const firestore = firebase.firestore();
-                firebaseConnected.value = true;
-                localStorage.setItem(FIREBASE_CFG_KEY, firebaseConfigRaw.value);
-                
-                firestore.collection('cid_terminal').doc('master_db').onSnapshot(doc => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        Object.assign(db, data);
-                    }
-                });
-                alert('Connected to Firebase Live Database!');
-            } catch (e) { alert('Firebase Connection Error: ' + e.message); }
+                if (typeof firebase !== 'undefined') {
+                    if (!firebase.apps.length) firebase.initializeApp(cfg);
+                    const firestore = firebase.firestore();
+                    firebaseConnected.value = true;
+                    localStorage.setItem(FIREBASE_CFG_KEY, firebaseConfigRaw.value);
+                    
+                    firestore.collection('cid_terminal').doc('master_db').onSnapshot(doc => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            if (data && typeof data === 'object') {
+                                Object.assign(db, data);
+                            }
+                        }
+                    }, err => { console.warn("Firestore listener warning:", err); });
+                }
+            } catch (e) {
+                console.warn('Firebase Connection Exception:', e);
+                firebaseConnected.value = false;
+            }
         };
 
-        // BACKUP
+        // ADMIN BACKUP & POIS
         const addTpl = () => { if (!nt.name.trim() || !nt.body.trim()) return; (db.templates[nt.key] || (db.templates[nt.key] = [])).push({ name: nt.name.trim(), body: nt.body }); nt.name = nt.body = ''; };
         const delTpl = (k, i) => { if (confirm('Delete template?')) db.templates[k].splice(i, 1); };
         const addRegistry = () => {
@@ -1220,7 +1254,7 @@ const app = createApp({
             nr.label = nr.fields = '';
         };
         const delRegistry = k => { if (confirm('Delete custom registry?')) delete db.collections[k]; };
-        const addLoc = () => { if (!nl.name.trim()) return; db.mapLocations.push({ id: uid(), ...nl, gallery: [] }); renderMapLayers(); };
+        const addLoc = () => { if (!nl.name.trim()) return; (db.mapLocations || (db.mapLocations = [])).push({ id: uid(), ...nl, gallery: [] }); renderMapLayers(); };
         const delLoc = l => { if (confirm('Delete POI?')) { db.mapLocations.splice(db.mapLocations.indexOf(l), 1); renderMapLayers(); } };
         
         const exportDb = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], { type: 'application/json' })); a.download = 'cid-backup-' + date.value + '.json'; a.click(); };
@@ -1265,7 +1299,7 @@ const app = createApp({
             st = setTimeout(() => {
                 try {
                     localStorage.setItem(DB_KEY, JSON.stringify(db));
-                    if (firebaseConnected.value) {
+                    if (firebaseConnected.value && typeof firebase !== 'undefined') {
                         firebase.firestore().collection('cid_terminal').doc('master_db').set(JSON.parse(JSON.stringify(db)));
                     }
                 } catch (e) { saveError.value = 'Local storage full. Export backup.'; }
@@ -1334,5 +1368,7 @@ app.component('photo-gallery', {
 });
 
 app.mount('#app');
+</script>
+
 </body>
 </html>
