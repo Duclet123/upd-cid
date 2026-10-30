@@ -112,8 +112,17 @@
         <!-- LOGO & BRANDING HEADER -->
         <div class="p-4 border-b border-slate-800/80 flex items-center space-x-3 cursor-pointer" @click="go('welcome'); mobileMenuOpen=false">
             <div class="w-12 h-12 rounded-2xl bg-bg border border-tc/40 flex items-center justify-center text-tc shadow-md shrink-0 overflow-hidden p-1">
-                <img src="images/CID Logo.png" @error="handleImgErr" class="w-full h-full object-contain">
-                <i class="fa-solid fa-shield-halved text-xl hidden"></i>
+                <img :src="db.logoUrl || 'images/CID Logo.png'" @error="handleImgErr" class="w-full h-full object-contain">
+                <svg class="w-full h-full hidden" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 5 L90 20 V55 C90 80 50 110 50 110 C50 110 10 80 10 55 V20 L50 5 Z" fill="#0f0b1a" stroke="#c084fc" stroke-width="4" />
+                    <path d="M50 10 L85 23 V53 C85 75 50 102 50 102 C50 102 15 75 15 53 V23 L50 10 Z" fill="#1a102f" stroke="#a855f7" stroke-width="2" />
+                    <polygon points="50,22 55,35 68,30 62,42 75,48 62,54 68,66 55,61 50,74 45,61 32,66 38,54 25,48 38,42 32,30 45,35" fill="#c084fc" opacity="0.85"/>
+                    <circle cx="50" cy="48" r="14" fill="#06040a" stroke="#e9d5ff" stroke-width="2"/>
+                    <text x="50" y="45" font-family="Syne, sans-serif" font-size="7" font-weight="900" fill="#ffffff" text-anchor="middle">U.P.D.</text>
+                    <text x="50" y="53" font-family="Share Tech Mono, monospace" font-size="6" font-weight="bold" fill="#c084fc" text-anchor="middle">C.I.D.</text>
+                    <path d="M22 82 L50 76 L78 82 L70 90 L50 85 L30 90 Z" fill="#9333ea" stroke="#c084fc" stroke-width="1.5"/>
+                    <text x="50" y="85" font-family="Syne, sans-serif" font-size="5" font-weight="bold" fill="#ffffff" text-anchor="middle">OFFICIAL POLICE</text>
+                </svg>
             </div>
             <div>
                 <h1 class="text-sm font-title font-bold text-white tracking-widest uppercase">C.I.D. TERMINAL</h1>
@@ -177,8 +186,14 @@
                         <p class="text-xs font-bold text-white truncate">{{ user.name }}</p>
                         <p class="text-[10px] text-slate-400 font-mono">{{ user.rank }} | {{ user.badge }}</p>
                     </div>
-                    <span v-if="firebaseConnected" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" title="Firebase Live Connected"></span>
-                    <span v-else class="w-2.5 h-2.5 rounded-full bg-amber-500/80" title="Local Offline Mode"></span>
+                    <div class="flex items-center space-x-1.5" :title="firebaseConnected ? 'Firebase Live Sync Active' : fbStatusMessage">
+                        <span v-if="firebaseConnected" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></span>
+                        <span v-else class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-lg shadow-red-500/50"></span>
+                        <span class="text-[10px] font-mono font-bold" :class="firebaseConnected ? 'text-emerald-400' : 'text-red-400'">{{ firebaseConnected ? 'LIVE' : 'OFFLINE' }}</span>
+                    </div>
+                </div>
+                <div v-if="!firebaseConnected && fbStatusMessage" class="text-[9px] font-mono text-amber-400 bg-amber-500/10 p-1.5 rounded border border-amber-500/30 leading-tight">
+                    ⚠ {{ fbStatusMessage }}
                 </div>
                 <div class="flex items-center gap-1.5">
                     <button @click="logout" class="flex-1 py-1.5 bg-slate-800 hover:bg-red-600/80 text-slate-300 hover:text-white rounded-xl text-xs font-mono border border-slate-700 transition">Sign Out</button>
@@ -203,9 +218,18 @@
             <!-- WELCOME LANDING VIEW (DEFAULTS ON LOAD) -->
             <div v-if="tab==='welcome'" class="h-full flex flex-col items-center justify-center p-8 text-center space-y-6">
                 <div class="relative group">
-                    <img src="images/CID Logo.png" @error="handleImgErr" class="w-48 h-48 object-contain drop-shadow-[0_0_35px_rgba(192,132,252,0.4)] transition duration-500 transform hover:scale-105">
-                    <div class="w-44 h-44 rounded-full bg-panel border-2 border-tc/50 flex items-center justify-center text-tc text-6xl shadow-2xl hidden">
-                        <i class="fa-solid fa-shield-halved"></i>
+                    <img :src="db.logoUrl || 'images/CID Logo.png'" @error="handleImgErr" class="w-48 h-48 object-contain drop-shadow-[0_0_35px_rgba(192,132,252,0.4)] transition duration-500 transform hover:scale-105">
+                    <div class="w-48 h-48 rounded-2xl bg-panel border-2 border-tc/50 flex items-center justify-center text-tc shadow-2xl hidden p-2">
+                        <svg class="w-full h-full" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M50 5 L90 20 V55 C90 80 50 110 50 110 C50 110 10 80 10 55 V20 L50 5 Z" fill="#0f0b1a" stroke="#c084fc" stroke-width="4" />
+                            <path d="M50 10 L85 23 V53 C85 75 50 102 50 102 C50 102 15 75 15 53 V23 L50 10 Z" fill="#1a102f" stroke="#a855f7" stroke-width="2" />
+                            <polygon points="50,22 55,35 68,30 62,42 75,48 62,54 68,66 55,61 50,74 45,61 32,66 38,54 25,48 38,42 32,30 45,35" fill="#c084fc" opacity="0.85"/>
+                            <circle cx="50" cy="48" r="14" fill="#06040a" stroke="#e9d5ff" stroke-width="2"/>
+                            <text x="50" y="45" font-family="Syne, sans-serif" font-size="7" font-weight="900" fill="#ffffff" text-anchor="middle">U.P.D.</text>
+                            <text x="50" y="53" font-family="Share Tech Mono, monospace" font-size="6" font-weight="bold" fill="#c084fc" text-anchor="middle">C.I.D.</text>
+                            <path d="M22 82 L50 76 L78 82 L70 90 L50 85 L30 90 Z" fill="#9333ea" stroke="#c084fc" stroke-width="1.5"/>
+                            <text x="50" y="85" font-family="Syne, sans-serif" font-size="5" font-weight="bold" fill="#ffffff" text-anchor="middle">OFFICIAL POLICE</text>
+                        </svg>
                     </div>
                 </div>
 
@@ -519,7 +543,28 @@
                 </div>
 
                 <div v-if="atab==='accounts'" class="hud p-6 space-y-4 font-mono text-xs">
-                    <h3 class="text-sm font-title font-bold text-white uppercase">Issue Agent Credentials</h3>
+                    <!-- LOGO & BRANDING MANAGEMENT -->
+                    <div class="p-4 bg-bg border border-tc/30 rounded-xl space-y-3">
+                        <h4 class="text-tc font-bold uppercase text-xs flex items-center gap-2">
+                            <i class="fa-solid fa-image"></i> Department Logo Settings
+                        </h4>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <input v-model="db.logoUrl" placeholder="Paste Logo Image URL (e.g. https://... or images/CID Logo.png)" class="inp flex-1">
+                            <label class="btn bg-purple-600 cursor-pointer">
+                                Upload Logo File
+                                <input type="file" accept="image/*" class="hidden" @change="handleLogoUpload">
+                            </label>
+                            <button @click="db.logoUrl='images/CID Logo.png'" class="btn bg-slate-800 border border-slate-700">Reset Default</button>
+                        </div>
+                        <p class="text-[10px] text-slate-400">Uploading a logo here embeds it directly into your database so it displays across all devices and in PDF document exports.</p>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-2">
+                        <h3 class="text-sm font-title font-bold text-white uppercase">Issue Agent Credentials</h3>
+                        <button @click="ensureDefaultAccounts(true)" class="btn bg-amber-600 !py-1 text-[11px]">
+                            <i class="fa-solid fa-rotate-left mr-1"></i> Restore Default Master Director
+                        </button>
+                    </div>
                     <div class="grid md:grid-cols-4 gap-3">
                         <input v-model="na.name" placeholder="Username / Agent Name" class="inp">
                         <input v-model="na.badge" placeholder="Badge ID (e.g. CID-01)" class="inp">
@@ -658,7 +703,17 @@
         <div class="w-full max-w-md hud p-6 relative">
             <button @click="showLogin=false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             <div class="flex justify-center mb-3">
-                <img src="images/CID Logo.png" @error="handleImgErr" class="h-16 w-auto object-contain">
+                <img :src="db.logoUrl || 'images/CID Logo.png'" @error="handleImgErr" class="h-16 w-auto object-contain">
+                <div class="h-16 w-16 hidden">
+                    <svg class="w-full h-full" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 5 L90 20 V55 C90 80 50 110 50 110 C50 110 10 80 10 55 V20 L50 5 Z" fill="#0f0b1a" stroke="#c084fc" stroke-width="4" />
+                        <path d="M50 10 L85 23 V53 C85 75 50 102 50 102 C50 102 15 75 15 53 V23 L50 10 Z" fill="#1a102f" stroke="#a855f7" stroke-width="2" />
+                        <polygon points="50,22 55,35 68,30 62,42 75,48 62,54 68,66 55,61 50,74 45,61 32,66 38,54 25,48 38,42 32,30 45,35" fill="#c084fc" opacity="0.85"/>
+                        <circle cx="50" cy="48" r="14" fill="#06040a" stroke="#e9d5ff" stroke-width="2"/>
+                        <text x="50" y="45" font-family="Syne, sans-serif" font-size="7" font-weight="900" fill="#ffffff" text-anchor="middle">U.P.D.</text>
+                        <text x="50" y="53" font-family="Share Tech Mono, monospace" font-size="6" font-weight="bold" fill="#c084fc" text-anchor="middle">C.I.D.</text>
+                    </svg>
+                </div>
             </div>
             <h2 class="text-xl font-title font-bold text-white uppercase text-center mb-6">C.I.D. Agent Sign In</h2>
             <form @submit.prevent="login" class="space-y-4">
@@ -885,7 +940,19 @@
         <div class="bg-white text-slate-900 p-8 rounded-xl max-w-3xl w-full font-mono text-xs space-y-6 shadow-2xl">
             <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4">
                 <div class="flex items-center gap-4">
-                    <img src="images/CID Logo.png" @error="handleImgErr" class="w-16 h-16 object-contain">
+                    <div class="w-16 h-16 shrink-0 flex items-center justify-center">
+                        <img :src="db.logoUrl || 'images/CID Logo.png'" @error="handleImgErr" class="w-16 h-16 object-contain">
+                        <div class="w-16 h-16 hidden">
+                            <svg class="w-full h-full" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M50 5 L90 20 V55 C90 80 50 110 50 110 C50 110 10 80 10 55 V20 L50 5 Z" fill="#0f0b1a" stroke="#231938" stroke-width="4" />
+                                <path d="M50 10 L85 23 V53 C85 75 50 102 50 102 C50 102 15 75 15 53 V23 L50 10 Z" fill="#1a102f" stroke="#9333ea" stroke-width="2" />
+                                <polygon points="50,22 55,35 68,30 62,42 75,48 62,54 68,66 55,61 50,74 45,61 32,66 38,54 25,48 38,42 32,30 45,35" fill="#a855f7" opacity="0.85"/>
+                                <circle cx="50" cy="48" r="14" fill="#06040a" stroke="#e9d5ff" stroke-width="2"/>
+                                <text x="50" y="45" font-family="Syne, sans-serif" font-size="7" font-weight="900" fill="#ffffff" text-anchor="middle">U.P.D.</text>
+                                <text x="50" y="53" font-family="Share Tech Mono, monospace" font-size="6" font-weight="bold" fill="#c084fc" text-anchor="middle">C.I.D.</text>
+                            </svg>
+                        </div>
+                    </div>
                     <div>
                         <h1 class="text-xl font-bold uppercase tracking-wider text-slate-900">UNIFIED POLICE DEPARTMENT</h1>
                         <p class="font-bold text-slate-700 text-xs">CRIMINAL INVESTIGATION DIVISION // OFFICIAL DOCUMENT</p>
@@ -950,15 +1017,17 @@ async function hashPw(salt, pw) {
     let h = 5381; for (const ch of s) h = ((h << 5) + h + ch.charCodeAt(0)) | 0; return 'f' + h;
 }
 
+// Compress uploaded photos aggressively (max 600px, 0.5 JPEG quality) to fit within LocalStorage quota
 const fileToData = f => new Promise(res => {
     const fr = new FileReader();
     fr.onload = () => {
         const im = new Image();
         im.onload = () => {
-            const s = Math.min(1, 900 / Math.max(im.width, im.height)), c = document.createElement('canvas');
-            c.width = im.width * s; c.height = im.height * s;
+            const s = Math.min(1, 600 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(im.width * s));
+            c.height = Math.max(1, Math.round(im.height * s));
             c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-            res(c.toDataURL('image/jpeg', .72));
+            res(c.toDataURL('image/jpeg', .50));
         };
         im.onerror = () => res(null);
         im.src = fr.result;
@@ -970,6 +1039,7 @@ const fileToData = f => new Promise(res => {
 const COL = (label, icon, fields) => ({ label, icon, fields, items: [], builtin: true });
 
 const defaults = () => ({
+    logoUrl: 'images/CID Logo.png',
     accounts: [],
     perms: { 'Probationary Detective': { interrogations: 'none' } },
     templates: {
@@ -988,27 +1058,23 @@ const defaults = () => ({
         ]
     },
     collections: {
-        citizens: COL('Citizen Registry', 'fa-solid fa-address-card text-tc', [['fullName', 'Full Name'], ['citizenId', 'Citizen ID'], ['phone', 'Phone'], ['gang', 'Gang / Affiliation'], ['notes', 'Notes', 'a']]),
+        citizens: COL('Citizen Registry', 'fa-solid fa-address-card', [['fullName', 'Full Name'], ['citizenId', 'Citizen ID'], ['phone', 'Phone'], ['gang', 'Gang / Affiliation'], ['notes', 'Notes', 'a']]),
         weapons: COL('Weapons Registry', 'fa-solid fa-gun text-amber-400', [['serial', 'Serial Number'], ['model', 'Model'], ['owner', 'Owner (full name)'], ['ownerCid', 'Owner Citizen ID (optional)'], ['stolen', 'Flagged stolen', 'b']]),
-        vehicles: COL('Vehicle Registry', 'fa-solid fa-car text-tc', [['plate', 'License Plate'], ['model', 'Model'], ['color', 'Color'], ['owner', 'Owner (full name)'], ['ownerCid', 'Owner Citizen ID (optional)']]),
-        cases: COL('Case Files', 'fa-solid fa-folder-open text-purple-400', [['title', 'Case Title'], ['summary', 'Investigation details', 'a']]),
-        organizations: COL('Organisations', 'fa-solid fa-sitemap text-amber-400', [['name', 'Organisation Name'], ['notes', 'Notes & structure', 'a']]),
+        vehicles: COL('Vehicle Registry', 'fa-solid fa-car', [['plate', 'License Plate'], ['model', 'Model'], ['color', 'Color'], ['owner', 'Owner (full name)'], ['ownerCid', 'Owner Citizen ID (optional)']]),
+        cases: COL('Case Files', 'fa-solid fa-folder-open text-amber-400', [['title', 'Case Title'], ['summary', 'Investigation details', 'a']]),
+        organizations: COL('Organisations', 'fa-solid fa-sitemap text-purple-400', [['name', 'Organisation Name'], ['notes', 'Notes & structure', 'a']]),
         interrogations: COL('Interrogations', 'fa-solid fa-comments text-cyan-400', [['suspect', 'Suspect Name'], ['transcript', 'Transcript', 'a']]),
         warrants: COL('Request Warrants', 'fa-solid fa-triangle-exclamation text-red-400', [['citizenName', 'Subject Full Name'], ['citizenId', 'Citizen ID'], ['reason', 'Probable cause', 'a']])
     },
-    documents: [
-        { id: 'd1', title: 'Grand Jury RICO Indictment', category: 'Affidavit', notes: 'Master indictment document for La Mesa operation', fileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', date: '28/10/2026', uploadedBy: 'John Director' }
-    ],
-    reports: [
-        { id: 'r1', reportNumber: '1001', title: 'Shots Fired Incident - Forum Dr', details: 'Officers responded to shots fired. Discovered 9mm casings.', author: 'John Director', date: '28/10/2026' }
-    ],
     penal: [
         { id: 'p1', category: 'Weapons', title: 'Unlicensed Firearm Possession', fine: 5000, jail: 15 },
         { id: 'p2', category: 'Narcotics', title: 'Narcotics Distribution', fine: 12000, jail: 30 }
     ],
+    documents: [],
+    reports: [],
     mapLocations: [
         { id: 'm1', x: 197.25, y: -441.5, name: 'STR', category: 'Gangs', address: 'Eclipse Blvd', color: '#B00707', radius: 100, gallery: [] },
-        { id: 'm2', x: 710.5, y: -1161.5, name: 'MRPD', category: 'Services', address: 'Mission Row', color: '#c084fc', gallery: [] },
+        { id: 'm2', x: 710.5, y: -1161.5, name: 'MRPD', category: 'Services', address: 'Mission Row', color: '#38bdf8', gallery: [] },
         { id: 'm3', x: 472.73, y: -818.34, name: 'EMS Hospital', category: 'Services', address: 'Alta St', color: '#10b981', gallery: [] },
         { id: 'm4', x: 1125, y: -1085, name: 'Burgershot', category: 'Jobs', address: 'San Andreas Ave', color: '#d97706', gallery: [] }
     ]
@@ -1017,33 +1083,15 @@ const defaults = () => ({
 function loadDb() {
     const d = defaults();
     try {
-        const raw = localStorage.getItem(DB_KEY);
-        if (raw) {
-            const s = JSON.parse(raw);
-            if (s && typeof s === 'object') {
-                if (Array.isArray(s.accounts)) d.accounts = s.accounts;
-                if (s.perms && typeof s.perms === 'object') Object.assign(d.perms, s.perms);
-                if (s.templates && typeof s.templates === 'object') Object.assign(d.templates, s.templates);
-                if (Array.isArray(s.documents)) d.documents = s.documents;
-                if (Array.isArray(s.reports)) d.reports = s.reports;
-                if (Array.isArray(s.penal)) d.penal = s.penal;
-                if (Array.isArray(s.mapLocations)) d.mapLocations = s.mapLocations;
-                if (s.collections && typeof s.collections === 'object') {
-                    for (const k in s.collections) {
-                        if (d.collections[k]) {
-                            if (Array.isArray(s.collections[k].items)) {
-                                d.collections[k].items = s.collections[k].items;
-                            }
-                            if (s.collections[k].label) d.collections[k].label = s.collections[k].label;
-                        } else {
-                            d.collections[k] = s.collections[k];
-                            if (!d.collections[k].items) d.collections[k].items = [];
-                        }
-                    }
-                }
+        const s = JSON.parse(localStorage.getItem(DB_KEY) || 'null');
+        if (s) {
+            for (const k in d) {
+                if (s[k] !== undefined) d[k] = s[k];
             }
         }
-    } catch (e) { console.warn("Error loading local DB:", e); }
+    } catch (e) {
+        console.warn(e);
+    }
     return d;
 }
 
@@ -1052,98 +1100,134 @@ const app = createApp({
         const db = reactive(loadDb());
         const user = ref(null), tab = ref('welcome'), atab = ref('accounts'), showLogin = ref(false);
         const isMobileView = ref(false), mobileMenuOpen = ref(false);
-        const loginError = ref(''), time = ref(''), date = ref(''), saveError = ref(''), q = ref('');
-        const mapFilterQuery = ref('');
-        const firebaseConnected = ref(false), firebaseConfigRaw = ref(JSON.stringify(HARDCODED_FB_CONFIG, null, 2));
-        
+        const loginError = ref(''), time = ref(''), date = ref(''), saveError = ref('');
+        const q = ref(''), mapFilterQuery = ref('');
         const mapLayers = reactive({ gangs: true, services: true, jobs: true, assets: true });
-        
-        const auth = reactive({ u: '', p: '' }), na = reactive({ name: '', badge: '', rank: 'Detective I', password: '' });
-        const nt = reactive({ key: 'cases', name: '', body: '' }), nr = reactive({ label: '', fields: '' });
+        const firebaseConnected = ref(false);
+        const firebaseConfigRaw = ref('');
+
+        const auth = reactive({ u: '', p: '' });
+        const na = reactive({ name: '', badge: '', rank: 'Detective I', password: '' });
+        const nt = reactive({ key: 'cases', name: '', body: '' });
+        const nr = reactive({ label: '', fields: '' });
         const nl = reactive({ name: '', category: 'Gangs', x: 0, y: 0, address: '', color: '#B00707' });
-        
+
         const rec = ref(null), recErr = ref(''), gal = ref(null), zoom = ref(null), zs = ref(1);
         const pdfExportItem = ref(null);
-        
         const caseCodeNum = ref('001');
         const newVideoUrl = ref('');
-        const showReportModal = ref(false), newReportForm = reactive({ reportNumber: '1001', title: '', details: '' });
-        const showUploadDocModal = ref(false), newDocForm = reactive({ title: '', category: 'PDF', notes: '', fileUrl: '' });
-        const showPenalEditModal = ref(false), penalForm = reactive({ id: null, category: 'General', title: '', fine: 0, jail: 0 });
+
+        const showReportModal = ref(false);
+        const newReportForm = reactive({ reportNumber: '', title: '', details: '' });
+
+        const showUploadDocModal = ref(false);
+        const newDocForm = reactive({ title: '', category: 'PDF File', notes: '', fileUrl: '' });
+
+        const showPenalEditModal = ref(false);
+        const penalForm = reactive({ id: null, category: 'Weapons', title: '', fine: 1000, jail: 10 });
 
         const mImg = ref(''), mUrl = ref(''), mMode = ref('face'), mBusy = ref(false), mStatus = ref(''), mResults = ref([]);
-        let gtaMapInstance = null, mapLayerGroups = {};
 
-        // SELECTOR LISTS
-        const citizenListForSelect = computed(() => ((db.collections.citizens || {}).items || []));
-        const vehicleListForSelect = computed(() => ((db.collections.vehicles || {}).items || []));
+        let gtaMapInstance = null;
+        let mapLayerGroups = {};
 
         // PERMISSIONS
         const isAdmin = computed(() => !!user.value && isTop(user.value.rank));
         const rankLevel = (r, k) => isTop(r) ? 'edit' : ((db.perms[r] || {})[k] || (r === 'Probationary Detective' ? 'view' : 'edit'));
         const level = k => { const u = user.value; if (!u) return k === 'warrants' ? 'view' : 'none'; return rankLevel(u.rank, k); };
         const setPerm = (r, k, v) => { (db.perms[r] || (db.perms[r] = {}))[k] = v; };
-        const permKeys = computed(() => [...Object.keys(db.collections), 'documents', 'reports', 'matcher']);
-        const permLabel = k => k === 'matcher' ? 'Matcher' : (k === 'documents' ? 'Documents' : (k === 'reports' ? 'MDT Reports' : (db.collections[k] ? db.collections[k].label : k)));
+        const permKeys = computed(() => [...Object.keys(db.collections || {}), 'matcher', 'documents', 'reports']);
+        const permLabel = k => k === 'matcher' ? 'Matcher' : (k === 'documents' ? 'Document Vault' : (k === 'reports' ? 'MDT Reports' : (db.collections[k] ? db.collections[k].label : k)));
 
-        // TABS & LISTS
-        const col = computed(() => db.collections[tab.value]);
-        const go = t => {
-            tab.value = t; q.value = '';
-            if (t === 'map') {
-                nextTick(() => {
-                    initMap();
-                    if (gtaMapInstance) gtaMapInstance.invalidateSize();
-                });
-            }
-        };
-        const nav = t => 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-title tracking-wider transition ' + (tab.value === t ? 'bg-purple-600/20 text-tc border border-purple-500/40 font-bold' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200');
-        const subFields = c => c ? c.fields.slice(1).filter(f => f[2] !== 'a').slice(0, 2) : [];
+        // NAVIGATION & LISTS
+        const col = computed(() => db.collections ? db.collections[tab.value] : null);
+        const go = t => { tab.value = t; q.value = ''; if (t === 'map') nextTick(initMap); };
+        const nav = t => 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-title tracking-wider transition ' + (tab.value === t ? 'bg-purple-600/20 text-tc border border-purple-500/40 font-bold shadow-sm' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200');
+        const subFields = c => c && c.fields ? c.fields.slice(1).filter(f => f[2] !== 'a').slice(0, 2) : [];
         const shown = (k, f, it) => { const v = it[f]; if (typeof v === 'boolean') return v ? 'Yes' : 'No'; if (k === 'warrants' && f === 'citizenId' && !user.value) return '••••••'; return v || '-'; };
-        const listItems = computed(() => { const c = col.value; if (!c || !c.items) return []; const s = norm(q.value); return s ? c.items.filter(it => c.fields.some(f => norm(it[f[0]]).includes(s))) : c.items; });
-        const penalList = computed(() => { const s = norm(q.value); const list = db.penal || []; return s ? list.filter(p => norm(p.title + p.category).includes(s)) : list; });
-        const tplCols = computed(() => Object.entries(db.collections).filter(([k, c]) => c.fields.some(f => f[2] === 'a')));
-        const tplFor = k => db.templates[k] || [];
 
-        // ALL PHOTOS AGGREGATION
-        const allGalleryPhotos = computed(() => {
-            const photos = [];
-            for (const [k, c] of Object.entries(db.collections)) {
-                if (!c.items) continue;
-                c.items.forEach(it => (it.gallery || []).forEach((photo, idx) => {
-                    photos.push({ ...photo, parentObj: it, photoIdx: idx, sourceLabel: c.label });
-                }));
-            }
-            (db.mapLocations || []).forEach(it => (it.gallery || []).forEach((photo, idx) => {
-                photos.push({ ...photo, parentObj: it, photoIdx: idx, sourceLabel: 'Tactical Map POI' });
-            }));
-            return photos;
+        const listItems = computed(() => {
+            const c = col.value; if (!c || !c.items) return [];
+            const s = norm(q.value);
+            return s ? c.items.filter(it => c.fields.some(f => norm(it[f[0]]).includes(s))) : c.items;
         });
 
-        // CLOCK (FORMAT dd/mm/yyyy & HH:mm:ss)
-        const tick = () => {
-            const now = new Date();
-            const d = String(now.getDate()).padStart(2, '0');
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            const y = now.getFullYear();
-            date.value = `${d}/${m}/${y}`;
-            
-            const hh = String(now.getHours()).padStart(2, '0');
-            const mm = String(now.getMinutes()).padStart(2, '0');
-            const ss = String(now.getSeconds()).padStart(2, '0');
-            time.value = `${hh}:${mm}:${ss}`;
-        };
+        const penalList = computed(() => { const s = norm(q.value); return s ? (db.penal || []).filter(p => norm(p.title + p.category).includes(s)) : (db.penal || []); });
+        const tplCols = computed(() => db.collections ? Object.entries(db.collections).filter(([k, c]) => c.fields.some(f => f[2] === 'a')) : []);
+        const tplFor = k => (db.templates && db.templates[k]) ? db.templates[k] : [];
+
+        const allGalleryPhotos = computed(() => {
+            const list = [];
+            if (db.collections) {
+                for (const [k, c] of Object.entries(db.collections)) {
+                    if (c && Array.isArray(c.items)) {
+                        c.items.forEach(it => {
+                            if (Array.isArray(it.gallery)) {
+                                it.gallery.forEach((p, photoIdx) => {
+                                    list.push({ ...p, sourceLabel: c.label, parentObj: it, photoIdx });
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+            if (Array.isArray(db.mapLocations)) {
+                db.mapLocations.forEach(loc => {
+                    if (Array.isArray(loc.gallery)) {
+                        loc.gallery.forEach((p, photoIdx) => {
+                            list.push({ ...p, sourceLabel: 'Map POI: ' + loc.name, parentObj: loc, photoIdx });
+                        });
+                    }
+                });
+            }
+            return list;
+        });
 
         const handleImgErr = e => {
-            if (e && e.target) {
-                e.target.style.display = 'none';
-                if (e.target.nextElementSibling) e.target.nextElementSibling.classList.remove('hidden');
+            e.target.style.display = 'none';
+            if (e.target.nextElementSibling) {
+                e.target.nextElementSibling.classList.remove('hidden');
             }
         };
 
-        // AUTH
+        const handleLogoUpload = async e => {
+            const f = e.target.files[0]; e.target.value = '';
+            if (f) {
+                const dataUrl = await fileToData(f);
+                if (dataUrl) db.logoUrl = dataUrl;
+            }
+        };
+
+        const citizenListForSelect = computed(() => db.collections && db.collections.citizens ? db.collections.citizens.items : []);
+        const vehicleListForSelect = computed(() => db.collections && db.collections.vehicles ? db.collections.vehicles.items : []);
+
+        const tick = () => {
+            const now = new Date(Date.now() + 7200000); // UTC+2
+            const d = String(now.getUTCDate()).padStart(2, '0');
+            const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const y = now.getUTCFullYear();
+            date.value = `${d}/${m}/${y}`;
+            time.value = now.toISOString().slice(11, 19);
+        };
+
         const setSession = a => { user.value = { id: a.id, name: a.name, badge: a.badge, rank: a.rank }; localStorage.setItem(SESSION_KEY, a.id); };
         const mkAccount = async (name, badge, rank, p) => { const salt = uid(); return { id: uid(), name, badge, rank, salt, hash: await hashPw(salt, p) }; };
+
+        const ensureDefaultAccounts = async (force = false) => {
+            if (!db.accounts) db.accounts = [];
+            const hasDirector = db.accounts.some(a => a.rank === 'Director');
+            if (force || !hasDirector || db.accounts.length === 0) {
+                if (!hasDirector) {
+                    const masterAcc = await mkAccount('John Director', 'CID-01', 'Director', 'ChangeMe123!');
+                    db.accounts.push(masterAcc);
+                }
+                if (!db.accounts.some(a => a.name === 'Marcus Miller')) {
+                    const detAcc = await mkAccount('Marcus Miller', 'CID-12', 'Detective II', 'ChangeMe123!');
+                    db.accounts.push(detAcc);
+                }
+            }
+        };
+
         const login = async () => {
             loginError.value = '';
             try {
@@ -1154,74 +1238,140 @@ const app = createApp({
         };
         const logout = () => { user.value = null; localStorage.removeItem(SESSION_KEY); go('welcome'); };
 
+        watch(() => (db.accounts || []).map(a => a.id + a.rank + a.name + a.badge).join('|'), () => {
+            if (!user.value) return;
+            const a = (db.accounts || []).find(x => x.id === user.value.id);
+            if (!a) logout(); else user.value = { id: a.id, name: a.name, badge: a.badge, rank: a.rank };
+        });
+
         const addAgent = async () => {
-            if (!na.name.trim() || !na.badge.trim() || na.password.length < 8) return alert('Name, badge and 8+ char password required.');
-            db.accounts.push(await mkAccount(na.name.trim(), na.badge.trim(), na.rank, na.password));
+            if (!na.name.trim() || !na.badge.trim() || na.password.length < 8) return alert('Name, badge and a password of 8+ characters are required.');
+            if ((db.accounts || []).some(a => norm(a.name) === norm(na.name) || norm(a.badge) === norm(na.badge))) return alert('Username and badge must be unique.');
+            (db.accounts || (db.accounts = [])).push(await mkAccount(na.name.trim(), na.badge.trim(), na.rank, na.password));
             na.name = na.badge = na.password = '';
         };
-        const resetPw = async (a, e) => { const p = e.target.value; e.target.value = ''; if (p.length < 8) return alert('Minimum 8 chars.'); a.salt = uid(); a.hash = await hashPw(a.salt, p); alert('Password reset.'); };
+        const resetPw = async (a, e) => {
+            const p = e.target.value; e.target.value = ''; if (p.length < 8) return alert('Minimum 8 characters.');
+            a.salt = uid(); a.hash = await hashPw(a.salt, p); alert('Password updated.');
+        };
         const delAgent = a => {
-            if (a.id === user.value.id) return alert('Cannot delete own account.');
-            if (confirm('Delete account?')) db.accounts.splice(db.accounts.indexOf(a), 1);
+            if (user.value && a.id === user.value.id) return alert('You cannot delete your own account.');
+            if (a.rank === 'Director' && db.accounts.filter(x => x.rank === 'Director').length < 2) return alert('Cannot delete the last Director.');
+            if (confirm('Delete this account?')) db.accounts.splice(db.accounts.indexOf(a), 1);
         };
 
-        // RECORDS & ATTACHMENTS
+        // RECORD HELPERS
         const canEditRec = computed(() => !!rec.value && level(rec.value.key) === 'edit');
+        
         const openRec = (key, obj) => {
             if (!obj) return;
             tab.value = key; recErr.value = '';
+            if (!obj.gallery) obj.gallery = [];
+            if (!obj.attachedCases) obj.attachedCases = [];
+            if (!obj.attachedCitizens) obj.attachedCitizens = [];
+            if (!obj.attachedVehicles) obj.attachedVehicles = [];
             if (key === 'cases') {
-                const parts = (obj.caseCode || 'CID-26-001').split('-');
-                caseCodeNum.value = parts[2] || '001';
+                caseCodeNum.value = obj.caseCode ? obj.caseCode.replace('CID-26-', '') : '001';
             }
             rec.value = { key, obj, isNew: false };
         };
 
         const newRec = key => {
             const o = reactive({ id: uid(), gallery: [], attachedCases: [], attachedCitizens: [], attachedVehicles: [] });
-            if (db.collections[key]) {
-                db.collections[key].fields.forEach(f => o[f[0]] = f[2] === 'b' ? false : '');
-            }
+            db.collections[key].fields.forEach(f => o[f[0]] = f[2] === 'b' ? false : '');
             if (key === 'cases') {
-                caseCodeNum.value = String(((db.collections.cases.items || []).length + 1)).padStart(3, '0');
+                const nextNum = String((db.collections.cases.items.length + 1)).padStart(3, '0');
+                caseCodeNum.value = nextNum;
+                o.caseCode = 'CID-26-' + nextNum;
             } else if (key === 'interrogations') {
-                o.interrogationNum = ((db.collections.interrogations.items || []).length + 1);
+                o.interrogationNum = (db.collections.interrogations.items.length + 1);
             }
-            recErr.value = ''; rec.value = { key, obj: o, isNew: true };
+            recErr.value = '';
+            rec.value = { key, obj: o, isNew: true };
         };
 
         const closeRec = () => { rec.value = null; };
 
         const saveNew = () => {
-            const { key, obj } = rec.value, c = db.collections[key];
-            if (!c) return;
-            if (!String(obj[c.fields[0][0]]).trim()) { recErr.value = '"' + c.fields[0][1] + '" is required.'; return; }
-            if (key === 'cases') {
-                obj.caseCode = `CID-26-${caseCodeNum.value.padStart(3, '0')}`;
+            if (!rec.value) return;
+            const { key, obj } = rec.value;
+            const c = db.collections[key];
+            const firstFieldKey = c.fields[0][0];
+            if (!String(obj[firstFieldKey] || '').trim()) {
+                recErr.value = '"' + c.fields[0][1] + '" is required.';
+                return;
             }
-            c.items.push(obj); rec.value = null;
+            if (key === 'cases') {
+                obj.caseCode = 'CID-26-' + (caseCodeNum.value || '000').padStart(3, '0');
+            }
+            if (key === 'warrants' && user.value) {
+                Object.assign(obj, { issuedAt: date.value, issuedBy: user.value.name, issuedRank: user.value.rank, issuedBadge: user.value.badge });
+            }
+            c.items.push(obj);
+            rec.value = null;
         };
 
-        const delRec = (key, it) => { if (!confirm('Delete record?')) return; const a = db.collections[key].items; a.splice(a.indexOf(it), 1); };
-        const applyTpl = name => { const t = tplFor(rec.value.key).find(x => x.name === name); if (t) { const f = db.collections[rec.value.key].fields.find(f => f[2] === 'a'); if (f) { rec.value.obj[f[0]] = t.body; rec.value.obj.template = t.name; } } };
+        const delRec = (key, it) => {
+            if (!confirm('Delete this record?')) return;
+            const arr = db.collections[key].items;
+            const idx = arr.indexOf(it);
+            if (idx !== -1) arr.splice(idx, 1);
+        };
 
-        const caseById = id => ((db.collections.cases || {}).items || []).find(c => c.id === id);
-        const caseTitle = id => (caseById(id) || { title: '(Deleted Case)' }).title;
-        const freeCases = computed(() => ((db.collections.cases || {}).items || []).filter(c => !(rec.value.obj.attachedCases || []).includes(c.id)));
-        const attachCase = e => { const v = e.target.value; e.target.value = ''; if (v) (rec.value.obj.attachedCases || (rec.value.obj.attachedCases = [])).push(v); };
-        const detachCase = id => { const a = rec.value.obj.attachedCases; a.splice(a.indexOf(id), 1); };
+        const applyTpl = name => {
+            const t = tplFor(rec.value.key).find(x => x.name === name);
+            if (!t) return;
+            const f = db.collections[rec.value.key].fields.find(f => f[2] === 'a');
+            if (f) { rec.value.obj[f[0]] = t.body; rec.value.obj.template = t.name; }
+        };
 
-        const attachCitizen = e => { const v = e.target.value; e.target.value = ''; if (v) (rec.value.obj.attachedCitizens || (rec.value.obj.attachedCitizens = [])).push(v); };
-        const detachCitizen = name => { const a = rec.value.obj.attachedCitizens; if (a) a.splice(a.indexOf(name), 1); };
+        const caseById = id => (db.collections.cases ? db.collections.cases.items.find(c => c.id === id) : null);
+        const caseTitle = id => { const c = caseById(id); return c ? `${c.caseCode || 'CASE'}: ${c.title}` : '(Deleted Case)'; };
+        const freeCases = computed(() => {
+            if (!rec.value || !db.collections.cases) return [];
+            const attached = rec.value.obj.attachedCases || [];
+            return db.collections.cases.items.filter(c => !attached.includes(c.id));
+        });
 
-        const attachVehicle = e => { const v = e.target.value; e.target.value = ''; if (v) (rec.value.obj.attachedVehicles || (rec.value.obj.attachedVehicles = [])).push(v); };
-        const detachVehicle = plate => { const a = rec.value.obj.attachedVehicles; if (a) a.splice(a.indexOf(plate), 1); };
+        const attachCase = e => {
+            const id = e.target.value; e.target.value = ''; if (!id) return;
+            if (!rec.value.obj.attachedCases) rec.value.obj.attachedCases = [];
+            if (!rec.value.obj.attachedCases.includes(id)) rec.value.obj.attachedCases.push(id);
+        };
+        const detachCase = id => {
+            const arr = rec.value.obj.attachedCases;
+            if (arr) { const i = arr.indexOf(id); if (i !== -1) arr.splice(i, 1); }
+        };
 
-        // VIDEO ATTACHMENTS
-        const attachVideoUrl = () => { if (newVideoUrl.value) { rec.value.obj.videoUrl = newVideoUrl.value; newVideoUrl.value = ''; } };
-        const uploadVideoFile = async e => {
+        const attachCitizen = e => {
+            const val = e.target.value; e.target.value = ''; if (!val) return;
+            if (!rec.value.obj.attachedCitizens) rec.value.obj.attachedCitizens = [];
+            if (!rec.value.obj.attachedCitizens.includes(val)) rec.value.obj.attachedCitizens.push(val);
+        };
+        const detachCitizen = name => {
+            const arr = rec.value.obj.attachedCitizens;
+            if (arr) { const i = arr.indexOf(name); if (i !== -1) arr.splice(i, 1); }
+        };
+
+        const attachVehicle = e => {
+            const val = e.target.value; e.target.value = ''; if (!val) return;
+            if (!rec.value.obj.attachedVehicles) rec.value.obj.attachedVehicles = [];
+            if (!rec.value.obj.attachedVehicles.includes(val)) rec.value.obj.attachedVehicles.push(val);
+        };
+        const detachVehicle = plate => {
+            const arr = rec.value.obj.attachedVehicles;
+            if (arr) { const i = arr.indexOf(plate); if (i !== -1) arr.splice(i, 1); }
+        };
+
+        const attachVideoUrl = () => {
+            if (!newVideoUrl.value.trim() || !rec.value) return;
+            rec.value.obj.videoUrl = newVideoUrl.value.trim();
+            newVideoUrl.value = '';
+        };
+
+        const uploadVideoFile = e => {
             const f = e.target.files[0]; e.target.value = '';
-            if (f) {
+            if (f && rec.value) {
                 const fr = new FileReader();
                 fr.onload = () => { rec.value.obj.videoUrl = fr.result; };
                 fr.readAsDataURL(f);
@@ -1385,6 +1535,7 @@ const app = createApp({
         const goTo = r => { openRec(r.key, r.item); };
 
         // FIREBASE SYNC
+        const fbStatusMessage = ref('');
         const connectFirebase = () => {
             const raw = firebaseConfigRaw.value || JSON.stringify(HARDCODED_FB_CONFIG);
             try {
@@ -1392,21 +1543,43 @@ const app = createApp({
                 if (typeof firebase !== 'undefined') {
                     if (!firebase.apps.length) firebase.initializeApp(cfg);
                     const firestore = firebase.firestore();
-                    firebaseConnected.value = true;
                     localStorage.setItem(FIREBASE_CFG_KEY, raw);
                     
                     firestore.collection('cid_terminal').doc('master_db').onSnapshot(doc => {
+                        firebaseConnected.value = true;
+                        fbStatusMessage.value = 'Live Sync Active';
                         if (doc.exists) {
                             const data = doc.data();
                             if (data && typeof data === 'object') {
-                                Object.assign(db, data);
+                                // Merge accounts safely so local/created credentials are not erased
+                                if (Array.isArray(data.accounts) && data.accounts.length > 0) {
+                                    const accMap = new Map();
+                                    (db.accounts || []).forEach(a => accMap.set(a.id || norm(a.name), a));
+                                    data.accounts.forEach(a => accMap.set(a.id || norm(a.name), a));
+                                    db.accounts = Array.from(accMap.values());
+                                }
+                                Object.keys(data).forEach(k => {
+                                    if (k !== 'accounts' && data[k] !== undefined) {
+                                        db[k] = data[k];
+                                    }
+                                });
+                                ensureDefaultAccounts();
                             }
                         }
-                    }, err => { console.warn("Firestore listener warning:", err); });
+                    }, err => {
+                        console.warn("Firestore listener warning:", err);
+                        firebaseConnected.value = false;
+                        if (err.code === 'permission-denied') {
+                            fbStatusMessage.value = 'Firebase Permission Denied! Set Firestore Rules to "allow read, write: if true;" in Firebase Console.';
+                        } else {
+                            fbStatusMessage.value = 'Firebase Error: ' + err.message;
+                        }
+                    });
                 }
             } catch (e) {
                 console.warn('Firebase Connection Exception:', e);
                 firebaseConnected.value = false;
+                fbStatusMessage.value = e.message;
             }
         };
 
@@ -1466,20 +1639,20 @@ const app = createApp({
             st = setTimeout(() => {
                 try {
                     localStorage.setItem(DB_KEY, JSON.stringify(db));
+                    saveError.value = '';
                     if (firebaseConnected.value && typeof firebase !== 'undefined') {
                         firebase.firestore().collection('cid_terminal').doc('master_db').set(JSON.parse(JSON.stringify(db)));
                     }
-                } catch (e) { saveError.value = 'Local storage full. Export backup.'; }
+                } catch (e) {
+                    saveError.value = 'Local storage full. Delete heavy photos/videos or Export backup.';
+                }
             }, 300);
         }, { deep: true });
 
         onMounted(async () => {
             tick(); setInterval(tick, 1000);
-            if (!db.accounts.length) {
-                db.accounts.push(await mkAccount('John Director', 'CID-01', 'Director', 'ChangeMe123!'));
-                db.accounts.push(await mkAccount('Marcus Miller', 'CID-12', 'Detective II', 'ChangeMe123!'));
-            }
-            const a = db.accounts.find(x => x.id === localStorage.getItem(SESSION_KEY));
+            await ensureDefaultAccounts();
+            const a = (db.accounts || []).find(x => x.id === localStorage.getItem(SESSION_KEY));
             if (a) setSession(a);
 
             connectFirebase();
@@ -1487,11 +1660,11 @@ const app = createApp({
 
         return {
             db, user, tab, atab, showLogin, isMobileView, mobileMenuOpen, loginErr: loginError, q, time, date, saveError, mapFilterQuery, mapLayers,
-            firebaseConnected, firebaseConfigRaw, auth, na, nt, nr, nl, rec, recErr, gal, zoom, zs, pdfExportItem,
+            firebaseConnected, fbStatusMessage, firebaseConfigRaw, auth, na, nt, nr, nl, rec, recErr, gal, zoom, zs, pdfExportItem,
             caseCodeNum, newVideoUrl, showReportModal, newReportForm, showUploadDocModal, newDocForm, showPenalEditModal, penalForm,
             mImg, mUrl, mMode, mBusy, mStatus, mResults, RANKS, isTop, isAdmin, rankLevel, level, setPerm, permKeys,
-            permLabel, col, go, nav, subFields, shown, listItems, penalList, tplCols, tplFor, allGalleryPhotos, handleImgErr,
-            citizenListForSelect, vehicleListForSelect, filteredMapItems, login, logout, addAgent, resetPw, delAgent,
+            permLabel, col, go, nav, subFields, shown, listItems, penalList, tplCols, tplFor, allGalleryPhotos, handleImgErr, handleLogoUpload,
+            citizenListForSelect, vehicleListForSelect, filteredMapItems, login, logout, addAgent, resetPw, delAgent, ensureDefaultAccounts,
             canEditRec, openRec, newRec, closeRec, saveNew, delRec, applyTpl, caseById, caseTitle, freeCases, attachCase,
             detachCase, attachCitizen, detachCitizen, attachVehicle, detachVehicle, attachVideoUrl, uploadVideoFile,
             openNewReportModal, saveNewReport, deleteReport, saveNewDocument, handleDocFileUpload, deleteDocument,
@@ -1506,7 +1679,7 @@ app.component('photo-gallery', {
     props: ['target', 'edit', 'by'], emits: ['zoom'],
     data() { return { url: '', busy: false }; },
     methods: {
-        push(url) { (this.target.gallery || (this.target.gallery = [])).push({ id: uid(), url, title: '', desc: '', taken: '', place: '', date: new Date().toLocaleDateString('el-GR'), by: this.by || 'Agent' }); },
+        push(url) { (this.target.gallery || (this.target.gallery = [])).push({ id: uid(), url, title: '', desc: '', date: new Date().toLocaleDateString('el-GR'), by: this.by || 'Agent' }); },
         addUrl() { const u = this.url.trim(); if (u) { this.push(u); this.url = ''; } },
         async upload(e) { this.busy = true; for (const f of e.target.files) { const d = await fileToData(f); if (d) this.push(d); } e.target.value = ''; this.busy = false; }
     },
