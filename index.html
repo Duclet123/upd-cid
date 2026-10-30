@@ -78,23 +78,34 @@
         ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 9px; }
         ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
 
+        @page {
+            size: auto;
+            margin: 0mm; /* Removes default browser print headers, URLs, date, and page numbers */
+        }
+
         @media print {
-            body * { visibility: hidden; }
-            #pdfExportContainer, #pdfExportContainer * { visibility: visible; }
-            #pdfExportContainer { position: absolute; left: 0; top: 0; width: 100%; background: #fff !important; color: #000 !important; padding: 20px; }
+            html, body { background: #fff !important; color: #000 !important; margin: 0 !important; padding: 0 !important; }
+            body * { visibility: hidden !important; }
+            #pdfExportContainer, #pdfExportContainer * { visibility: visible !important; }
+            #pdfExportContainer { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; min-height: 100% !important; background: #fff !important; color: #000 !important; padding: 15mm !important; box-shadow: none !important; box-sizing: border-box !important; }
             .no-print { display: none !important; }
         }
     </style>
 </head>
 <body>
 
-<div id="app" class="flex h-screen overflow-hidden relative">
+<div id="app" class="flex h-screen overflow-hidden relative transition-all duration-300" :class="isMobileView ? 'max-w-[430px] mx-auto border-x border-slate-800 shadow-2xl my-0 relative' : ''">
+
+    <!-- MOBILE OVERLAY BACKDROP -->
+    <div v-if="isMobileView && mobileMenuOpen" @click="mobileMenuOpen = false" class="fixed inset-0 bg-black/80 z-30"></div>
 
     <!-- SIDEBAR NAVIGATION -->
-    <aside class="w-64 bg-panel border-r border-slate-800 flex flex-col shrink-0 z-20">
-        <div class="p-4 border-b border-slate-800 flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-2xl bg-bg border border-tc/40 flex items-center justify-center text-tc shadow-md shrink-0">
-                <i class="fa-solid fa-shield-halved text-xl"></i>
+    <aside class="bg-panel border-r border-slate-800 flex flex-col shrink-0 z-40 transition-all duration-300" 
+           :class="isMobileView ? (mobileMenuOpen ? 'fixed inset-y-0 left-0 w-64 shadow-2xl' : 'hidden') : 'w-64'">
+        <div class="p-4 border-b border-slate-800 flex items-center space-x-3 cursor-pointer" @click="go('welcome'); mobileMenuOpen=false">
+            <div class="w-12 h-12 rounded-2xl bg-bg border border-tc/40 flex items-center justify-center text-tc shadow-md shrink-0 overflow-hidden p-1">
+                <img src="images/CID Logo.png" onerror="this.onerror=null; this.src=''; this.className='hidden'; this.nextElementSibling.classList.remove('hidden');" class="w-full h-full object-contain">
+                <i class="fa-solid fa-shield-halved text-xl hidden"></i>
             </div>
             <div>
                 <h1 class="text-sm font-title font-bold text-white tracking-widest uppercase">C.I.D. TERMINAL</h1>
@@ -104,36 +115,37 @@
 
         <nav class="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
             <div class="text-[9px] font-mono text-slate-500 uppercase px-3 py-1">Public Services</div>
-            <button @click="go('map')" :class="nav('map')"><i class="fa-solid fa-map-location-dot w-5 text-tc"></i>Tactical Map</button>
-            <button @click="go('warrants')" :class="nav('warrants')"><i class="fa-solid fa-triangle-exclamation w-5 text-red-400"></i>Request Warrants</button>
-            <button @click="go('penal')" :class="nav('penal')"><i class="fa-solid fa-gavel w-5 text-amber-400"></i>Penal Code</button>
+            <button @click="go('welcome'); mobileMenuOpen=false" :class="nav('welcome')"><i class="fa-solid fa-house w-5 text-sky-400"></i>Terminal Home</button>
+            <button @click="go('map'); mobileMenuOpen=false" :class="nav('map')"><i class="fa-solid fa-map-location-dot w-5 text-tc"></i>Tactical Map</button>
+            <button @click="go('warrants'); mobileMenuOpen=false" :class="nav('warrants')"><i class="fa-solid fa-triangle-exclamation w-5 text-red-400"></i>Request Warrants</button>
+            <button @click="go('penal'); mobileMenuOpen=false" :class="nav('penal')"><i class="fa-solid fa-gavel w-5 text-amber-400"></i>Penal Code</button>
 
             <template v-if="user">
                 <div class="text-[9px] font-mono text-tc uppercase px-3 pt-4 mt-2 border-t border-slate-800">
                     <i class="fa-solid fa-lock text-[8px] mr-1"></i>Agent Operations
                 </div>
                 
-                <button v-for="(c, k) in db.collections" :key="k" v-show="k!=='warrants'&&level(k)!=='none'" @click="go(k)" :class="nav(k)">
+                <button v-for="(c, k) in db.collections" :key="k" v-show="k!=='warrants'&&level(k)!=='none'" @click="go(k); mobileMenuOpen=false" :class="nav(k)">
                     <i :class="c.icon" class="w-5"></i><span>{{ c.label }}</span>
                 </button>
 
-                <button v-if="level('documents') !== 'none'" @click="go('documents')" :class="nav('documents')">
+                <button v-if="level('documents') !== 'none'" @click="go('documents'); mobileMenuOpen=false" :class="nav('documents')">
                     <i class="fa-solid fa-file-pdf text-red-400 w-5"></i><span>Document Vault</span>
                 </button>
 
-                <button v-if="level('reports') !== 'none'" @click="go('reports')" :class="nav('reports')">
+                <button v-if="level('reports') !== 'none'" @click="go('reports'); mobileMenuOpen=false" :class="nav('reports')">
                     <i class="fa-solid fa-file-signature text-emerald-400 w-5"></i><span>MDT Incident Reports</span>
                 </button>
 
-                <button @click="go('photo_evidence')" :class="nav('photo_evidence')">
+                <button @click="go('photo_evidence'); mobileMenuOpen=false" :class="nav('photo_evidence')">
                     <i class="fa-solid fa-images text-amber-300 w-5"></i><span>Master Photo Evidence</span>
                 </button>
 
-                <button v-if="level('matcher')!=='none'" @click="go('matcher')" :class="nav('matcher')">
+                <button v-if="level('matcher')!=='none'" @click="go('matcher'); mobileMenuOpen=false" :class="nav('matcher')">
                     <i class="fa-solid fa-wand-magic-sparkles text-purple-400 w-5"></i><span>Face / Outfit Matcher</span>
                 </button>
 
-                <button v-if="isAdmin" @click="go('admin')" :class="nav('admin')" class="text-red-400 font-bold">
+                <button v-if="isAdmin" @click="go('admin'); mobileMenuOpen=false" :class="nav('admin')" class="text-red-400 font-bold">
                     <i class="fa-solid fa-user-gear w-5"></i><span>Admin Panel</span>
                 </button>
             </template>
@@ -152,22 +164,36 @@
                     <span v-if="firebaseConnected" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" title="Firebase Live Connected"></span>
                     <span v-else class="w-2.5 h-2.5 rounded-full bg-amber-500/80" title="Local Offline Mode"></span>
                 </div>
-                <button @click="logout" class="w-full py-1.5 bg-slate-800 hover:bg-red-600/80 text-slate-300 hover:text-white rounded-xl text-xs font-mono border border-slate-700 transition">Sign Out</button>
+                <div class="flex items-center gap-1.5">
+                    <button @click="logout" class="flex-1 py-1.5 bg-slate-800 hover:bg-red-600/80 text-slate-300 hover:text-white rounded-xl text-xs font-mono border border-slate-700 transition">Sign Out</button>
+                    <button @click="isMobileView = !isMobileView" class="p-1.5 bg-slate-800 hover:bg-tc/20 text-slate-400 hover:text-tc rounded-xl border border-slate-700 transition" title="Toggle Mobile View">
+                        <i :class="isMobileView ? 'fa-solid fa-desktop text-xs' : 'fa-solid fa-mobile-screen-button text-xs'"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </aside>
 
     <!-- MAIN VIEWPORT -->
     <main class="flex-1 flex flex-col min-w-0 bg-bg">
-        <header class="h-14 bg-panel border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
-            <span class="text-xs font-title font-bold text-white tracking-widest uppercase">
-                SAN ANDREAS STATE POLICE // CRIMINAL INVESTIGATION DIVISION
-            </span>
-            <div class="flex items-center space-x-3 text-xs font-mono text-slate-400">
-                <span class="text-tc uppercase tracking-wider text-[10px] px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded-full font-bold">
+        <header class="h-14 bg-panel border-b border-slate-800 flex items-center justify-between px-4 sm:px-6 shrink-0">
+            <div class="flex items-center space-x-2">
+                <button v-if="isMobileView" @click="mobileMenuOpen = !mobileMenuOpen" class="p-2 text-slate-300 hover:text-white mr-1 text-base">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <img src="images/CID Logo.png" class="h-7 w-auto object-contain" onerror="this.style.display='none'">
+                <span class="text-[11px] sm:text-xs font-title font-bold text-white tracking-wider sm:tracking-widest uppercase truncate">
+                    S.A.S.P. // C.I.D.
+                </span>
+            </div>
+            <div class="flex items-center space-x-2 sm:space-x-3 text-xs font-mono text-slate-400">
+                <span class="text-tc uppercase tracking-wider text-[10px] px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded-full font-bold hidden sm:inline-block">
                     UTC+2
                 </span>
-                <span>{{ date }} {{ time }}</span>
+                <span class="text-[11px]">{{ time }}</span>
+                <button @click="isMobileView = !isMobileView" class="text-slate-400 hover:text-tc text-xs p-1.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 rounded-lg transition" :title="isMobileView ? 'Switch to Desktop View' : 'Switch to Mobile View'">
+                    <i :class="isMobileView ? 'fa-solid fa-desktop' : 'fa-solid fa-mobile-screen-button'"></i>
+                </button>
             </div>
         </header>
 
@@ -177,6 +203,34 @@
         </div>
 
         <div class="flex-1 overflow-y-auto" :class="tab==='map' ? 'p-0 flex flex-col' : 'p-6'">
+
+            <!-- WELCOME LANDING VIEW -->
+            <div v-if="tab==='welcome'" class="h-full flex flex-col items-center justify-center p-8 text-center space-y-6">
+                <div class="relative group">
+                    <img src="images/CID Logo.png" class="w-48 h-48 object-contain drop-shadow-[0_0_35px_rgba(56,189,248,0.4)] transition duration-500 transform hover:scale-105" onerror="this.onerror=null; this.src=''; this.className='hidden'; this.nextElementSibling.classList.remove('hidden');">
+                    <div class="w-44 h-44 rounded-full bg-panel border-2 border-tc/50 flex items-center justify-center text-tc text-6xl shadow-2xl hidden">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                </div>
+
+                <div class="space-y-2 max-w-xl">
+                    <h1 class="text-2xl font-title font-extrabold text-white tracking-widest uppercase">
+                        SAN ANDREAS STATE POLICE
+                    </h1>
+                    <h2 class="text-base font-title font-bold text-tc tracking-widest uppercase">
+                        CRIMINAL INVESTIGATION DIVISION // CAD & MDT
+                    </h2>
+                    <p class="text-xs font-mono text-slate-400 leading-relaxed pt-2">
+                        Welcome to the official S.A.S.P. C.I.D. Terminal database interface. Access restricted intelligence dossiers, criminal organisation tracking, ballistics registries, warrants, and real-time tactical grid maps.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap justify-center gap-4 pt-4 font-mono text-xs">
+                    <button @click="go('map')" class="btn bg-blue-600 px-6 py-3 text-sm uppercase"><i class="fa-solid fa-map-location-dot mr-2"></i> Launch Tactical Map</button>
+                    <button v-if="!user" @click="showLogin=true" class="btn bg-slate-800 border border-slate-700 px-6 py-3 text-sm uppercase hover:bg-slate-700"><i class="fa-solid fa-right-to-bracket mr-2"></i> Agent Access Login</button>
+                    <button v-else @click="go('cases')" class="btn bg-amber-600 px-6 py-3 text-sm uppercase"><i class="fa-solid fa-folder-open mr-2"></i> Access Active Case Files</button>
+                </div>
+            </div>
 
             <!-- TACTICAL MAP -->
             <div v-show="tab==='map'" class="h-full flex relative overflow-hidden">
@@ -308,7 +362,11 @@
                                 <i class="fa-regular fa-image text-xl"></i>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <h3 class="text-sm font-bold text-white font-title truncate">{{ it[col.fields[0][0]] || '(Untitled)' }}</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span v-if="tab==='cases'&&it.caseCode" class="px-2 py-0.5 bg-tc/20 text-tc border border-tc/40 rounded font-bold text-[10px]">{{ it.caseCode }}</span>
+                                    <span v-if="tab==='interrogations'&&it.interrogationNum" class="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded font-bold text-[10px]">#{{ it.interrogationNum }}</span>
+                                    <h3 class="text-sm font-bold text-white font-title truncate">{{ it[col.fields[0][0]] || '(Untitled)' }}</h3>
+                                </div>
                                 <p v-for="f in subFields(col)" :key="f[0]" class="text-slate-400 truncate">{{ f[1] }}: {{ shown(tab, f[0], it) }}</p>
                                 <p v-if="it.template" class="text-tc text-[10px]">Template: {{ it.template }}</p>
                                 <p v-if="it.attachedCases&&it.attachedCases.length" class="text-amber-400 text-[10px]">{{ it.attachedCases.length }} attached case(s)</p>
@@ -374,7 +432,7 @@
                 <div class="grid md:grid-cols-2 gap-4 font-mono text-xs">
                     <div v-for="(rep, rIdx) in (db.reports || [])" :key="rep.id" class="hud p-5 space-y-3">
                         <div class="flex justify-between items-start">
-                            <span class="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full text-[10px] font-bold uppercase">REPORT #{{ rep.reportNumber || rIdx + 1 }}</span>
+                            <span class="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full text-[10px] font-bold uppercase">REPORT #{{ rep.reportNumber }}</span>
                             <div class="flex space-x-2">
                                 <button @click="exportPdfRecord('reports', rep)" class="btn !py-1 !px-2 bg-slate-800 text-xs"><i class="fa-solid fa-print"></i> PDF</button>
                                 <button v-if="level('reports')==='edit'" @click="deleteReport(rIdx)" class="del">Delete</button>
@@ -603,6 +661,9 @@
     <div v-if="showLogin&&!user" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
         <div class="w-full max-w-md hud p-6 relative">
             <button @click="showLogin=false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            <div class="flex justify-center mb-3">
+                <img src="images/CID Logo.png" class="h-16 w-auto object-contain" onerror="this.style.display='none'">
+            </div>
             <h2 class="text-xl font-title font-bold text-white uppercase text-center mb-6">C.I.D. Agent Sign In</h2>
             <form @submit.prevent="login" class="space-y-4">
                 <input v-model="auth.u" required placeholder="Username" autocomplete="username" class="inp">
@@ -626,11 +687,30 @@
                 <option v-for="t in tplFor(rec.key)" :key="t.name">{{ t.name }}</option>
             </select>
 
+            <!-- CASE FILE SPECIFIC CODE FIELD CID-26-XXX -->
+            <div v-if="rec.key==='cases'" class="p-4 bg-bg border border-tc/30 rounded-xl space-y-2">
+                <label class="text-tc font-bold uppercase block text-xs">Case File Reference Code (CID-26-XXX)</label>
+                <div class="flex items-center space-x-2">
+                    <span class="px-3 py-2 bg-tc/20 text-tc font-bold border border-tc/40 rounded-lg">CID-26-</span>
+                    <input v-model="caseCodeNum" maxlength="3" placeholder="001" class="inp !w-28 font-bold text-center" :disabled="!canEditRec">
+                    <span class="text-slate-400 text-xs">Full Case ID: <strong>CID-26-{{ caseCodeNum || '000' }}</strong></span>
+                </div>
+            </div>
+
             <div class="grid md:grid-cols-2 gap-4">
                 <template v-for="f in db.collections[rec.key].fields" :key="f[0]">
                     <div :class="f[2]==='a'?'md:col-span-2':''">
                         <label class="text-slate-400 font-bold block mb-1 uppercase text-[11px]">{{ f[1] }}</label>
-                        <textarea v-if="f[2]==='a'" v-model="rec.obj[f[0]]" :disabled="!canEditRec" rows="10" class="inp leading-relaxed"></textarea>
+                        
+                        <!-- INTERROGATION SUSPECT SELECTOR FROM REGISTERED CITIZENS -->
+                        <div v-if="rec.key==='interrogations'&&f[0]==='suspect'">
+                            <select v-model="rec.obj[f[0]]" :disabled="!canEditRec" class="inp">
+                                <option value="">-- Select Suspect from Citizen Registry --</option>
+                                <option v-for="c in citizenListForSelect" :key="c.id" :value="c.fullName">{{ c.fullName }} (CID: {{ c.citizenId || 'N/A' }})</option>
+                            </select>
+                        </div>
+
+                        <textarea v-else-if="f[2]==='a'" v-model="rec.obj[f[0]]" :disabled="!canEditRec" rows="10" class="inp leading-relaxed"></textarea>
                         <label v-else-if="f[2]==='b'" class="flex items-center gap-2 mt-2">
                             <input type="checkbox" v-model="rec.obj[f[0]]" :disabled="!canEditRec">
                             <span class="text-white">{{ rec.obj[f[0]] ? 'Yes' : 'No' }}</span>
@@ -640,12 +720,15 @@
                 </template>
             </div>
 
-            <!-- INTERROGATIONS VIDEO PLAYER -->
+            <!-- INTERROGATIONS VIDEO PLAYER & AUTO NUMBER -->
             <div v-if="rec.key==='interrogations'" class="space-y-3 pt-4 border-t border-slate-800">
-                <h4 class="text-tc font-bold uppercase text-sm flex items-center space-x-2">
-                    <i class="fa-solid fa-video"></i>
-                    <span>Interrogation Footage / Surveillance Video</span>
-                </h4>
+                <div class="flex justify-between items-center">
+                    <h4 class="text-tc font-bold uppercase text-sm flex items-center space-x-2">
+                        <i class="fa-solid fa-video"></i>
+                        <span>Interrogation Footage / Surveillance Video</span>
+                    </h4>
+                    <span class="px-3 py-1 bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40 rounded-lg">Interrogation Record #{{ rec.obj.interrogationNum }}</span>
+                </div>
                 <div v-if="canEditRec" class="flex gap-2">
                     <input v-model="newVideoUrl" placeholder="Paste Video MP4 / WebM URL..." class="inp flex-1">
                     <button @click="attachVideoUrl" class="btn">+ Attach Video URL</button>
@@ -663,6 +746,39 @@
                 </div>
             </div>
 
+            <!-- ORGANISATIONS & CASE FILES CROSS-ATTACHMENTS (CITIZENS & VEHICLES) -->
+            <div v-if="rec.key==='organizations' || rec.key==='cases'" class="space-y-4 pt-4 border-t border-slate-800">
+                <h4 class="text-tc font-bold uppercase text-sm">Attached Suspects & Vehicles</h4>
+                
+                <div class="grid md:grid-cols-2 gap-4">
+                    <!-- ATTACHED CITIZENS -->
+                    <div class="hud p-4 space-y-3">
+                        <h5 class="font-bold text-white uppercase text-xs">Attached Suspects / Persons of Interest</h5>
+                        <div v-for="cName in (rec.obj.attachedCitizens||[])" :key="cName" class="flex items-center justify-between p-2 bg-bg border border-slate-800 rounded-lg">
+                            <span class="text-white font-bold">{{ cName }}</span>
+                            <button v-if="canEditRec" @click="detachCitizen(cName)" class="del">Detach</button>
+                        </div>
+                        <select v-if="canEditRec" @change="attachCitizen($event)" class="inp">
+                            <option value="">+ Link Citizen Suspect...</option>
+                            <option v-for="c in citizenListForSelect" :key="c.id" :value="c.fullName">{{ c.fullName }} ({{ c.citizenId || 'No ID' }})</option>
+                        </select>
+                    </div>
+
+                    <!-- ATTACHED VEHICLES -->
+                    <div class="hud p-4 space-y-3">
+                        <h5 class="font-bold text-white uppercase text-xs">Attached Registered Vehicles</h5>
+                        <div v-for="vPlate in (rec.obj.attachedVehicles||[])" :key="vPlate" class="flex items-center justify-between p-2 bg-bg border border-slate-800 rounded-lg">
+                            <span class="text-white font-bold">{{ vPlate }}</span>
+                            <button v-if="canEditRec" @click="detachVehicle(vPlate)" class="del">Detach</button>
+                        </div>
+                        <select v-if="canEditRec" @change="attachVehicle($event)" class="inp">
+                            <option value="">+ Link Vehicle Plate...</option>
+                            <option v-for="v in vehicleListForSelect" :key="v.id" :value="v.plate + ' (' + v.model + ')'">{{ v.plate }} - {{ v.model }} (Owner: {{ v.owner }})</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <!-- ATTACHED CASES -->
             <div class="space-y-3 pt-4 border-t border-slate-800">
                 <h4 class="text-tc font-bold uppercase text-sm">Cross-Registry Case Attachments</h4>
@@ -675,7 +791,7 @@
                 </div>
                 <select v-if="canEditRec" @change="attachCase($event)" class="inp">
                     <option value="">+ Attach a Case File...</option>
-                    <option v-for="c in freeCases" :key="c.id" :value="c.id">{{ c.title }}</option>
+                    <option v-for="c in freeCases" :key="c.id" :value="c.id">{{ c.caseCode || 'CASE' }}: {{ c.title }}</option>
                 </select>
             </div>
 
@@ -699,6 +815,7 @@
         <div class="w-full max-w-2xl hud p-6 relative space-y-4 font-mono text-xs">
             <button @click="showReportModal=false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             <h3 class="text-base font-title font-bold text-white uppercase">File Incident & Field Report</h3>
+            <input v-model="newReportForm.reportNumber" placeholder="Report Number (e.g. 1001 or CID-REP-01)" class="inp font-bold">
             <input v-model="newReportForm.title" placeholder="Report Title" class="inp">
             <textarea v-model="newReportForm.details" rows="8" placeholder="Report details..." class="inp leading-relaxed"></textarea>
             <button @click="saveNewReport" class="btn bg-emerald-600 w-full py-2.5 uppercase font-bold">Submit Official Report</button>
@@ -771,10 +888,8 @@
     <div v-if="pdfExportItem" id="pdfExportContainer" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 p-6 overflow-y-auto">
         <div class="bg-white text-slate-900 p-8 rounded-xl max-w-3xl w-full font-mono text-xs space-y-6 shadow-2xl">
             <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-14 h-14 rounded-xl bg-slate-900 text-cyan-400 flex items-center justify-center text-2xl shrink-0">
-                        <i class="fa-solid fa-shield-halved"></i>
-                    </div>
+                <div class="flex items-center gap-4">
+                    <img src="images/CID Logo.png" class="w-16 h-16 object-contain" onerror="this.style.display='none'">
                     <div>
                         <h1 class="text-xl font-bold uppercase tracking-wider text-slate-900">SAN ANDREAS STATE POLICE</h1>
                         <p class="font-bold text-slate-700 text-xs">CRIMINAL INVESTIGATION DIVISION // OFFICIAL DOCUMENT</p>
@@ -936,7 +1051,8 @@ function loadDb() {
 const app = createApp({
     setup() {
         const db = reactive(loadDb());
-        const user = ref(null), tab = ref('map'), atab = ref('accounts'), showLogin = ref(false);
+        const user = ref(null), tab = ref('welcome'), atab = ref('accounts'), showLogin = ref(false);
+        const isMobileView = ref(false), mobileMenuOpen = ref(false);
         const loginError = ref(''), time = ref(''), date = ref(''), saveError = ref(''), q = ref('');
         const mapFilterQuery = ref('');
         const firebaseConnected = ref(false), firebaseConfigRaw = ref('');
@@ -950,13 +1066,18 @@ const app = createApp({
         const rec = ref(null), recErr = ref(''), gal = ref(null), zoom = ref(null), zs = ref(1);
         const pdfExportItem = ref(null);
         
+        const caseCodeNum = ref('001');
         const newVideoUrl = ref('');
-        const showReportModal = ref(false), newReportForm = reactive({ title: '', details: '' });
+        const showReportModal = ref(false), newReportForm = reactive({ reportNumber: '1001', title: '', details: '' });
         const showUploadDocModal = ref(false), newDocForm = reactive({ title: '', category: 'PDF', notes: '', fileUrl: '' });
         const showPenalEditModal = ref(false), penalForm = reactive({ id: null, category: 'General', title: '', fine: 0, jail: 0 });
 
         const mImg = ref(''), mUrl = ref(''), mMode = ref('face'), mBusy = ref(false), mStatus = ref(''), mResults = ref([]);
         let gtaMapInstance = null, mapLayerGroups = {};
+
+        // SELECTOR LISTS
+        const citizenListForSelect = computed(() => ((db.collections.citizens || {}).items || []));
+        const vehicleListForSelect = computed(() => ((db.collections.vehicles || {}).items || []));
 
         // PERMISSIONS
         const isAdmin = computed(() => !!user.value && isTop(user.value.rank));
@@ -1014,7 +1135,7 @@ const app = createApp({
                 setSession(a); showLogin.value = false; auth.u = ''; auth.p = '';
             } catch (e) { loginError.value = 'Login error: ' + e.message; }
         };
-        const logout = () => { user.value = null; localStorage.removeItem(SESSION_KEY); go('map'); };
+        const logout = () => { user.value = null; localStorage.removeItem(SESSION_KEY); go('welcome'); };
 
         const addAgent = async () => {
             if (!na.name.trim() || !na.badge.trim() || na.password.length < 8) return alert('Name, badge and 8+ char password required.');
@@ -1029,21 +1150,41 @@ const app = createApp({
 
         // RECORDS & ATTACHMENTS
         const canEditRec = computed(() => !!rec.value && level(rec.value.key) === 'edit');
-        const openRec = (key, obj) => { if (!obj) return; tab.value = key; recErr.value = ''; rec.value = { key, obj, isNew: false }; };
+        const openRec = (key, obj) => {
+            if (!obj) return;
+            tab.value = key; recErr.value = '';
+            if (key === 'cases') {
+                const parts = (obj.caseCode || 'CID-26-001').split('-');
+                caseCodeNum.value = parts[2] || '001';
+            }
+            rec.value = { key, obj, isNew: false };
+        };
+
         const newRec = key => {
-            const o = reactive({ id: uid(), gallery: [], attachedCases: [] });
+            const o = reactive({ id: uid(), gallery: [], attachedCases: [], attachedCitizens: [], attachedVehicles: [] });
             if (db.collections[key]) {
                 db.collections[key].fields.forEach(f => o[f[0]] = f[2] === 'b' ? false : '');
             }
+            if (key === 'cases') {
+                caseCodeNum.value = String(((db.collections.cases.items || []).length + 1)).padStart(3, '0');
+            } else if (key === 'interrogations') {
+                o.interrogationNum = ((db.collections.interrogations.items || []).length + 1);
+            }
             recErr.value = ''; rec.value = { key, obj: o, isNew: true };
         };
+
         const closeRec = () => { rec.value = null; };
+
         const saveNew = () => {
             const { key, obj } = rec.value, c = db.collections[key];
             if (!c) return;
             if (!String(obj[c.fields[0][0]]).trim()) { recErr.value = '"' + c.fields[0][1] + '" is required.'; return; }
+            if (key === 'cases') {
+                obj.caseCode = `CID-26-${caseCodeNum.value.padStart(3, '0')}`;
+            }
             c.items.push(obj); rec.value = null;
         };
+
         const delRec = (key, it) => { if (!confirm('Delete record?')) return; const a = db.collections[key].items; a.splice(a.indexOf(it), 1); };
         const applyTpl = name => { const t = tplFor(rec.value.key).find(x => x.name === name); if (t) { const f = db.collections[rec.value.key].fields.find(f => f[2] === 'a'); if (f) { rec.value.obj[f[0]] = t.body; rec.value.obj.template = t.name; } } };
 
@@ -1052,6 +1193,12 @@ const app = createApp({
         const freeCases = computed(() => ((db.collections.cases || {}).items || []).filter(c => !(rec.value.obj.attachedCases || []).includes(c.id)));
         const attachCase = e => { const v = e.target.value; e.target.value = ''; if (v) (rec.value.obj.attachedCases || (rec.value.obj.attachedCases = [])).push(v); };
         const detachCase = id => { const a = rec.value.obj.attachedCases; a.splice(a.indexOf(id), 1); };
+
+        const attachCitizen = e => { const v = e.target.value; e.target.value = ''; if (v) (rec.value.obj.attachedCitizens || (rec.value.obj.attachedCitizens = [])).push(v); };
+        const detachCitizen = name => { const a = rec.value.obj.attachedCitizens; if (a) a.splice(a.indexOf(name), 1); };
+
+        const attachVehicle = e => { const v = e.target.value; e.target.value = ''; if (v) (rec.value.obj.attachedVehicles || (rec.value.obj.attachedVehicles = [])).push(v); };
+        const detachVehicle = plate => { const a = rec.value.obj.attachedVehicles; if (a) a.splice(a.indexOf(plate), 1); };
 
         // VIDEO ATTACHMENTS
         const attachVideoUrl = () => { if (newVideoUrl.value) { rec.value.obj.videoUrl = newVideoUrl.value; newVideoUrl.value = ''; } };
@@ -1065,10 +1212,13 @@ const app = createApp({
         };
 
         // REPORTS & DOCUMENTS & PENAL
-        const openNewReportModal = () => { newReportForm.title = ''; newReportForm.details = ''; showReportModal.value = true; };
+        const openNewReportModal = () => {
+            newReportForm.reportNumber = String(((db.reports || []).length + 1001));
+            newReportForm.title = ''; newReportForm.details = ''; showReportModal.value = true;
+        };
         const saveNewReport = () => {
             if (!newReportForm.title.trim()) return;
-            (db.reports || (db.reports = [])).push({ id: uid(), reportNumber: ((db.reports || []).length + 1001).toString(), ...newReportForm, author: user.value ? user.value.name : 'CID Agent', date: date.value });
+            (db.reports || (db.reports = [])).push({ id: uid(), ...newReportForm, author: user.value ? user.value.name : 'CID Agent', date: date.value });
             showReportModal.value = false;
         };
         const deleteReport = idx => { if (confirm('Delete report?')) db.reports.splice(idx, 1); };
@@ -1320,22 +1470,21 @@ const app = createApp({
                 firebaseConfigRaw.value = savedFb;
                 connectFirebase();
             }
-
-            nextTick(initMap);
         });
 
         return {
-            db, user, tab, atab, showLogin, loginErr: loginError, q, time, date, saveError, mapFilterQuery, mapLayers,
+            db, user, tab, atab, showLogin, isMobileView, mobileMenuOpen, loginErr: loginError, q, time, date, saveError, mapFilterQuery, mapLayers,
             firebaseConnected, firebaseConfigRaw, auth, na, nt, nr, nl, rec, recErr, gal, zoom, zs, pdfExportItem,
-            newVideoUrl, showReportModal, newReportForm, showUploadDocModal, newDocForm, showPenalEditModal, penalForm,
+            caseCodeNum, newVideoUrl, showReportModal, newReportForm, showUploadDocModal, newDocForm, showPenalEditModal, penalForm,
             mImg, mUrl, mMode, mBusy, mStatus, mResults, RANKS, isTop, isAdmin, rankLevel, level, setPerm, permKeys,
             permLabel, col, go, nav, subFields, shown, listItems, penalList, tplCols, tplFor, allGalleryPhotos,
-            filteredMapItems, login, logout, addAgent, resetPw, delAgent, canEditRec, openRec, newRec, closeRec,
-            saveNew, delRec, applyTpl, caseById, caseTitle, freeCases, attachCase, detachCase, attachVideoUrl,
-            uploadVideoFile, openNewReportModal, saveNewReport, deleteReport, saveNewDocument, handleDocFileUpload,
-            deleteDocument, openEditPenalModal, savePenalCharge, deletePenalCharge, exportPdfRecord, renderMapLayers,
-            zoomToMapItem, mFile, runMatch, goTo, connectFirebase, addTpl, delTpl, addRegistry, delRegistry, addLoc,
-            delLoc, exportDb, importDb, importPenal, printNow, zp, openZoom, delPhoto
+            citizenListForSelect, vehicleListForSelect, filteredMapItems, login, logout, addAgent, resetPw, delAgent,
+            canEditRec, openRec, newRec, closeRec, saveNew, delRec, applyTpl, caseById, caseTitle, freeCases, attachCase,
+            detachCase, attachCitizen, detachCitizen, attachVehicle, detachVehicle, attachVideoUrl, uploadVideoFile,
+            openNewReportModal, saveNewReport, deleteReport, saveNewDocument, handleDocFileUpload, deleteDocument,
+            openEditPenalModal, savePenalCharge, deletePenalCharge, exportPdfRecord, renderMapLayers, zoomToMapItem,
+            mFile, runMatch, goTo, connectFirebase, addTpl, delTpl, addRegistry, delRegistry, addLoc, delLoc, exportDb,
+            importDb, importPenal, printNow, zp, openZoom, delPhoto
         };
     }
 });
