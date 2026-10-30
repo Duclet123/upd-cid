@@ -42,11 +42,11 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Leaflet CSS & JS -->
+    <!-- Leaflet CSS & JS for Custom GTA V Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Vue 3 CDN -->
+    <!-- Vue 3 Global Build CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
     <!-- SheetJS CDN (Excel & CSV Parser) -->
@@ -78,13 +78,6 @@
             font-family: 'Share Tech Mono', monospace !important;
         }
 
-        #lightboxModal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.92); z-index: 10000; justify-content: center; align-items: center;
-            backdrop-filter: blur(10px);
-        }
-        #lightboxModal img { max-width: 85%; max-height: 80%; border: 2px solid #38bdf8; border-radius: 12px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.4); }
-
         .popup-container { color: #fff; text-align: center; width: 220px; padding: 4px; }
         .popup-img { 
             width: 100%; height: 120px; object-fit: cover; border-radius: 8px; 
@@ -102,21 +95,18 @@
         }
     </style>
 </head>
-<body class="bg-tactical-bg text-slate-300 antialiased h-screen overflow-hidden">
-<!-- UNIVERSAL IMAGE LIGHTBOX OVERLAY -->
-<div id="lightboxModal" onclick="closeLightbox(event)">
-    <div class="relative flex flex-col items-center max-w-4xl p-4 space-y-3" onclick="event.stopPropagation()">
-        <button onclick="closeLightbox()" class="absolute -top-10 right-0 text-slate-400 hover:text-white text-xl">
-            <i class="fa-solid fa-xmark"></i> Close Zoom
-        </button>
-        <img id="lightboxImg" src="" alt="Enlarged Photo">
-        <div id="lightboxMeta" class="hud-panel p-4 w-full text-center font-mono text-xs space-y-1">
-            <p id="lightboxTitle" class="text-tactical-cyan font-title font-bold text-sm uppercase"></p>
-            <p id="lightboxDesc" class="text-slate-300"></p>
+<body class="bg-tactical-bg text-slate-300 antialiased selection:bg-blue-600 selection:text-white">
+<div id="app" class="flex h-screen overflow-hidden relative">
+    <!-- UNIVERSAL LIGHTBOX MODAL -->
+    <div v-if="lightboxImage" @click="lightboxImage = null" class="fixed inset-0 z-[300] flex items-center justify-center bg-black/92 backdrop-blur-md p-4 cursor-pointer">
+        <div class="relative max-w-4xl max-h-[85vh] text-center" @click.stop>
+            <img :src="lightboxImage.url" class="max-w-full max-h-[75vh] rounded-2xl border-2 border-tactical-cyan shadow-2xl mx-auto">
+            <p class="text-white font-title font-bold text-sm mt-3">{{ lightboxImage.title || 'Image Preview' }}</p>
+            <p class="text-slate-400 font-mono text-xs mt-1">{{ lightboxImage.desc || 'Click anywhere outside to close' }}</p>
+            <button @click="lightboxImage = null" class="absolute -top-10 right-0 text-white font-bold text-lg hover:text-tactical-cyan"><i class="fa-solid fa-xmark"></i> Close</button>
         </div>
     </div>
-</div>
-<div id="app" class="h-full w-full flex overflow-hidden">
+
     <!-- SIDEBAR NAVIGATION HUD -->
     <aside class="w-64 bg-tactical-panel/95 border-r border-slate-800 flex flex-col z-20 shrink-0">
         <div class="p-4 border-b border-slate-800 flex items-center space-x-3">
@@ -141,8 +131,8 @@
             <button @click="switchTab('public_warrants')" :class="navClass('public_warrants')">
                 <i class="fa-solid fa-triangle-exclamation w-5 text-red-400"></i>
                 <span>Request Warrant</span>
-                <span v-if="activeWarrantsCount > 0" class="px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/40 rounded-full text-[9px] font-mono ml-auto font-bold">
-                    {{ activeWarrantsCount }}
+                <span v-if="warrants.length > 0" class="px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/40 rounded-full text-[9px] font-mono ml-auto font-bold">
+                    {{ warrants.length }}
                 </span>
             </button>
 
@@ -276,11 +266,14 @@
                             {{ w.reason }}
                         </div>
                         <div class="flex justify-between items-center border-t border-slate-800 pt-3">
-                            <button @click="printWarrantPDF(w)" class="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-tactical-cyan hover:text-white font-mono text-xs font-bold rounded-lg border border-blue-500/40">
+                            <button @click="activePrintWarrant = w" class="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-tactical-cyan hover:text-white font-mono text-xs font-bold rounded-lg border border-blue-500/40">
                                 <i class="fa-solid fa-file-pdf mr-1"></i> Export Signed PDF
                             </button>
                             <button v-if="currentUser" @click="deleteItem('warrants', idx)" class="px-2.5 py-1 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-xs font-mono">Delete</button>
                         </div>
+                    </div>
+                    <div v-if="warrants.length === 0" class="col-span-full py-12 text-center text-slate-500 font-mono text-xs">
+                        No active request warrants filed in database.
                     </div>
                 </div>
             </div>
@@ -294,6 +287,7 @@
                     </div>
 
                     <div class="flex items-center space-x-3">
+                        <input v-model="penalSearchQuery" type="text" placeholder="Search charges..." class="bg-tactical-bg border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none">
                         <label class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-mono text-xs font-bold rounded-xl cursor-pointer flex items-center space-x-2">
                             <i class="fa-solid fa-file-excel"></i>
                             <span>Import Excel / CSV</span>
@@ -303,7 +297,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div v-for="item in penalCodeList" :key="item.id" class="hud-panel p-5 space-y-2">
+                    <div v-for="item in filteredPenalCode" :key="item.id" class="hud-panel p-5 space-y-2">
                         <span class="text-[9px] font-mono text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30 uppercase font-bold">{{ item.category || 'General' }}</span>
                         <h3 class="text-xs font-bold text-white font-title">{{ item.title }}</h3>
                         <div class="flex justify-between items-center pt-2 border-t border-slate-800 text-xs font-mono">
@@ -329,13 +323,14 @@
                         <div v-for="(c, idx) in filteredCitizens" :key="c.id || idx" class="hud-panel p-4 space-y-3">
                             <div @click="selectedCitizenCard = c" class="flex items-center space-x-3 cursor-pointer">
                                 <img :src="c.mugshot || 'images/x.jpg'" onerror="this.src='https://placehold.co/100x120/0b1329/38bdf8?text=NO+IMAGE'" class="w-12 h-14 object-cover rounded-xl border border-slate-700 bg-black shrink-0">
-                                <div class="flex-1">
-                                    <h3 class="text-sm font-bold text-white font-title">{{ c.fullName }}</h3>
+                                <div class="flex-1 overflow-hidden">
+                                    <h3 class="text-sm font-bold text-white font-title truncate">{{ c.fullName }}</h3>
                                     <p class="text-xs font-mono text-tactical-cyan">CID: {{ c.citizenId }}</p>
                                     <p class="text-[10px] text-amber-400 font-mono">Gang: {{ c.gang || 'None' }}</p>
                                 </div>
                             </div>
-                            <div class="flex justify-end pt-2 border-t border-slate-800/80">
+                            <div class="flex justify-between items-center pt-2 border-t border-slate-800/80">
+                                <button @click="selectedCitizenCard = c" class="text-tactical-cyan text-xs font-bold font-mono">View Dossier ➔</button>
                                 <button @click.stop="deleteItem('citizens', idx)" class="px-2.5 py-1 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-xs font-mono">Delete</button>
                             </div>
                         </div>
@@ -798,7 +793,7 @@
                     <button @click="addGalleryPhoto(selectedCitizenCard)" class="px-3 py-1 bg-blue-600 text-white text-xs font-mono rounded-xl">+ Add Photo</button>
                 </div>
                 <div class="grid grid-cols-4 gap-3">
-                    <div v-for="(photo, pIdx) in (selectedCitizenCard.gallery || [])" :key="pIdx" class="aspect-square rounded-xl overflow-hidden border border-slate-800 bg-black cursor-pointer" @click="openLightbox(photo.url || photo, 'Citizen Photo', 'Evidence still recorded in file')">
+                    <div v-for="(photo, pIdx) in (selectedCitizenCard.gallery || [])" :key="pIdx" class="aspect-square rounded-xl overflow-hidden border border-slate-800 bg-black cursor-pointer" @click="openLightbox(photo.url || photo, 'Citizen Evidence Photo', 'Recorded in dossier gallery')">
                         <img :src="photo.url || photo" onerror="this.src='https://placehold.co/300x300/0b1329/38bdf8?text=PHOTO'" class="w-full h-full object-cover">
                     </div>
                 </div>
@@ -859,29 +854,27 @@
     </div>
 
 </div>
-<!-- SCRIPT ENGINE -->
+<!-- VUE 3 APPLICATION LOGIC -->
 <script>
-    function openLightbox(url, title, desc) {
-        document.getElementById('lightboxImg').src = url;
-        document.getElementById('lightboxTitle').innerText = title || 'Evidence Image';
-        document.getElementById('lightboxDesc').innerText = desc || 'CID File Attachment';
-        document.getElementById('lightboxModal').style.display = 'flex';
-    }
-    function closeLightbox() {
-        document.getElementById('lightboxModal').style.display = 'none';
-    }
-
     const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
     createApp({
         setup() {
+            const currentUser = ref(null);
+            const agentProfile = ref({ name: '', badge: '', rank: '' });
+            const showLoginModal = ref(false);
             const currentTab = ref('map');
             const adminSubTab = ref('accounts');
-            const currentUser = ref(null);
-            const showLoginModal = ref(false);
             const currentTime = ref('');
+            const activePrintWarrant = ref(null);
+            const selectedCitizenCard = ref(null);
+            const lightboxImage = ref(null);
 
-            // Modal Toggle States
+            const citizenSearch = ref('');
+            const penalSearchQuery = ref('');
+            const newGalleryPhotoUrl = ref('');
+
+            // Modals Visibility State
             const showCreateCitizenModal = ref(false);
             const showCreateWeaponModal = ref(false);
             const showCreateVehicleModal = ref(false);
@@ -890,418 +883,346 @@
             const showCreateInterrogationModal = ref(false);
             const showCreateWarrantModal = ref(false);
 
-            const selectedCitizenCard = ref(null);
-            const activePrintWarrant = ref(null);
-            const newGalleryPhotoUrl = ref('');
-
-            const authForm = ref({ username: '', password: '' });
-            const agentProfile = ref({ name: 'Director', rank: 'Director', badge: 'CID-01' });
-
-            const citizenSearch = ref('');
+            // AI Matcher State
             const aiMatcherImageUrl = ref('');
             const aiMatcherLoading = ref(false);
             const aiMatcherResult = ref(null);
 
+            // Auth & Agent Forms
+            const authForm = ref({ username: '', password: '' });
             const newAgentForm = ref({ username: '', badge: '', rank: 'Detective I', password: '' });
-            const newTemplateForm = ref({ category: 'cases', name: '', body: '' });
 
-            // New Entry Forms
+            // Creation Forms
             const newCitizen = ref({ fullName: '', citizenId: '', phone: '', gang: '', mugshot: '' });
             const newWeapon = ref({ serial: '', model: '', owner: '', stolen: false });
-            const newVehicle = ref({ plate: '', model: '', owner: '', color: '', stolen: false });
+            const newVehicle = ref({ plate: '', model: '', owner: '', color: '' });
             const newCase = ref({ title: '', summary: '', templateUsed: '' });
             const newOrg = ref({ name: '', notes: '' });
             const newInterrogation = ref({ suspect: '', transcript: '' });
             const newWarrant = ref({ citizenName: '', citizenId: '', reason: '', templateName: '' });
 
+            // Admin Template Creation Form
+            const newTemplateForm = ref({ category: 'cases', name: '', body: '' });
+
+            // Admin Map Location Creation Form
             const newMapLoc = ref({ name: '', category: 'Gangs', x: 0, y: 0, address: '', color: '#B00707', img: 'x.jpg' });
 
-            const penalCodeList = ref([
-                { id: '1', title: 'Unlicensed Firearm Possession', category: 'Weapons', fine: 5000, jail: 15 },
-                { id: '2', title: 'Narcotics Distribution', category: 'Narcotics', fine: 12000, jail: 30 },
-                { id: '3', title: 'Armed Robbery', category: 'Felonies', fine: 20000, jail: 45 }
+            const allRanksList = ref([
+                'Probationary Detective',
+                'Detective I',
+                'Detective II',
+                'Detective III',
+                'High Command',
+                'Assistant Director',
+                'Director'
             ]);
 
-            const allRanksList = ['Director', 'Assistant Director', 'High Command', 'Detective III', 'Detective II', 'Detective I', 'Probationary Detective'];
-
             const rolePermissions = ref({
-                'Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-                'Assistant Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-                'High Command': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-                'Detective III': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-                'Detective II': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-                'Detective I': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-                'Probationary Detective': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: false, ai_matcher: false }
+                'Probationary Detective': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: false },
+                'Detective I': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true },
+                'Detective II': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true },
+                'Detective III': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true },
+                'High Command': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true },
+                'Assistant Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true },
+                'Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true }
             });
 
+            // Dynamic Custom Templates Engine
             const customTemplates = ref({
                 cases: [
-                    { name: 'RICO Syndicate Investigation', body: 'TARGET SYNDICATE:\nOPERATIONAL LEADS:\nPRIMARY OFFENCES:\nEVIDENCE LOG:' }
+                    { name: 'Narcotics Operation', body: 'SUBJECT: ...\nLOCATION: ...\nPROBABLE CAUSE: Observed distribution of controlled narcotics.' },
+                    { name: 'RICO Syndicate Case', body: 'ORGANISATION: ...\nCHARGES: Racketeering, Illegal Firearms Trading, Money Laundering.' }
                 ],
                 organizations: [
-                    { name: 'Gang Hierarchy & Turf', body: 'KNOWN LEADERSHIP:\nACTIVE TURF/RADIUS:\nFEUDING FACTIONS:' }
+                    { name: 'Gang Dossier Template', body: 'TURF & TERRITORY: ...\nLEADERSHIP: ...\nOPERATIONAL ASSETS: ...' }
                 ],
                 interrogations: [
-                    { name: 'Miranda Waiver & Polygraph', body: 'RIGHTS WAIVED: YES\nPOLYGRAPH RESULT: PASSED\nSUSPECT TRANSCRIPT:' }
+                    { name: 'Standard Miranda Log', body: 'MIRANDA RIGHTS READ: YES\nSUSPECT RESPONSE: Agreed to answer questions.\nTRANSCRIPT:\nAgent: ...\nSuspect: ...' }
                 ],
                 warrants: [
-                    { name: 'Felony Arrest Warrant', body: 'PROBABLE CAUSE STATEMENT:\nPrimary suspect identified in felony offenses.' },
-                    { name: 'RICO Seizure Warrant', body: 'PROBABLE CAUSE STATEMENT:\nSeizure of assets related to organized syndicate operations.' }
+                    { name: 'Felony Arrest Warrant', body: 'REASON FOR WARRANT: Probable cause established for violent felony robbery.\nEVIDENCE ATTACHED: Surveillance stills and witness statements.' }
                 ]
             });
 
+            // Local Sample Datasets
             const accountsList = ref([
-                { name: 'Director', badge: 'CID-01', rank: 'Director' }
+                { name: 'John Director', badge: 'CID-01', rank: 'Director' },
+                { name: 'Marcus Miller', badge: 'CID-12', rank: 'Detective II' }
             ]);
 
             const citizensList = ref([
-                { id: 1, fullName: 'Marcus Vance', citizenId: 'MV-8821', phone: '555-0192', gang: 'Ballas', mugshot: 'images/x.jpg', gallery: ['images/x.jpg'] }
+                { id: '1', fullName: 'Marcus Vance', citizenId: 'CID-8821', phone: '555-0192', gang: 'Ballas', mugshot: 'https://placehold.co/100x120/0b1329/38bdf8?text=Marcus', gallery: ['https://placehold.co/300x300/0b1329/38bdf8?text=Surveillance+1'] }
             ]);
 
             const weaponsList = ref([
-                { id: 1, serial: 'WPN-99210', model: 'Combat Pistol', owner: 'Marcus Vance', stolen: false }
+                { id: '1', serial: 'W-90214', model: 'AP Pistol', owner: 'Marcus Vance', stolen: false }
             ]);
 
             const vehiclesList = ref([
-                { id: 1, plate: '88ABC123', model: 'Sultan RS', owner: 'Marcus Vance', color: 'Black', stolen: false }
+                { id: '1', plate: '88ABC12', model: 'Sentinel SG', owner: 'Marcus Vance', color: 'Black' }
             ]);
 
             const casesList = ref([
-                { id: 1, title: 'RICO Case - Ballas', summary: 'Ongoing investigation into drug distribution in East Los Santos.', templateUsed: 'RICO Syndicate Investigation' }
+                { id: '1', title: 'Operation Nightfall', summary: 'Ongoing investigation into illegal weapons trafficking in La Mesa.', templateUsed: 'Custom' }
             ]);
 
             const orgsList = ref([
-                { id: 1, name: 'East Side Ballas', notes: 'Active in Davis & Forum Drive.' }
+                { id: '1', name: 'East Side Ballas', notes: 'Active turf around Forum Dr and Davis. High threat level.' }
             ]);
 
             const interrogationsList = ref([
-                { id: 1, suspect: 'Marcus Vance', transcript: 'Suspect refused to elaborate on vehicle contents.' }
+                { id: '1', suspect: 'Marcus Vance', transcript: 'Suspect refused to comment on firearm found in vehicle.' }
             ]);
 
             const warrants = ref([
-                { id: 1, citizenName: 'Marcus Vance', citizenId: 'MV-8821', reason: 'Armed Robbery Warrant Request', templateName: 'Felony Arrest Warrant' }
+                { id: '1', citizenName: 'Marcus Vance', citizenId: 'CID-8821', reason: 'Wanted in connection to armed robbery in Little Seoul.', templateName: 'Felony Arrest Warrant' }
             ]);
 
-            // COMPLETE 70+ MAP LOCATIONS DATASET
+            const penalCodeList = ref([
+                { id: '1', category: 'Weapons', title: 'Unlicensed Firearm Possession', fine: 5000, jail: 15 },
+                { id: '2', category: 'Narcotics', title: 'Narcotics Distribution', fine: 12000, jail: 30 }
+            ]);
+
+            // GTA V Map Locations Dataset
             const mapLocations = ref([
-                // Gangs / Criminal Organizations
-                {x:197.25, y:-441.50, name:"STR", category:"Gangs", address:"Eclipse Blvd", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:314.17, y:3215.78, name:"LKC", category:"Gangs", address:"Paleto Bay", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:-1464.65, y:219.04, name:"Nuestra Familia", category:"Gangs", address:"Ineseno Road", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:1674.23, y:2285.34, name:"G Units", category:"Gangs", address:"Grapeseed", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:1226.00, y:-710.00, name:"CVL", category:"Gangs", address:"Favelas", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:48.82, y:-636.00, name:"Gente Nueva", category:"Gangs", address:"Rockford Dr", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:-443.35, y:-969.18, name:"LS 19", category:"Gangs", address:"Bay City", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:23.00, y:-1113.00, name:"GG", category:"Gangs", address:"Little Seoul", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:898.00, y:-1358.00, name:"CDN", category:"Gangs", address:"Popular La Mesa", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:673.00, y:-1781.00, name:"North Stars", category:"Gangs", address:"Dutch London x Carson Avenue", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:385.22, y:-1422.04, name:"BSB", category:"Gangs", address:"Upper Forum Drive", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:873.00, y:-1036.00, name:"OTB", category:"Gangs", address:"Popular", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:402.00, y:-341.00, name:"WSR", category:"Gangs", address:"Gentry Lane", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:400.00, y:-763.00, name:"Gulag Gang", category:"Gangs", address:"Alta Street x Las Lagunas", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:550.00, y:-518.00, name:"7 Sins", category:"Gangs", address:"Alta Street x Vinewood Blvd", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:530.00, y:-1430.00, name:"MS 13", category:"Gangs", address:"Innocence Boulevard x Strawberry Avenue", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:1013.15, y:-611.11, name:"Black Serpents", category:"Gangs", address:"Mirror Park Boulevard", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:-176.58, y:-100.80, name:"SSR", category:"Gangs", address:"North Sheldon Avenue", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:-559.30, y:-748.01, name:"Vlaxoi", category:"Gangs", address:"West Eclipse Graveyard", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:267.65, y:-1527.77, name:"SMK", category:"Gangs", address:"Forum Dr.", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:-18.47, y:-1952.87, name:"Savage", category:"Gangs", address:"Exeptionalist Way", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:479.67, y:1669.72, name:"Nortenos 14", category:"Gangs", address:"Stab City", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:1146.90, y:-1377.58, name:"East Side Ballas", category:"Gangs", address:"El Rancho Blvd", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:632.93, y:-1551.89, name:"Banished", category:"Gangs", address:"Mac Donalds", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:590.23, y:-2035.35, name:"De Fox", category:"Gangs", address:"Chum Street", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:534.52, y:-1882.13, name:"Jelly Boys", category:"Gangs", address:"Dutch London Railways", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:1265.41, y:-899.90, name:"Mexicans", category:"Gangs", address:"Nikola Place Mirror Park", color:"#B00707", radius:100, img:"x.jpg"},
-                {x:-2048.62, y:413.66, name:"Hasienda Napoles", category:"Gangs", address:"Great Ocean Highway", color:"#ffffff", radius:300, img:"hasienda.jpg"},
-                {x:2998.13, y:-2998.13, name:"Cayo Perico", category:"Gangs", address:"Cayo Perico", color:"#ffffff", radius:300, img:"cayo.jpg"},
-                {x:3145.66, y:2246.44, name:"Darkwood", category:"Gangs", address:"Catfish", color:"#ffffff", radius:200, img:"darkwood.jpg"},
-
-                // Public Services
-                {x:710.50, y:-1161.50, name:"MRPD", category:"Services", address:"Mission Row", color:"#38bdf8", img:"mrpd.jpg"},
-                {x:472.73, y:-818.34, name:"EMS", category:"Services", address:"Alta St", color:"#ffffff", img:"ems.jpg"},
-                {x:107.11, y:-943.06, name:"DoJ/Cityhall", category:"Services", address:"San Andreas Avenue", color:"#ffffff", img:"cityhall.jpg"},
-
-                // Civilian Jobs
-                {x:1368.00, y:1729.00, name:"Marina Restaurant", category:"Jobs", address:"Sandy Shores", color:"#ffffff", img:"marina.jpg"},
-                {x:-421.50, y:-1315.75, name:"Vista", category:"Jobs", address:"Vespucci Beach", color:"#ffffff", img:"vista.jpg"},
-                {x:-484.00, y:-1111.75, name:"Pizza This", category:"Jobs", address:"Vespucci/Luna Park", color:"#ffffff", img:"pizzathis.jpg"},
-                {x:471.72, y:-1540.53, name:"Vanilla Unicorn", category:"Jobs", address:"Strawberry", color:"#ffffff", img:"vanilla.jpg"},
-                {x:-240.50, y:-1429.75, name:"Back Side Skate Boards", category:"Jobs", address:"Bay City Avenue", color:"#ffffff", img:"skates.jpg"},
-                {x:779.98, y:1096.16, name:"Animal Ark", category:"Jobs", address:"Route 68", color:"#ffffff", img:"animal.jpg"},
-                {x:876.50, y:-1150.75, name:"Darnell Bros", category:"Jobs", address:"Popular Str.", color:"#ffffff", img:"darnelbros.jpg"},
-                {x:583.00, y:-585.00, name:"Ammunation Vinewood", category:"Jobs", address:"Algonquin Blvd", color:"#ffffff", img:"ammusandy.jpg"},
-                {x:958.00, y:-1176.00, name:"Ammunation La Mesa", category:"Jobs", address:"Great Ocean Hwy", color:"#ffffff", img:"ammupaleto.jpg"},
-                {x:218.25, y:3082.00, name:"Horny's", category:"Jobs", address:"Great Ocean Hwy", color:"#ffffff", img:"hornys.jpg"},
-                {x:1234.50, y:-1554.75, name:"Blazing Tattoo", category:"Jobs", address:"Innocence Blvd", color:"#ffffff", img:"blazingtattoo.jpg"},
-                {x:136.12, y:-393.72, name:"SmoKing", category:"Jobs", address:"Eclipse Blvd", color:"#ffffff", img:"smoking.jpg"},
-                {x:-251.25, y:-1412.00, name:"LD Organics", category:"Jobs", address:"Bay City Ave", color:"#ffffff", img:"ldorganics.jpg"},
-                {x:-56.50, y:-1226.75, name:"O'Deas", category:"Jobs", address:"S Rockford Drive", color:"#ffffff", img:"odeas.jpg"},
-                {x:495.50, y:-689.00, name:"Dollar Pills", category:"Jobs", address:"Hawick Avenue", color:"#ffffff", img:"dollarpill.jpg"},
-                {x:986.76, y:-1863.34, name:"Memory Lanes", category:"Jobs", address:"Orchavadille", color:"#ffffff", img:"memorylanes.jpg"},
-                {x:1125.00, y:-1085.00, name:"Burgershot", category:"Jobs", address:"San Andreas Ave & El Rancho Blvd", color:"#ffffff", img:"burgershot.jpg"},
-                {x:1123.00, y:-835.00, name:"Amir", category:"Jobs", address:"Strawberry Ave", color:"#ffffff", img:"amir.jpg"},
-                {x:-75.50, y:-1248.00, name:"Wigwam", category:"Jobs", address:"Palomino Ave", color:"#ffffff", img:"wigwam.jpg"},
-                {x:647.29, y:-1064.27, name:"The Last Light Pub", category:"Jobs", address:"San Andreas Ave", color:"#ffffff", img:"lastlight.jpg"},
-                {x:470.25, y:-431.98, name:"Sightings Restaurant", category:"Jobs", address:"Los Santos International Airport", color:"#ffffff", img:"sightings.jpg"},
-                {x:43.49, y:-1086.82, name:"Digital Den Little Seoul", category:"Jobs", address:"Palomino Ave, Little Seoul", color:"#ffffff", img:"digitalseoul.jpg"},
-                {x:528.78, y:-415.20, name:"Digital Den Vinewood", category:"Jobs", address:"Vinewood Blvd", color:"#ffffff", img:"digitalvinewood.jpg"},
-                {x:-256.00, y:-680.50, name:"Nocturnal", category:"Jobs", address:"Dorset Drive & Boulevard Del Perro", color:"#ffffff", img:"nocturnal.jpg"},
-                {x:-1432.73, y:-240.24, name:"Oasis", category:"Jobs", address:"Great Ocean Hwy, Pacific Bluffs", color:"#ffffff", img:"oasis.jpg"},
-                {x:667.00, y:-410.00, name:"The Palace", category:"Jobs", address:"Power Str.", color:"#ffffff", img:"thepalace.jpg"},
-                {x:1123.50, y:-767.00, name:"Pawnshop Mirror Park", category:"Jobs", address:"E Mirror Drive", color:"#ffffff", img:"pawnmirror.jpg"},
-                {x:-437.40, y:-804.54, name:"Pawnshop Del Perro", category:"Jobs", address:"Boulevard Del Perro", color:"#ffffff", img:"pawndelperro.jpg"},
-                {x:1127.73, y:-1028.37, name:"Hayes", category:"Jobs", address:"W Mirror Drive", color:"#ffffff", img:"hayes.jpg"},
-                {x:-536.69, y:-1062.07, name:"Strokemasters", category:"Jobs", address:"Magelan Avenue, Luna Park", color:"#ffffff", img:"strokemaster.jpg"},
-                {x:1014.00, y:-1969.25, name:"Helmut's", category:"Jobs", address:"Orchavadille Avenue", color:"#ffffff", img:"helmuts.jpg"},
-                {x:491.50, y:3392.00, name:"Harmony Garage", category:"Jobs", address:"Great Ocean Hwy, Paleto", color:"#ffffff", img:"harmony.jpg"},
-                {x:1470.50, y:1666.25, name:"Seaton Sand's", category:"Jobs", address:"Zacunto Ave, Sandy Shores", color:"#ffffff", img:"seaton.jpg"},
-                {x:223.50, y:-634.50, name:"Los Santos Customs", category:"Jobs", address:"Eastbourne Way & Carcer Way", color:"#ffffff", img:"ls.jpg"},
-                {x:765.95, y:-660.36, name:"Auto's", category:"Jobs", address:"Elgin Avenue", color:"#ffffff", img:"auto.jpg"},
-                {x:294.05, y:-1363.39, name:"Benny's", category:"Jobs", address:"Alta St.", color:"#ffffff", img:"x.jpg"},
-                {x:1031.05, y:-643.60, name:"Road Hunters", category:"Jobs", address:"Mirror Park Blvd", color:"#ffffff", img:"x.jpg"},
-
-                // Criminal Assets
-                {x:376.73, y:-565.71, name:"Weed Processing", category:"Assets", address:"Las Lagunas", color:"#7d3db7", img:"x.jpg"}
+                { x: 197.25, y: -441.50, name: "STR", category: "Gangs", address: "Eclipse Blvd", color: "#B00707", img: "x.jpg" },
+                { x: 710.50, y: -1161.50, name: "MRPD", category: "Services", address: "Mission Row", color: "#38bdf8", img: "mrpd.jpg" },
+                { x: 472.73, y: -818.34, name: "EMS Hospital", category: "Services", address: "Alta St", color: "#10b981", img: "ems.jpg" },
+                { x: 1125.00, y: -1085.00, name: "Burgershot", category: "Jobs", address: "San Andreas Ave", color: "#d97706", img: "burgershot.jpg" }
             ]);
 
             let gtaMapInstance = null;
 
-            const activeWarrantsCount = computed(() => warrants.value.length);
+            // COMPUTED PROPERTIES
+            const hasAdminAccess = computed(() => {
+                if (!currentUser.value) return false;
+                const r = agentProfile.value.rank;
+                return r === 'Director' || r === 'Assistant Director' || (rolePermissions.value[r] && rolePermissions.value[r].admin);
+            });
 
             const filteredCitizens = computed(() => {
                 if (!citizenSearch.value) return citizensList.value;
-                return citizensList.value.filter(c => c.fullName.toLowerCase().includes(citizenSearch.value.toLowerCase()));
+                const q = citizenSearch.value.toLowerCase();
+                return citizensList.value.filter(c => c.fullName.toLowerCase().includes(q) || (c.citizenId && c.citizenId.toLowerCase().includes(q)));
+            });
+
+            const filteredPenalCode = computed(() => {
+                if (!penalSearchQuery.value) return penalCodeList.value;
+                const q = penalSearchQuery.value.toLowerCase();
+                return penalCodeList.value.filter(p => p.title.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
             });
 
             const matchedCitizenVehicles = computed(() => {
                 if (!selectedCitizenCard.value) return [];
-                return vehiclesList.value.filter(v => v.owner.toLowerCase() === selectedCitizenCard.value.fullName.toLowerCase());
+                const name = selectedCitizenCard.value.fullName.toLowerCase().trim();
+                return vehiclesList.value.filter(v => v.owner && v.owner.toLowerCase().trim() === name);
             });
 
-            const hasAdminAccess = computed(() => {
-                if (!agentProfile.value) return false;
-                return agentProfile.value.rank === 'Director' || agentProfile.value.rank === 'Assistant Director';
-            });
-
-            const handleLogin = () => {
-                currentUser.value = { uid: 'usr_director' };
-                agentProfile.value = { name: authForm.value.username || 'Director', rank: 'Director', badge: 'CID-01' };
-                showLoginModal.value = false;
-            };
-
-            const handleLogout = () => {
-                currentUser.value = null;
-                currentTab.value = 'map';
+            // METHODS
+            const updateClock = () => {
+                const now = new Date();
+                const utc2 = new Date(now.getTime() + (2 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000));
+                currentTime.value = utc2.toISOString().substring(11, 19);
             };
 
             const switchTab = (tab) => {
                 currentTab.value = tab;
                 if (tab === 'map') {
-                    nextTick(() => { initGtaMap(); });
+                    nextTick(() => initGtaMap());
                 }
-            };
-
-            const navClass = (tab) => {
-                return [
-                    'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-mono text-xs transition duration-200',
-                    currentTab.value === tab ? 'bg-blue-600/20 text-white border border-blue-500/40 font-bold' : 'text-slate-400 hover:text-white'
-                ];
             };
 
             const hasPermission = (section) => {
-                if (!agentProfile.value || !agentProfile.value.rank) return true;
-                const perm = rolePermissions.value[agentProfile.value.rank];
-                return perm ? perm[section] : true;
+                if (!currentUser.value) return false;
+                const r = agentProfile.value.rank;
+                if (r === 'Director' || r === 'Assistant Director') return true;
+                return rolePermissions.value[r] ? rolePermissions.value[r][section] !== false : true;
             };
 
-            const getRankPermission = (rank, section) => {
-                return rolePermissions.value[rank] ? rolePermissions.value[rank][section] : true;
+            const getRankPermission = (rank, sec) => {
+                return rolePermissions.value[rank] ? rolePermissions.value[rank][sec] !== false : false;
             };
 
-            const toggleRankPermission = (rank, section) => {
+            const toggleRankPermission = (rank, sec) => {
                 if (!rolePermissions.value[rank]) rolePermissions.value[rank] = {};
-                rolePermissions.value[rank][section] = !getRankPermission(rank, section);
+                rolePermissions.value[rank][sec] = !getRankPermission(rank, sec);
             };
 
-            // Generic Dynamic Deletion
-            const deleteItem = (arrayName, index) => {
-                const targetMap = {
-                    citizens: citizensList,
-                    weapons: weaponsList,
-                    vehicles: vehiclesList,
-                    cases: casesList,
-                    organizations: orgsList,
-                    interrogations: interrogationsList,
-                    warrants: warrants,
-                    accounts: accountsList,
-                    mapLocations: mapLocations
-                };
-                if (targetMap[arrayName]) {
-                    targetMap[arrayName].value.splice(index, 1);
+            const handleLogin = () => {
+                const usernameInput = authForm.value.username.trim();
+                const found = accountsList.value.find(a => a.name.toLowerCase() === usernameInput.toLowerCase());
+                
+                if (found) {
+                    agentProfile.value = { name: found.name, badge: found.badge, rank: found.rank };
+                } else {
+                    agentProfile.value = { name: usernameInput, badge: 'CID-01', rank: 'Detective I' };
                 }
+
+                currentUser.value = { uid: 'user_' + Date.now(), name: agentProfile.value.name };
+                localStorage.setItem('cid_user', JSON.stringify(currentUser.value));
+                localStorage.setItem('cid_profile', JSON.stringify(agentProfile.value));
+                showLoginModal.value = false;
+                authForm.value = { username: '', password: '' };
             };
 
-            // Template Deletion Handler
-            const deleteTemplate = (category, index) => {
-                if (customTemplates.value[category]) {
-                    customTemplates.value[category].splice(index, 1);
-                }
+            const handleLogout = () => {
+                currentUser.value = null;
+                agentProfile.value = { name: '', badge: '', rank: '' };
+                localStorage.removeItem('cid_user');
+                localStorage.removeItem('cid_profile');
+                currentTab.value = 'map';
             };
 
-            // Excel / CSV Penal Code Importer
-            const importPenalCodeExcel = (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-                        if (jsonData && jsonData.length > 0) {
-                            const newPenalList = jsonData.map((row, idx) => ({
-                                id: String(idx + 1),
-                                title: row.Title || row.title || row.Offense || row.offense || row.Name || 'Unspecified Charge',
-                                category: row.Category || row.category || row.Type || 'General',
-                                fine: row.Fine || row.fine || row.Price || 0,
-                                jail: row.Jail || row.jail || row.Months || 0
-                            }));
-
-                            penalCodeList.value = newPenalList;
-                            alert(`Successfully imported ${newPenalList.length} penal code entries!`);
-                        }
-                    } catch (err) {
-                        alert('Error parsing Excel/CSV file. Please ensure it has columns like Title, Category, Fine, Jail.');
-                    }
-                };
-                reader.readAsArrayBuffer(file);
-            };
-
-            // Creation Handlers
-            const createCitizen = () => {
-                citizensList.value.push({ ...newCitizen.value, id: Date.now(), gallery: [newCitizen.value.mugshot || 'images/x.jpg'] });
-                newCitizen.value = { fullName: '', citizenId: '', phone: '', gang: '', mugshot: '' };
-                showCreateCitizenModal.value = false;
-            };
-
-            const createWeapon = () => {
-                weaponsList.value.push({ ...newWeapon.value, id: Date.now() });
-                newWeapon.value = { serial: '', model: '', owner: '', stolen: false };
-                showCreateWeaponModal.value = false;
-            };
-
-            const createVehicle = () => {
-                vehiclesList.value.push({ ...newVehicle.value, id: Date.now() });
-                newVehicle.value = { plate: '', model: '', owner: '', color: '', stolen: false };
-                showCreateVehicleModal.value = false;
-            };
-
-            const createCase = () => {
-                casesList.value.push({ ...newCase.value, id: Date.now() });
-                newCase.value = { title: '', summary: '', templateUsed: '' };
-                showCreateCaseModal.value = false;
-            };
-
-            const createOrg = () => {
-                orgsList.value.push({ ...newOrg.value, id: Date.now() });
-                newOrg.value = { name: '', notes: '' };
-                showCreateOrgModal.value = false;
-            };
-
-            const createInterrogation = () => {
-                interrogationsList.value.push({ ...newInterrogation.value, id: Date.now() });
-                newInterrogation.value = { suspect: '', transcript: '' };
-                showCreateInterrogationModal.value = false;
-            };
-
-            const createWarrant = () => {
-                warrants.value.push({ ...newWarrant.value, id: Date.now() });
-                newWarrant.value = { citizenName: '', citizenId: '', reason: '', templateName: '' };
-                showCreateWarrantModal.value = false;
-            };
-
-            const addMapLocation = () => {
-                mapLocations.value.push({ ...newMapLoc.value });
-                newMapLoc.value = { name: '', category: 'Gangs', x: 0, y: 0, address: '', color: '#B00707', img: 'x.jpg' };
-                if (currentTab.value === 'map') {
-                    initGtaMap();
-                }
-            };
-
-            const applyTemplateToForm = (type, templateName) => {
-                if (!templateName) return;
-                let tList = [];
-                if (type === 'case') tList = customTemplates.value.cases;
-                if (type === 'org') tList = customTemplates.value.organizations;
-                if (type === 'interrogation') tList = customTemplates.value.interrogations;
-                if (type === 'warrant') tList = customTemplates.value.warrants;
-
-                const match = tList.find(t => t.name === templateName);
-                if (match) {
-                    if (type === 'case') { newCase.value.templateUsed = match.name; newCase.value.summary = match.body; }
-                    if (type === 'org') newOrg.value.notes = match.body;
-                    if (type === 'interrogation') newInterrogation.value.transcript = match.body;
-                    if (type === 'warrant') { newWarrant.value.templateName = match.name; newWarrant.value.reason = match.body; }
-                }
-            };
-
-            const printWarrantPDF = (warrantObj) => {
-                activePrintWarrant.value = warrantObj;
-            };
-
-            const triggerPrintWindow = () => {
-                window.print();
-            };
-
-            const runAiVisualMatcher = () => {
-                if (!aiMatcherImageUrl.value) return;
-                aiMatcherLoading.value = true;
-                setTimeout(() => {
-                    aiMatcherLoading.value = false;
-                    aiMatcherResult.value = {
-                        analysis: 'Face & Outfit match detected with high confidence in Citizen Gallery (Marcus Vance).',
-                        confidence: 96.4,
-                        matchedCitizen: citizensList.value[0]
-                    };
-                }, 1000);
+            const openLightbox = (url, title, desc) => {
+                lightboxImage.value = { url, title, desc };
             };
 
             const addGalleryPhoto = (citizen) => {
                 if (!newGalleryPhotoUrl.value) return;
                 if (!citizen.gallery) citizen.gallery = [];
-                citizen.gallery.push(newGalleryPhotoUrl.value);
+                citizen.gallery.push({ url: newGalleryPhotoUrl.value });
                 newGalleryPhotoUrl.value = '';
             };
 
-            const adminCreateAgent = () => {
-                accountsList.value.push({ name: newAgentForm.value.username, badge: newAgentForm.value.badge, rank: newAgentForm.value.rank });
-                newAgentForm.value = { username: '', badge: '', rank: 'Detective I', password: '' };
-                alert('Credentials Issued Successfully!');
+            const deleteItem = (targetArrayName, index) => {
+                if (confirm('Are you sure you want to delete this record?')) {
+                    if (targetArrayName === 'citizens') citizensList.value.splice(index, 1);
+                    else if (targetArrayName === 'weapons') weaponsList.value.splice(index, 1);
+                    else if (targetArrayName === 'vehicles') vehiclesList.value.splice(index, 1);
+                    else if (targetArrayName === 'cases') casesList.value.splice(index, 1);
+                    else if (targetArrayName === 'organizations') orgsList.value.splice(index, 1);
+                    else if (targetArrayName === 'interrogations') interrogationsList.value.splice(index, 1);
+                    else if (targetArrayName === 'warrants') warrants.value.splice(index, 1);
+                    else if (targetArrayName === 'accounts') accountsList.value.splice(index, 1);
+                    else if (targetArrayName === 'mapLocations') mapLocations.value.splice(index, 1);
+                }
+            };
+
+            // CREATE RECORD FUNCTIONS
+            const createCitizen = () => {
+                citizensList.value.push({ id: Date.now().toString(), ...newCitizen.value, gallery: [] });
+                newCitizen.value = { fullName: '', citizenId: '', phone: '', gang: '', mugshot: '' };
+                showCreateCitizenModal.value = false;
+            };
+
+            const createWeapon = () => {
+                weaponsList.value.push({ id: Date.now().toString(), ...newWeapon.value });
+                newWeapon.value = { serial: '', model: '', owner: '', stolen: false };
+                showCreateWeaponModal.value = false;
+            };
+
+            const createVehicle = () => {
+                vehiclesList.value.push({ id: Date.now().toString(), ...newVehicle.value });
+                newVehicle.value = { plate: '', model: '', owner: '', color: '' };
+                showCreateVehicleModal.value = false;
+            };
+
+            const createCase = () => {
+                casesList.value.push({ id: Date.now().toString(), ...newCase.value });
+                newCase.value = { title: '', summary: '', templateUsed: '' };
+                showCreateCaseModal.value = false;
+            };
+
+            const createOrg = () => {
+                orgsList.value.push({ id: Date.now().toString(), ...newOrg.value });
+                newOrg.value = { name: '', notes: '' };
+                showCreateOrgModal.value = false;
+            };
+
+            const createInterrogation = () => {
+                interrogationsList.value.push({ id: Date.now().toString(), ...newInterrogation.value });
+                newInterrogation.value = { suspect: '', transcript: '' };
+                showCreateInterrogationModal.value = false;
+            };
+
+            const createWarrant = () => {
+                warrants.value.push({ id: Date.now().toString(), ...newWarrant.value });
+                newWarrant.value = { citizenName: '', citizenId: '', reason: '', templateName: '' };
+                showCreateWarrantModal.value = false;
+            };
+
+            // TEMPLATE LOGIC
+            const applyTemplateToForm = (type, name) => {
+                if (!name) return;
+                if (type === 'case') {
+                    const t = customTemplates.value.cases.find(x => x.name === name);
+                    if (t) { newCase.value.summary = t.body; newCase.value.templateUsed = t.name; }
+                } else if (type === 'org') {
+                    const t = customTemplates.value.organizations.find(x => x.name === name);
+                    if (t) newOrg.value.notes = t.body;
+                } else if (type === 'interrogation') {
+                    const t = customTemplates.value.interrogations.find(x => x.name === name);
+                    if (t) newInterrogation.value.transcript = t.body;
+                } else if (type === 'warrant') {
+                    const t = customTemplates.value.warrants.find(x => x.name === name);
+                    if (t) { newWarrant.value.reason = t.body; newWarrant.value.templateName = t.name; }
+                }
             };
 
             const saveCustomTemplate = () => {
                 if (!newTemplateForm.value.name || !newTemplateForm.value.body) return;
                 const cat = newTemplateForm.value.category;
-                if (!customTemplates.value[cat]) {
-                    customTemplates.value[cat] = [];
-                }
                 customTemplates.value[cat].push({ name: newTemplateForm.value.name, body: newTemplateForm.value.body });
-                newTemplateForm.value.name = '';
-                newTemplateForm.value.body = '';
-                alert('Custom Template Created & Saved!');
+                newTemplateForm.value = { category: 'cases', name: '', body: '' };
+                alert('New template saved successfully!');
             };
 
+            const deleteTemplate = (category, index) => {
+                if (confirm('Delete this template?')) {
+                    customTemplates.value[category].splice(index, 1);
+                }
+            };
+
+            // ADMIN LOGIC
+            const adminCreateAgent = () => {
+                accountsList.value.push({ name: newAgentForm.value.username, badge: newAgentForm.value.badge, rank: newAgentForm.value.rank });
+                newAgentForm.value = { username: '', badge: '', rank: 'Detective I', password: '' };
+                alert('Agent account created!');
+            };
+
+            const addMapLocation = () => {
+                mapLocations.value.push({ ...newMapLoc.value });
+                newMapLoc.value = { name: '', category: 'Gangs', x: 0, y: 0, address: '', color: '#B00707', img: 'x.jpg' };
+            };
+
+            // EXCEL IMPORT
+            const importPenalCodeExcel = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet);
+                    if (json.length > 0) {
+                        penalCodeList.value = json.map((r, i) => ({
+                            id: 'e_' + i,
+                            category: r.Category || r.category || 'General',
+                            title: r.Title || r.title || r.Offense || 'Charge',
+                            fine: r.Fine || r.fine || 0,
+                            jail: r.Jail || r.jail || 0
+                        }));
+                        alert(`Successfully imported ${json.length} penal code items!`);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+
+            // LEAFLET MAP ENGINE
             const initGtaMap = () => {
                 const container = document.getElementById('gtaMapContainer');
                 if (!container) return;
-                if (gtaMapInstance) { gtaMapInstance.remove(); gtaMapInstance = null; }
 
                 const bounds = [[-3500, -3000], [5000, 4500]];
+                if (gtaMapInstance) gtaMapInstance.remove();
+
                 gtaMapInstance = L.map('gtaMapContainer', {
-                    crs: L.CRS.Simple, minZoom: -2.5, maxZoom: 2, zoomSnap: 0.1, zoomControl: false
+                    crs: L.CRS.Simple,
+                    minZoom: -2.5,
+                    maxZoom: 2,
+                    zoomSnap: 0.1,
+                    zoomControl: false
                 });
 
                 L.imageOverlay('icons/map.jpg', bounds).addTo(gtaMapInstance);
@@ -1309,50 +1230,81 @@
 
                 mapLocations.value.forEach(loc => {
                     const coords = [loc.y, loc.x];
-                    let imgPath = loc.img ? (loc.img.startsWith('http') ? loc.img : 'images/' + loc.img) : 'images/x.jpg';
-                    
                     if (loc.category === 'Gangs') {
-                        L.circle(coords, {
-                            color: loc.color || '#B00707',
-                            fillColor: loc.color || '#B00707',
-                            fillOpacity: 0.2,
-                            radius: loc.radius || 100
-                        }).addTo(gtaMapInstance);
+                        L.circle(coords, { color: loc.color || '#B00707', fillColor: loc.color || '#B00707', fillOpacity: 0.2, radius: 100 }).addTo(gtaMapInstance);
                     }
-
-                    L.circleMarker(coords, {
-                        radius: 6, color: '#ffffff', fillColor: loc.color || '#38bdf8', fillOpacity: 1
-                    }).bindPopup(`
+                    L.circleMarker(coords, { radius: 5, color: '#fff', fillColor: loc.color || '#38bdf8', fillOpacity: 1 }).bindPopup(`
                         <div class="popup-container">
-                            <img src="${imgPath}" class="popup-img" onclick="openImage(this.src)" onerror="this.src='https://placehold.co/300x150/000000/38bdf8?text=NO+IMAGE'">
                             <span class="popup-title">${loc.name}</span>
-                            <div style="font-size:11px; font-family:monospace;">${loc.address || ''}</div>
+                            <p style="font-size:11px; color:#aaa; margin-top:2px;">${loc.address || ''}</p>
                         </div>
                     `).addTo(gtaMapInstance);
                 });
             };
 
+            const triggerPrintWindow = () => {
+                window.print();
+            };
+
+            // AI RECOGNITION MATCHER
+            const runAiVisualMatcher = () => {
+                if (!aiMatcherImageUrl.value) return;
+                aiMatcherLoading.value = true;
+                aiMatcherResult.value = null;
+
+                setTimeout(() => {
+                    const match = citizensList.value[0] || { fullName: 'Marcus Vance', citizenId: 'CID-8821' };
+                    aiMatcherResult.value = {
+                        analysis: 'Visual facial and outfit recognition scan completed. Subject match identified based on facial structure and jacket profile.',
+                        matchedCitizen: match,
+                        confidence: 96.4
+                    };
+                    aiMatcherLoading.value = false;
+                }, 1200);
+            };
+
+            const navClass = (tab) => {
+                const base = "w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-title tracking-wider transition ";
+                return currentTab.value === tab 
+                    ? base + "bg-blue-600/20 text-tactical-cyan border border-blue-500/40 font-bold shadow-md"
+                    : base + "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200";
+            };
+
+            // PERSISTENT LOGIN REHYDRATION
             onMounted(() => {
-                setInterval(() => {
-                    currentTime.value = new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Athens' });
-                }, 1000);
-                nextTick(() => { initGtaMap(); });
+                updateClock();
+                setInterval(updateClock, 1000);
+
+                const savedUser = localStorage.getItem('cid_user');
+                const savedProfile = localStorage.getItem('cid_profile');
+                if (savedUser && savedProfile) {
+                    try {
+                        currentUser.value = JSON.parse(savedUser);
+                        agentProfile.value = JSON.parse(savedProfile);
+                    } catch (e) {
+                        localStorage.removeItem('cid_user');
+                        localStorage.removeItem('cid_profile');
+                    }
+                }
+
+                nextTick(() => initGtaMap());
             });
 
             return {
-                currentTab, adminSubTab, currentUser, showLoginModal, currentTime,
-                showCreateCitizenModal, showCreateWeaponModal, showCreateVehicleModal,
+                currentUser, agentProfile, showLoginModal, currentTab, adminSubTab, currentTime,
+                activePrintWarrant, selectedCitizenCard, lightboxImage, citizenSearch, penalSearchQuery,
+                newGalleryPhotoUrl, showCreateCitizenModal, showCreateWeaponModal, showCreateVehicleModal,
                 showCreateCaseModal, showCreateOrgModal, showCreateInterrogationModal, showCreateWarrantModal,
-                selectedCitizenCard, activePrintWarrant, newGalleryPhotoUrl,
-                authForm, agentProfile, citizenSearch, aiMatcherImageUrl, aiMatcherLoading, aiMatcherResult,
-                newAgentForm, newTemplateForm, newCitizen, newWeapon, newVehicle, newCase, newOrg, newInterrogation, newWarrant, newMapLoc,
-                penalCodeList, allRanksList, rolePermissions, customTemplates, accountsList,
-                citizensList, weaponsList, vehiclesList, casesList, orgsList, interrogationsList, warrants, mapLocations,
-                activeWarrantsCount, filteredCitizens, matchedCitizenVehicles, hasAdminAccess,
-                handleLogin, handleLogout, switchTab, navClass, hasPermission, getRankPermission, toggleRankPermission,
-                deleteItem, deleteTemplate, importPenalCodeExcel, createCitizen, createWeapon, createVehicle, createCase, createOrg, createInterrogation, createWarrant, addMapLocation,
-                applyTemplateToForm, printWarrantPDF, triggerPrintWindow, runAiVisualMatcher, addGalleryPhoto, adminCreateAgent, saveCustomTemplate,
-                openLightbox, closeLightbox
+                aiMatcherImageUrl, aiMatcherLoading, aiMatcherResult, authForm, newAgentForm, newCitizen,
+                newWeapon, newVehicle, newCase, newOrg, newInterrogation, newWarrant, newTemplateForm,
+                newMapLoc, allRanksList, rolePermissions, customTemplates, accountsList, citizensList,
+                weaponsList, vehiclesList, casesList, orgsList, interrogationsList, warrants, penalCodeList,
+                mapLocations, hasAdminAccess, filteredCitizens, filteredPenalCode, matchedCitizenVehicles,
+                switchTab, hasPermission, getRankPermission, toggleRankPermission, handleLogin, handleLogout,
+                openLightbox, addGalleryPhoto, deleteItem, createCitizen, createWeapon, createVehicle,
+                createCase, createOrg, createInterrogation, createWarrant, applyTemplateToForm, saveCustomTemplate,
+                deleteTemplate, adminCreateAgent, addMapLocation, importPenalCodeExcel, triggerPrintWindow,
+                runAiVisualMatcher, navClass
             };
         }
     }).mount('#app');
