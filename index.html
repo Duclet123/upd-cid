@@ -3,1158 +3,814 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S.A.S.P. // C.I.D. Terminal CAD/MDT</title>
-
-<!-- Tailwind CSS CDN -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        tactical: {
-          bg: '#08050c',
-          panel: '#140c1f',
-          panelBorder: '#2b1a40',
-          accent: '#9333ea',
-          cyan: '#c084fc',
-          purple: '#a855f7',
-          gold: '#f59e0b',
-          danger: '#ef4444',
-          success: '#10b981'
-        }
-      },
-      fontFamily: {
-        mono: ['Share Tech Mono', 'monospace'],
-        title: ['Syne', 'sans-serif'],
-        sans: ['Inter', 'sans-serif']
-      }
-    }
-  }
-}
-</script>
-
-<!-- Google Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-<!-- FontAwesome Icons -->
+<title>S.A.S.P. // C.I.D. Terminal</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{tc:'#c084fc',panel:'#140c1f',bg:'#08050c',pu:'#a855f7'},fontFamily:{mono:['Share Tech Mono','monospace'],title:['Syne','sans-serif']}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Share+Tech+Mono&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<!-- Leaflet CSS & JS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- Vue 3 CDN -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-<!-- Eruda Console for Mobile Debugging -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
-
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script>if(location.search.includes('debug')){var _e=document.createElement('script');_e.src='https://cdn.jsdelivr.net/npm/eruda';_e.onload=function(){eruda.init();};document.head.appendChild(_e);}</script>
 <style>
-body { font-family: 'Inter', sans-serif; background-color: #08050c; color: #e9d5ff; overflow-x: hidden; }
-.hud-panel { background-color: #140c1f; border: 1px solid #2b1a40; border-radius: 1rem; box-shadow: 0 10px 30px -10px rgba(147, 51, 234, 0.2); backdrop-filter: blur(12px); }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #08050c; }
-::-webkit-scrollbar-thumb { background: #2b1a40; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #a855f7; }
-.leaflet-container { background: #000000 !important; font-family: 'Share Tech Mono', monospace !important; }
-#lightboxModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
-#lightboxModal img { max-width: 85%; max-height: 80%; border: 2px solid #a855f7; border-radius: 12px; box-shadow: 0 0 40px rgba(168, 85, 247, 0.4); }
-.popup-container { color: #fff; text-align: center; width: 220px; padding: 4px; }
-.popup-img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 6px; border: 1px solid #a855f7; cursor: pointer; transition: 0.2s; background: #000; }
-.popup-img:hover { filter: brightness(1.2); }
-.popup-title { font-size: 14px; font-weight: bold; font-family: 'Syne', sans-serif; color: #c084fc; margin-bottom: 4px; border-bottom: 1px solid #333; padding-bottom: 4px; }
-@media print {
-  body * { visibility: hidden; }
-  #printableModalContent, #printableModalContent * { visibility: visible; }
-  #printableModalContent { position: absolute; left: 0; top: 0; width: 100%; background: #fff !important; color: #000 !important; }
-  .no-print { display: none !important; }
-}
+body{font-family:Inter,sans-serif;background:#08050c;color:#e9d5ff}
+.hud{background:#140c1f;border:1px solid #2b1a40;border-radius:1rem;box-shadow:0 10px 30px -10px rgba(147,51,234,.2)}
+.inp{width:100%;background:#08050c;border:1px solid #3b2459;border-radius:.75rem;padding:.55rem .8rem;color:#fff;font-family:'Share Tech Mono',monospace;font-size:.8rem}
+.inp:disabled{opacity:.8}
+.btn{padding:.5rem 1rem;color:#fff;font-family:'Share Tech Mono',monospace;font-size:.75rem;font-weight:700;border-radius:.75rem;background:#9333ea;white-space:nowrap}
+.btn:hover{filter:brightness(1.15)}.btn:disabled{opacity:.5}
+.del{padding:.2rem .6rem;background:rgba(220,38,38,.2);color:#f87171;border-radius:.5rem;font-size:.75rem;font-family:'Share Tech Mono',monospace}
+.del:hover{background:#dc2626;color:#fff}
+.leaflet-container{background:#000!important}
+.leaflet-popup-content-wrapper{background:#000!important;color:#fff!important;border:1px solid #a855f7;border-radius:8px}.leaflet-popup-tip{background:#a855f7!important}
+.pc{text-align:center;width:220px}.pt{font-size:16px;font-weight:bold;color:#a855f7;display:block;border-bottom:1px solid #333;padding-bottom:4px;margin-bottom:6px}
+.pi{width:100%;height:120px;object-fit:cover;border-radius:4px;margin-bottom:8px;border:1px solid #a855f7;cursor:pointer;background:#000}
+.pr{font-size:12px;margin:3px 0;display:flex;justify-content:space-between;gap:10px}.pr b{color:#888}.pr span{color:#ddd;text-align:right}
+.sw{position:relative;display:inline-block;width:34px;height:18px;margin-right:6px}.sw input{opacity:0;width:0;height:0}
+.sl{position:absolute;cursor:pointer;inset:0;background:#333;transition:.3s;border-radius:20px}.sl:before{position:absolute;content:"";height:12px;width:12px;left:3px;bottom:3px;background:#fff;transition:.3s;border-radius:50%}
+input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translateX(16px)}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#2b1a40;border-radius:9px}
+@media print{#app,.noprint{display:none!important}body{background:#fff!important}#pdoc{position:static!important;background:#fff!important;padding:0!important;overflow:visible!important}.sheet{max-width:none!important;padding:0!important}}
 </style>
 </head>
+<body>
+<div id="app" class="flex h-screen overflow-hidden">
 
-<body class="h-screen w-screen flex antialiased bg-tactical-bg select-none">
+<!-- SIDEBAR -->
+<aside class="w-60 bg-panel border-r border-purple-950 flex flex-col shrink-0">
+  <div class="p-4 border-b border-purple-950 flex items-center space-x-3">
+    <img :src="LOGO" class="w-10 h-10 object-contain" onerror="this.style.display='none'">
+    <div><h1 class="text-sm font-title font-bold text-white tracking-widest">C.I.D. TERMINAL</h1><p class="text-[10px] text-tc font-mono">S.A.S.P. CAD/MDT</p></div>
+  </div>
+  <nav class="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+    <div class="text-[9px] font-mono text-slate-500 uppercase px-3">Public</div>
+    <button @click="go('dashboard')" :class="nav('dashboard')"><i class="fa-solid fa-bullhorn w-5 text-tc"></i>Directives & News</button>
+    <button @click="go('map')" :class="nav('map')"><i class="fa-solid fa-map-location-dot w-5 text-tc"></i>Tactical Map</button>
+    <button @click="go('warrants')" :class="nav('warrants')"><i class="fa-solid fa-triangle-exclamation w-5 text-red-400"></i>Request Warrants</button>
+    <button @click="go('penal')" :class="nav('penal')"><i class="fa-solid fa-gavel w-5 text-amber-400"></i>Penal Code</button>
+    <template v-if="user">
+      <div class="text-[9px] font-mono text-tc uppercase px-3 pt-4 mt-2 border-t border-purple-950"><i class="fa-solid fa-lock mr-1"></i>Agent Operations</div>
+      <button v-for="n in agentNav" :key="n.id" @click="go(n.id)" :class="nav(n.id)"><i :class="n.icon" class="w-5"></i>{{ n.label }}</button>
+      <button v-if="isAdmin" @click="go('admin')" :class="nav('admin')" class="text-purple-300"><i class="fa-solid fa-user-gear w-5"></i>Admin Panel</button>
+    </template>
+  </nav>
+  <div class="p-3 border-t border-purple-950 bg-bg">
+    <button v-if="!user" @click="showLogin=true" class="btn w-full py-2.5 uppercase">Agent Sign In</button>
+    <div v-else class="space-y-2"><p class="text-xs font-bold text-white truncate">{{ user.name }}</p><p class="text-[10px] text-slate-400 font-mono">{{ user.rank }} | {{ user.badge }}</p>
+      <button @click="logout" class="w-full py-1.5 bg-slate-800 hover:bg-red-600/80 rounded-xl text-xs font-mono border border-slate-700">Sign Out</button>
+      <button @click="changePw" class="w-full py-1 text-[10px] font-mono text-purple-300 hover:text-white">Change password</button></div>
+  </div>
+</aside>
 
-<!-- UNIVERSAL LIGHTBOX -->
-<div id="lightboxModal" onclick="closeLightbox()">
-  <div class="relative flex flex-col items-center max-w-4xl p-4 space-y-3" onclick="event.stopPropagation()">
-    <button onclick="closeLightbox()" class="absolute -top-10 right-0 text-slate-400 hover:text-white text-xl">
-      <i class="fa-solid fa-xmark"></i> Close Zoom
-    </button>
-    <img id="lightboxImg" src="" alt="Enlarged Photo">
-    <div id="lightboxMeta" class="hud-panel p-4 w-full text-center font-mono text-xs space-y-1">
-      <p id="lightboxTitle" class="text-tactical-cyan font-title font-bold text-sm uppercase"></p>
-      <p id="lightboxDesc" class="text-slate-300"></p>
+<main class="flex-1 flex flex-col min-w-0 bg-bg">
+  <header class="h-14 bg-panel border-b border-purple-950 flex items-center justify-between px-6 shrink-0">
+    <div class="flex items-center gap-3"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse"></span>
+      <span class="text-xs font-title font-bold text-white tracking-widest">SAN ANDREAS STATE POLICE // CRIMINAL INVESTIGATION DIVISION</span></div>
+    <div class="flex items-center gap-3 text-xs font-mono text-purple-300"><span class="text-tc uppercase tracking-wider text-[10px] px-2.5 py-0.5 bg-purple-500/10 border border-purple-500/30 rounded-full font-bold">SECURE MDT LINKED</span><span class="text-slate-600">|</span><span><i class="fa-regular fa-clock mr-1 text-tc"></i>{{ time }}</span></div>
+  </header>
+  <div v-if="!configured" class="bg-amber-900/60 text-amber-200 text-xs font-mono px-6 py-2">⚠ Firebase is not configured. Paste your firebaseConfig at the top of the script in index.html.</div>
+  <div v-if="msg" class="bg-red-900/60 text-red-200 text-xs font-mono px-6 py-2 flex justify-between">⚠ {{ msg }}<button @click="msg=''">✕</button></div>
+
+  <div class="flex-1 overflow-y-auto" :class="tab==='map'?'':'p-6'">
+
+    <!-- DASHBOARD -->
+    <div v-if="tab==='dashboard'" class="space-y-6">
+      <div class="hud p-6 space-y-3">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/30 text-tc rounded-full text-xs font-mono"><i class="fa-solid fa-shield"></i>SYSTEM OPERATIONAL</div>
+        <h2 class="text-2xl font-title font-bold text-white tracking-wider">C.I.D. Intelligence Portal</h2>
+        <p class="text-xs text-purple-200/80 leading-relaxed max-w-3xl">Operational terminal for the San Andreas State Police Criminal Investigation Division. Authorized detectives have access to registries, case files, similarity image matching, evidence galleries and MDT reports.</p>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="hud p-5"><p class="text-[10px] font-mono text-purple-400 uppercase">Active Warrants</p><p class="text-2xl font-mono font-bold text-red-400 mt-1">{{ itemsOf('warrants').length }}</p></div>
+        <template v-if="user">
+          <div class="hud p-5"><p class="text-[10px] font-mono text-purple-400 uppercase">Registered Citizens</p><p class="text-2xl font-mono font-bold text-tc mt-1">{{ itemsOf('citizens').length }}</p></div>
+          <div class="hud p-5"><p class="text-[10px] font-mono text-purple-400 uppercase">Registered Firearms</p><p class="text-2xl font-mono font-bold text-amber-400 mt-1">{{ itemsOf('weapons').length }}</p></div>
+          <div class="hud p-5"><p class="text-[10px] font-mono text-purple-400 uppercase">Active Case Files</p><p class="text-2xl font-mono font-bold text-emerald-400 mt-1">{{ itemsOf('cases').length }}</p></div>
+        </template>
+      </div>
+      <div class="hud p-5 flex justify-between items-center"><h2 class="text-base font-title font-bold text-white uppercase"><i class="fa-solid fa-bullhorn mr-2 text-tc"></i>Directives & News</h2>
+        <button v-if="level('directives')==='edit'" @click="newRec('directives')" class="btn">+ Post directive</button></div>
+      <div v-for="d in itemsOf('directives')" :key="d.id" class="hud p-5 space-y-2">
+        <div class="flex justify-between items-start gap-3"><h3 class="text-base font-bold text-white font-title">{{ d.title }}</h3>
+          <div class="flex gap-2 shrink-0"><button @click="printRecord(d)" class="btn !py-1 !bg-slate-700">PDF</button>
+            <button v-if="level('directives')==='edit'" @click="openRec(d)" class="btn !py-1">Edit</button><button v-if="level('directives')==='edit'" @click="delRec(d)" class="del">Delete</button></div></div>
+        <p class="text-xs font-mono text-purple-200 whitespace-pre-line leading-relaxed">{{ d.body }}</p>
+        <p class="text-[10px] font-mono text-purple-400">{{ d.by }} · {{ fmt(d.ts) }}</p>
+      </div>
+      <p v-if="!itemsOf('directives').length" class="text-center text-slate-500 font-mono text-xs py-6">No directives posted.</p>
     </div>
+
+    <!-- MAP -->
+    <div v-show="tab==='map'" class="h-full flex relative">
+      <div v-show="msOpen" class="w-[300px] min-w-[300px] bg-black border-r border-pu flex flex-col overflow-y-auto" style="color:#a855f7">
+        <div class="p-4 flex justify-between items-center border-b-2 border-pu"><h2 class="font-bold text-lg">2k25 Purple</h2><button @click="msOpen=false;fixMap()" class="bg-pu text-black font-bold px-2.5 py-1 rounded">❮</button></div>
+        <div class="p-3 border-b border-purple-950 bg-[#080808]"><input v-model="msq" placeholder="🔍 Search..." class="w-full bg-[#141414] border border-slate-700 text-white px-3 py-2 rounded text-sm outline-none focus:border-pu"></div>
+        <div v-for="c in CATS" :key="c.id">
+          <div class="bg-black px-4 py-3 cursor-pointer flex items-center justify-between border-b border-purple-950" @click="mOpen[c.id]=!mOpen[c.id]">
+            <div class="flex items-center text-[13px] font-bold text-slate-300"><label class="sw" @click.stop><input type="checkbox" v-model="layerOn[c.id]"><span class="sl"></span></label>{{ c.title }}</div>
+            <span class="bg-pu text-white px-2 rounded-full text-[11px] font-bold">{{ mapLocs.filter(l=>l.cat===c.id).length }}</span>
+          </div>
+          <div v-show="mOpen[c.id]||msq" class="bg-[#0f0f0f]">
+            <div v-for="l in mapLocs.filter(l=>l.cat===c.id&&(!msq||norm(l.name).includes(norm(msq))))" :key="l.id" @click="flyTo(l)" class="px-5 py-2.5 text-[13px] text-slate-400 cursor-pointer flex items-center gap-3 border-l-[3px] border-transparent hover:bg-[#1a1a1a] hover:text-white hover:border-pu">
+              <span class="w-2 h-2 rounded-full inline-block" :style="{background:l.color,boxShadow:'0 0 8px '+l.color}"></span>{{ l.name }}</div>
+          </div>
+        </div>
+      </div>
+      <button v-show="!msOpen" @click="msOpen=true;fixMap()" class="absolute top-5 left-5 z-[999] bg-pu text-black font-bold px-4 py-2.5 rounded text-lg">❯</button>
+      <div id="gta-map" class="flex-1 h-full bg-black"></div>
+      <div class="absolute top-4 right-4 z-[999] flex flex-col gap-2">
+        <button @click="mapZoomIn" class="w-10 h-10 hud flex items-center justify-center text-tc hover:text-white" title="Zoom in"><i class="fa-solid fa-plus"></i></button>
+        <button @click="mapZoomOut" class="w-10 h-10 hud flex items-center justify-center text-tc hover:text-white" title="Zoom out"><i class="fa-solid fa-minus"></i></button>
+        <button @click="mapResetView" class="w-10 h-10 hud flex items-center justify-center text-amber-400 hover:text-white" title="Reset view"><i class="fa-solid fa-crosshairs"></i></button></div>
+    </div>
+
+    <!-- PENAL CODE -->
+    <div v-if="tab==='penal'" class="space-y-6">
+      <div class="hud p-5 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-base font-title font-bold text-amber-400 uppercase">Penal Code Schedule</h2>
+        <div class="flex flex-wrap gap-3"><input v-model="q" placeholder="Search..." class="inp !w-48">
+          <button v-if="level('penal')==='edit'" @click="addPenal" class="btn">+ Add charge</button>
+          <label v-if="level('penal')==='edit'" class="btn !bg-amber-600 cursor-pointer">Import Excel / CSV<input type="file" accept=".xlsx,.xls,.csv" @change="importPenal" class="hidden"></label>
+          <button @click="printPenal" class="btn !bg-slate-700">Print PDF</button></div>
+      </div>
+      <p v-if="level('penal')==='edit'" class="text-xs font-mono text-slate-500">Import columns: Category, Title, Fine, Jail. Changes save automatically.</p>
+      <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div v-for="p in penalList" :key="p.id" class="hud p-4 space-y-2 font-mono text-xs">
+          <template v-if="level('penal')==='edit'">
+            <input v-model="p.category" @change="savePenal(p)" placeholder="Category" class="inp"><input v-model="p.title" @change="savePenal(p)" placeholder="Charge" class="inp">
+            <div class="flex gap-2 items-center"><input v-model.number="p.fine" @change="savePenal(p)" type="number" class="inp" placeholder="Fine $"><input v-model.number="p.jail" @change="savePenal(p)" type="number" class="inp" placeholder="Jail (months)"><button @click="delPenal(p)" class="del">Delete</button></div>
+          </template>
+          <template v-else>
+            <span class="text-[9px] text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30 uppercase">{{ p.category }}</span>
+            <h3 class="text-sm font-bold text-white">{{ p.title }}</h3>
+            <div class="flex justify-between pt-2 border-t border-purple-950"><span class="text-emerald-400">${{ Number(p.fine||0).toLocaleString() }}</span><span class="text-red-400">{{ p.jail||0 }} Months</span></div>
+          </template>
+        </div>
+        <p v-if="!penalList.length" class="col-span-full text-center py-10 text-slate-500 font-mono text-xs">No charges.</p>
+      </div>
+    </div>
+
+    <!-- COLLECTION LIST -->
+    <div v-if="col" class="space-y-6">
+      <div class="hud p-5 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-base font-title font-bold text-white uppercase"><i :class="col.icon" class="mr-2"></i>{{ col.label }}</h2>
+        <div class="flex flex-wrap gap-3"><input v-model="q" placeholder="Search..." class="inp !w-56">
+          <button @click="printList" class="btn !bg-slate-700">Print list PDF</button>
+          <button v-if="level(tab)==='edit'" @click="newRec(tab)" class="btn">+ New</button></div>
+      </div>
+      <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div v-for="it in listItems" :key="it.id" class="hud p-4 space-y-2 font-mono text-xs">
+          <div class="flex items-center gap-3" :class="user?'cursor-pointer':''" @click="user&&openRec(it)">
+            <img v-if="it.gallery&&it.gallery[0]" :src="it.gallery[0].url" class="w-12 h-14 object-cover rounded-xl border border-slate-700 bg-black">
+            <div v-else class="w-12 h-14 rounded-xl border border-purple-950 flex items-center justify-center text-slate-600"><i class="fa-regular fa-image"></i></div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-sm font-bold text-white font-title truncate">{{ recTitle(it) }}</h3>
+              <p v-for="f in subFields(col)" :key="f.k" class="text-slate-400 truncate">{{ f.l }}: {{ shown(it,f) }}</p>
+              <p class="text-tc text-[10px]"><span v-if="it.template">Template: {{ it.template }} · </span>{{ linkedFor(it).length }} linked · {{ (it.files||[]).length }} files</p>
+            </div>
+          </div>
+          <div class="flex justify-between pt-2 border-t border-purple-950">
+            <button @click="printRecord(it)" class="btn !py-1 !bg-slate-700">Print PDF</button>
+            <button v-if="level(tab)==='edit'" @click="delRec(it)" class="del">Delete</button>
+          </div>
+        </div>
+        <p v-if="!listItems.length" class="col-span-full text-center py-10 text-slate-500 font-mono text-xs">No records.</p>
+      </div>
+    </div>
+
+    <!-- EVIDENCE -->
+    <div v-if="tab==='evidence'" class="space-y-6">
+      <div class="hud p-5 flex flex-wrap items-center justify-between gap-3">
+        <div><h2 class="text-base font-title font-bold text-emerald-400 uppercase">Photographic Evidence</h2><p class="text-xs text-slate-400 font-mono">Every photo uploaded anywhere in the system, with its details. {{ evidenceList.length }} photos.</p></div>
+        <div class="flex flex-wrap gap-3"><input v-model="q" placeholder="Search title, notes, place, agent..." class="inp !w-64">
+          <select v-model="evSrc" class="inp !w-48"><option value="">All sources</option><option v-for="(c,k) in cfg.collections" :key="k" :value="k">{{ c.label }}</option><option value="_map">Map locations</option></select>
+          <button @click="printEvidence" class="btn !bg-slate-700">Print PDF</button></div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div v-for="e in evidenceList" :key="e.p.id" class="hud p-2 font-mono text-[11px] space-y-1">
+          <img :src="e.p.url" class="aspect-square w-full object-cover rounded-xl cursor-pointer bg-black" @click="openZoom(e.obj,e.i,level(e.src)==='edit')">
+          <p class="text-white font-bold truncate">{{ e.p.title||'Untitled' }}</p>
+          <p class="text-slate-400 truncate">{{ e.srcLabel }}: {{ e.name }}</p>
+          <p class="text-slate-500 truncate">{{ e.p.date }} · {{ e.p.by||'?' }}</p>
+          <button @click="openOwner(e)" class="text-tc">Open record ➔</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MATCHER -->
+    <div v-if="tab==='matcher'" class="space-y-6">
+      <div class="hud p-5"><h2 class="text-base font-title font-bold text-purple-400 uppercase">Face / Outfit Matcher</h2>
+        <p class="text-xs text-slate-400 font-mono mt-1">Finds similar people, not identical photos. Every gallery photo is analysed once when uploaded (face signatures and outfit colours are stored), so searching is instant. Results are investigative leads, not proof.</p></div>
+      <div class="hud p-6 space-y-4 font-mono text-xs">
+        <div class="flex flex-wrap gap-3 items-center">
+          <label class="btn !bg-purple-600 cursor-pointer">Upload evidence photo<input type="file" accept="image/*" class="hidden" @change="mFile"></label>
+          <select v-model="mMode" class="inp !w-52"><option value="face">Face similarity</option><option value="outfit">Outfit similarity</option><option value="both">Face + outfit</option></select>
+          <button @click="runMatch" :disabled="mBusy||!mImg" class="btn !bg-purple-600">{{ mBusy?'Working...':'Search all galleries' }}</button>
+        </div>
+        <img v-if="mImg" :src="mImg" class="max-h-48 rounded-xl border border-slate-700">
+        <p class="text-tc">{{ mStatus }}</p>
+        <p class="text-slate-500">Indexed photos: {{ allPhotos.filter(x=>x.p.ix===1).length }} / {{ allPhotos.length }} <span v-if="isAdmin">· older photos can be indexed from Admin > Tools</span></p>
+      </div>
+      <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div v-for="r in mResults" :key="r.p.id" class="hud p-4 flex gap-3 font-mono text-xs">
+          <img :src="r.p.url" class="w-28 h-28 object-cover rounded-xl cursor-pointer bg-black" @click="openZoom(r.obj,r.i,false)">
+          <div class="flex-1 space-y-1">
+            <p class="text-white font-bold text-sm">{{ r.name }}</p><p class="text-slate-400">{{ r.srcLabel }}</p>
+            <p :class="r.score>=75?'text-emerald-400':r.score>=60?'text-amber-400':'text-slate-300'">Similarity {{ r.score }}% · {{ r.score>=75?'Strong':r.score>=60?'Likely':'Possible' }}</p>
+            <p class="text-slate-500">{{ r.detail }}</p>
+            <button @click="openOwner(r)" class="btn !py-1">Go to record ➔</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div v-if="tab==='admin'&&isAdmin" class="space-y-6">
+      <div class="hud p-5 flex flex-wrap justify-between items-center gap-3">
+        <h2 class="text-base font-title font-bold text-purple-400 uppercase">Administration</h2>
+        <div class="flex flex-wrap gap-2 font-mono text-xs">
+          <button v-for="s in ['accounts','permissions','templates','registries','map','tools']" :key="s" @click="atab=s" :class="atab===s?'bg-purple-600 text-white font-bold':'text-slate-400'" class="px-3 py-1.5 rounded-lg capitalize">{{ s }}</button></div>
+      </div>
+
+      <div v-if="atab==='accounts'" class="hud p-6 space-y-4 font-mono text-xs">
+        <h3 class="text-sm font-title font-bold text-white uppercase">Issue New Credentials</h3>
+        <div class="grid md:grid-cols-4 gap-3">
+          <input v-model="na.username" placeholder="Username (login)" class="inp"><input v-model="na.badge" placeholder="Badge ID" class="inp">
+          <select v-model="na.rank" class="inp"><option v-for="r in RANKS" :key="r">{{ r }}</option></select><input v-model="na.password" type="password" placeholder="Password (min 6)" class="inp"></div>
+        <button @click="addAgent" :disabled="busy" class="btn">Issue Credentials</button>
+        <div class="pt-4 border-t border-purple-950 space-y-2">
+          <div v-for="a in accounts" :key="a.id" class="p-3 bg-bg border border-purple-950 rounded-xl grid grid-cols-4 gap-2 items-center">
+            <span class="text-white truncate">{{ a.name }}</span><input v-model="a.badge" @change="saveAcc(a)" class="inp">
+            <select v-model="a.rank" @change="saveAcc(a)" class="inp"><option v-for="r in RANKS" :key="r">{{ r }}</option></select>
+            <button @click="delAcc(a)" class="del">Remove access</button></div>
+        </div>
+      </div>
+
+      <div v-if="atab==='permissions'" class="hud p-6 overflow-x-auto">
+        <table class="w-full text-left font-mono text-xs"><thead class="bg-bg text-slate-400 uppercase"><tr><th class="p-3">Rank</th><th v-for="k in permKeys" :key="k" class="p-3">{{ permLabel(k) }}</th></tr></thead>
+          <tbody class="divide-y divide-slate-800"><tr v-for="r in RANKS" :key="r"><td class="p-3 font-bold text-white">{{ r }}</td>
+            <td v-for="k in permKeys" :key="k" class="p-2"><select :value="rankLevel(r,k)" :disabled="isTop(r)" @change="setPerm(r,k,$event.target.value)" class="inp !w-28 !px-1"><option value="none">No access</option><option value="view">View</option><option value="edit">Create/Edit</option></select></td></tr></tbody></table>
+        <p class="text-[10px] text-slate-500 mt-3 font-mono">Director and Assistant Director always have full access and the Admin Panel.</p>
+      </div>
+
+      <div v-if="atab==='templates'" class="hud p-6 space-y-4 font-mono text-xs">
+        <div class="grid md:grid-cols-3 gap-3"><select v-model="nt.key" class="inp"><option v-for="c in tplCols" :key="c[0]" :value="c[0]">{{ c[1].label }}</option></select>
+          <input v-model="nt.name" placeholder="Template name" class="inp"><button @click="addTpl" class="btn !bg-emerald-600">Save New Template</button></div>
+        <textarea v-model="nt.body" rows="6" placeholder="Template body..." class="inp"></textarea>
+        <div v-for="c in tplCols" :key="c[0]" class="pt-4 border-t border-purple-950 space-y-2"><h4 class="text-tc font-bold uppercase">{{ c[1].label }}</h4>
+          <p v-if="!(cfg.templates[c[0]]||[]).length" class="text-slate-500">No templates.</p>
+          <div v-for="(t,i) in (cfg.templates[c[0]]||[])" :key="i" class="p-3 bg-bg border border-purple-950 rounded-xl space-y-2">
+            <div class="flex gap-2"><input v-model="t.name" class="inp"><button @click="delTpl(c[0],i)" class="del">Delete</button></div><textarea v-model="t.body" :rows="rowsFor(t.body)" class="inp"></textarea></div></div>
+      </div>
+
+      <div v-if="atab==='registries'" class="space-y-4 font-mono text-xs">
+        <div class="hud p-6 space-y-3"><h3 class="text-sm font-title font-bold text-white uppercase">Create New Registry</h3>
+          <div class="grid md:grid-cols-3 gap-3"><input v-model="nr.label" placeholder="Registry name" class="inp"><input v-model="nr.fields" placeholder="Fields: Name, Address, Notes:a, Active:b" class="inp"><button @click="addRegistry" class="btn !bg-emerald-600">Create</button></div>
+          <p class="text-slate-500">:a = long text (enables templates), :b = checkbox. You can edit every registry's fields below.</p></div>
+        <div v-for="(c,k) in cfg.collections" :key="k" class="hud p-5 space-y-3">
+          <div class="flex gap-3 items-center"><input v-model="c.label" class="inp !w-64 font-bold"><input v-model="c.icon" class="inp !w-64" title="Font Awesome classes"><span class="flex-1"></span>
+            <button v-if="!c.builtin" @click="delRegistry(k)" class="del">Delete registry</button><span v-else class="text-slate-600">built-in</span></div>
+          <div v-for="(f,i) in c.fields" :key="f.k" class="flex gap-2 items-center">
+            <span class="text-slate-600 w-5">{{ i+1 }}</span><input v-model="f.l" class="inp"><select v-model="f.t" class="inp !w-40"><option value="t">Short text</option><option value="a">Long text</option><option value="b">Checkbox</option></select>
+            <button @click="moveField(c,i,-1)" class="btn !py-1 !bg-slate-700">↑</button><button @click="moveField(c,i,1)" class="btn !py-1 !bg-slate-700">↓</button><button @click="delField(c,i)" class="del">✕</button></div>
+          <button @click="addField(c)" class="btn !bg-slate-700">+ Add field</button>
+        </div>
+      </div>
+
+      <div v-if="atab==='map'" class="hud p-6 space-y-3 font-mono text-xs">
+        <div class="flex flex-wrap gap-3 items-center"><button @click="seedMap" class="btn !bg-amber-600">Import default locations</button><span class="text-slate-500">Right-click the map to copy coordinates and add a location there.</span></div>
+        <div class="grid md:grid-cols-6 gap-2 p-3 bg-bg rounded-xl border border-purple-950">
+          <input v-model="nl.name" placeholder="Name" class="inp"><select v-model="nl.cat" class="inp"><option v-for="c in CATS" :key="c.id" :value="c.id">{{ c.title }}</option></select>
+          <input v-model="nl.type" placeholder="Type" class="inp"><input v-model="nl.address" placeholder="Address" class="inp"><input v-model.number="nl.x" type="number" step="0.01" placeholder="X" class="inp"><input v-model.number="nl.y" type="number" step="0.01" placeholder="Y" class="inp">
+          <select v-model="nl.icon" class="inp"><option value="">(no icon)</option><option v-for="i in ICONS" :key="i">{{ i }}</option></select><input v-model="nl.color" placeholder="#B00707" class="inp"><input v-model.number="nl.radius" type="number" placeholder="Radius" class="inp"><input v-model="nl.img" placeholder="images/ file" class="inp"><button @click="addLoc" class="btn !bg-emerald-600 md:col-span-2">Add Location</button></div>
+        <input v-model="q" placeholder="Filter locations..." class="inp">
+        <div v-for="l in mapLocs.filter(l=>!q||norm(l.name).includes(norm(q)))" :key="l.id" class="grid grid-cols-12 gap-1 items-center">
+          <input v-model="l.name" @change="saveLoc(l)" class="inp col-span-2"><select v-model="l.cat" @change="saveLoc(l)" class="inp col-span-1"><option v-for="c in CATS" :key="c.id" :value="c.id">{{ c.id }}</option></select>
+          <input v-model="l.type" @change="saveLoc(l)" class="inp col-span-1"><input v-model="l.address" @change="saveLoc(l)" class="inp col-span-2">
+          <input v-model.number="l.x" @change="saveLoc(l)" type="number" step="0.01" class="inp col-span-1"><input v-model.number="l.y" @change="saveLoc(l)" type="number" step="0.01" class="inp col-span-1">
+          <select v-model="l.icon" @change="saveLoc(l)" class="inp col-span-1"><option value="">-</option><option v-for="i in ICONS" :key="i">{{ i }}</option></select>
+          <button @click="gal=l" class="btn !py-1 col-span-1">📷 {{ (l.gallery||[]).length }}</button><button @click="delLoc(l)" class="del col-span-1">Delete</button></div>
+      </div>
+
+      <div v-if="atab==='tools'" class="hud p-6 space-y-3 font-mono text-xs">
+        <p class="text-slate-400">Analyse photos uploaded before the matcher existed (or that failed). Needs the images to be readable by the browser.</p>
+        <button @click="indexAll" :disabled="mBusy" class="btn !bg-purple-600">Index all un-indexed photos ({{ allPhotos.filter(x=>x.p.ix!==1).length }})</button><p class="text-tc">{{ mStatus }}</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- LOGIN -->
+<div v-if="showLogin&&!user" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+  <div class="w-full max-w-md hud p-6 relative">
+    <button @click="showLogin=false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    <img :src="LOGO" class="h-16 mx-auto mb-3" onerror="this.style.display='none'">
+    <h2 class="text-xl font-title font-bold text-white uppercase text-center mb-6">C.I.D. Agent Sign In</h2>
+    <form @submit.prevent="login" class="space-y-4">
+      <input v-model="auth.u" type="text" required placeholder="Issued Username" autocomplete="username" class="inp"><input v-model="auth.p" type="password" required placeholder="Password" autocomplete="current-password" class="inp">
+      <p v-if="loginError" class="text-red-400 text-xs font-mono">{{ loginError }}</p>
+      <button type="submit" :disabled="busy" class="btn w-full py-2.5 uppercase">Sign In</button></form>
   </div>
 </div>
 
-<div id="app" class="h-full w-full flex overflow-hidden">
-  <!-- SIDEBAR NAVIGATION HUD -->
-  <aside class="w-64 bg-tactical-panel/95 border-r border-purple-950 flex flex-col z-20 shrink-0">
-    <div class="p-4 border-b border-purple-950 flex items-center space-x-3">
-      <div class="w-10 h-10 rounded-2xl bg-tactical-bg border border-purple-500/40 flex items-center justify-center text-tactical-cyan shrink-0 shadow-md">
-        <i class="fa-solid fa-shield-halved text-xl"></i>
-      </div>
-      <div>
-        <h1 class="text-sm font-title font-bold text-white tracking-widest uppercase">C.I.D. TERMINAL</h1>
-        <p class="text-[10px] text-tactical-cyan font-mono">S.A.S.P. CAD/MDT</p>
-      </div>
+<!-- RECORD MODAL -->
+<div v-if="rec" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-2">
+  <div class="w-[98vw] h-[96vh] hud flex flex-col font-mono text-xs">
+    <div class="flex items-center justify-between px-6 py-3 border-b border-purple-950 shrink-0">
+      <h3 class="text-lg font-title font-bold text-white uppercase truncate"><i :class="cfg.collections[rec.obj.col].icon" class="mr-2"></i>{{ rec.isNew?'New ':'' }}{{ cfg.collections[rec.obj.col].label }}<span v-if="!rec.isNew" class="text-slate-400 font-normal normal-case"> — {{ recTitle(rec.obj) }}</span></h3>
+      <div class="flex gap-2"><button v-if="!rec.isNew" @click="printRecord(rec.obj)" class="btn !bg-slate-700">Print PDF</button><button @click="closeRec" class="btn !bg-slate-700">✕ Close</button></div>
     </div>
-    
-    <!-- Navigation Links -->
-    <nav class="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
-      <div class="text-[9px] font-mono text-purple-400 uppercase px-3 py-1 tracking-wider">Public Services</div>
-      <button @click="switchTab('dashboard')" :class="navClass('dashboard')">
-        <i class="fa-solid fa-bullhorn w-5 text-tactical-cyan"></i>
-        <span>Directives & News</span>
-      </button>
-      <button @click="switchTab('map')" :class="navClass('map')">
-        <i class="fa-solid fa-map-location-dot w-5 text-tactical-cyan"></i>
-        <span>Tactical Map</span>
-      </button>
-      <button @click="switchTab('public_warrants')" :class="navClass('public_warrants')">
-        <i class="fa-solid fa-triangle-exclamation w-5 text-red-400"></i>
-        <span>Request Warrants</span>
-      </button>
-      <button @click="switchTab('penal_code')" :class="navClass('penal_code')">
-        <i class="fa-solid fa-gavel w-5 text-amber-400"></i>
-        <span>Penal Code</span>
-      </button>
-
-      <!-- RESTRICTED CID AGENT TABS -->
-      <template v-if="currentUser">
-        <div class="text-[9px] font-mono text-tactical-cyan uppercase px-3 pt-4 pb-1 tracking-wider border-t border-purple-950 mt-2">
-          <i class="fa-solid fa-lock text-[8px] mr-1"></i>Agent MDT Operations
-        </div>
-        <button v-if="hasPermission('citizens')" @click="switchTab('citizens')" :class="navClass('citizens')">
-          <i class="fa-solid fa-address-card w-5"></i>
-          <span>Citizen Registry</span>
-        </button>
-        <button v-if="hasPermission('weapons')" @click="switchTab('weapons')" :class="navClass('weapons')">
-          <i class="fa-solid fa-gun w-5 text-amber-400"></i>
-          <span>Weapons Registry</span>
-        </button>
-        <button v-if="hasPermission('vehicles')" @click="switchTab('vehicles')" :class="navClass('vehicles')">
-          <i class="fa-solid fa-car w-5"></i>
-          <span>Vehicle Registry</span>
-        </button>
-        <button v-if="hasPermission('ai_matcher')" @click="switchTab('ai_matcher')" :class="navClass('ai_matcher')">
-          <i class="fa-solid fa-wand-magic-sparkles text-purple-400 w-5"></i>
-          <span>Face/Outfit Matcher</span>
-        </button>
-        <button v-if="hasPermission('cases')" @click="switchTab('cases')" :class="navClass('cases')">
-          <i class="fa-solid fa-folder-open w-5"></i>
-          <span>Case Files</span>
-        </button>
-        <button v-if="hasPermission('organizations')" @click="switchTab('organizations')" :class="navClass('organizations')">
-          <i class="fa-solid fa-sitemap w-5 text-amber-400"></i>
-          <span>Organisations</span>
-        </button>
-        <button v-if="hasPermission('interrogations')" @click="switchTab('interrogations')" :class="navClass('interrogations')">
-          <i class="fa-solid fa-comments text-cyan-400 w-5"></i>
-          <span>Interrogations</span>
-        </button>
-        <button v-if="hasPermission('photo_evidence')" @click="switchTab('photo_evidence')" :class="navClass('photo_evidence')">
-          <i class="fa-solid fa-images text-purple-300 w-5"></i>
-          <span>Photographic Evidence</span>
-        </button>
-        <button v-if="hasPermission('mdt_reports')" @click="switchTab('mdt_reports')" :class="navClass('mdt_reports')">
-          <i class="fa-solid fa-file-lines text-blue-400 w-5"></i>
-          <span>MDT Reports</span>
-        </button>
-        <div v-if="hasAdminAccess" class="pt-2">
-          <button @click="switchTab('admin')" :class="navClass('admin')" class="bg-purple-950/40 border-purple-500/30 text-purple-300 hover:text-white">
-            <i class="fa-solid fa-user-gear w-5 text-purple-400"></i>
-            <span class="font-bold">Admin Panel</span>
-          </button>
-        </div>
-      </template>
-    </nav>
-
-    <!-- Agent Account Footer -->
-    <div class="p-3.5 border-t border-purple-950 bg-tactical-bg shrink-0">
-      <div v-if="!currentUser">
-        <button @click="showLoginModal = true" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-title font-bold rounded-xl text-xs uppercase transition shadow-lg shadow-purple-600/30 flex items-center justify-center space-x-2">
-          <i class="fa-solid fa-right-to-bracket"></i>
-          <span>Agent Sign In</span>
-        </button>
-      </div>
-      <div v-else class="space-y-2">
-        <div class="flex items-center space-x-3">
-          <div class="w-9 h-9 rounded-2xl bg-purple-950 flex items-center justify-center text-tactical-cyan font-bold text-xs border border-purple-800 font-mono shrink-0">
-            {{ agentProfile.name ? agentProfile.name.split(' ').map(n=>n[0]).join('') : 'AG' }}
-          </div>
-          <div class="overflow-hidden min-w-0 flex-1">
-            <p class="text-xs font-bold text-white truncate">{{ agentProfile.name }}</p>
-            <p class="text-[10px] text-purple-300 font-mono truncate">{{ agentProfile.rank }} | {{ agentProfile.badge }}</p>
-          </div>
-        </div>
-        <button @click="handleLogout" class="w-full py-1.5 bg-tactical-panel hover:bg-red-600/80 text-slate-300 hover:text-white rounded-xl text-xs font-mono transition flex items-center justify-center space-x-2 border border-purple-950">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          <span>Sign Out</span>
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <!-- MAIN VIEWPORT -->
-  <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-tactical-bg">
-    <header class="h-14 bg-tactical-panel border-b border-purple-950 flex items-center justify-between px-6 shrink-0">
-      <div class="flex items-center space-x-3">
-        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse"></span>
-        <span class="text-xs font-title font-bold text-white tracking-widest uppercase">
-          SAN ANDREAS STATE POLICE // CRIMINAL INVESTIGATION DIVISION
-        </span>
-      </div>
-      <div class="flex items-center space-x-3 text-xs font-mono text-purple-300">
-        <span class="text-tactical-cyan uppercase tracking-wider text-[10px] px-2.5 py-0.5 bg-purple-500/10 border border-purple-500/30 rounded-full font-bold">
-          SECURE MDT LINKED
-        </span>
-        <span class="text-slate-600">|</span>
-        <span><i class="fa-regular fa-clock mr-1 text-tactical-cyan"></i>{{ currentTime }}</span>
-      </div>
-    </header>
-
-    <div class="flex-1 overflow-y-auto" :class="currentTab === 'map' ? 'p-0 flex flex-col' : 'p-6'">
-      <!-- 1. DASHBOARD -->
-      <div v-if="currentTab === 'dashboard'" class="space-y-6">
-        <div class="hud-panel p-6 space-y-3">
-          <div class="inline-flex items-center space-x-2 px-3 py-1 bg-purple-500/10 border border-purple-500/30 text-tactical-cyan rounded-full text-xs font-mono">
-            <i class="fa-solid fa-shield"></i>
-            <span>SYSTEM OPERATIONAL</span>
-          </div>
-          <h2 class="text-2xl font-title font-bold text-white tracking-wider">C.I.D. Intelligence Portal</h2>
-          <p class="text-xs text-purple-200/80 leading-relaxed max-w-3xl">
-            Encrypted operational terminal for San Andreas State Police Criminal Investigation Division. Authorized detectives have access to multi-registry files, advanced similarity image matching, unified evidence galleries, and secure report logging.
-          </p>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div class="hud-panel p-5">
-            <p class="text-[10px] font-mono text-purple-400 uppercase">Active Warrants</p>
-            <p class="text-2xl font-mono font-bold text-red-400 mt-1">{{ warrants.length }}</p>
-          </div>
-          <div class="hud-panel p-5">
-            <p class="text-[10px] font-mono text-purple-400 uppercase">Registered Citizens</p>
-            <p class="text-2xl font-mono font-bold text-tactical-cyan mt-1">{{ citizensList.length }}</p>
-          </div>
-          <div class="hud-panel p-5">
-            <p class="text-[10px] font-mono text-purple-400 uppercase">Registered Firearms</p>
-            <p class="text-2xl font-mono font-bold text-amber-400 mt-1">{{ weaponsList.length }}</p>
-          </div>
-          <div class="hud-panel p-5">
-            <p class="text-[10px] font-mono text-purple-400 uppercase">Active Case Files</p>
-            <p class="text-2xl font-mono font-bold text-emerald-400 mt-1">{{ casesList.length }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. MAP -->
-      <div v-if="currentTab === 'map'" class="h-full flex relative overflow-hidden">
-        <div id="gtaMapContainer" class="w-full h-full bg-black z-10"></div>
-        <div class="absolute top-4 right-4 z-20 flex flex-col space-y-2">
-          <button @click="mapZoomIn" class="w-10 h-10 hud-panel flex items-center justify-center text-tactical-cyan hover:text-white hover:border-tactical-cyan transition font-mono text-sm shadow-lg" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
-          <button @click="mapZoomOut" class="w-10 h-10 hud-panel flex items-center justify-center text-tactical-cyan hover:text-white hover:border-tactical-cyan transition font-mono text-sm shadow-lg" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
-          <button @click="mapResetView" class="w-10 h-10 hud-panel flex items-center justify-center text-amber-400 hover:text-white hover:border-amber-400 transition font-mono text-sm shadow-lg" title="Reset View"><i class="fa-solid fa-crosshairs"></i></button>
-        </div>
-      </div>
-
-      <!-- 3. REQUEST WARRANTS -->
-      <div v-if="currentTab === 'public_warrants'" class="space-y-6">
-        <div class="hud-panel p-5 flex justify-between items-center">
-          <h2 class="text-base font-title font-bold text-red-400 uppercase flex items-center space-x-2">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            <span>Request Warrants & Operations</span>
-          </h2>
-          <button v-if="currentUser" @click="openCreateModal('warrant')" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold rounded-xl">+ Issue Warrant</button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="w in warrants" :key="w.id" class="hud-panel border-red-500/30 p-5 space-y-3">
-            <div class="flex justify-between items-start">
-              <div>
-                <h3 class="text-sm font-title font-bold text-white">{{ w.citizenName }}</h3>
-                <p class="text-xs font-mono text-red-400">ID: {{ w.citizenId }}</p>
-              </div>
-              <span class="px-2.5 py-0.5 bg-red-500 text-white font-mono text-[9px] uppercase font-bold rounded-full">WARRANT</span>
-            </div>
-            <div class="text-xs text-purple-200 font-mono bg-tactical-bg p-3.5 rounded-xl border border-purple-950 leading-relaxed whitespace-pre-line">
-              <span class="text-tactical-cyan font-bold block mb-1">TEMPLATE: {{ w.templateName || 'Standard Warrant' }}</span>
-              {{ w.reason }}
-            </div>
-            <div class="flex justify-between items-center border-t border-purple-950 pt-3">
-              <button @click="printRecordPDF('WARRANT', w)" class="px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600 text-tactical-cyan hover:text-white font-mono text-xs font-bold rounded-lg border border-purple-500/40">
-                <i class="fa-solid fa-file-pdf mr-1"></i> Export PDF
-              </button>
-              <button v-if="currentUser" @click="deleteDocItem('warrants', w.id)" class="px-2.5 py-1 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-xs font-mono">Delete</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. PENAL CODE -->
-      <div v-if="currentTab === 'penal_code'" class="space-y-6">
-        <div class="hud-panel p-5 flex justify-between items-center">
-          <h2 class="text-base font-title font-bold text-amber-400 uppercase">San Andreas Penal Code Schedule</h2>
-          <button v-if="hasAdminAccess" @click="openCreateModal('penalCode')" class="px-4 py-2 bg-amber-600 text-white font-mono text-xs font-bold rounded-xl">+ Add Offense</button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div v-for="item in penalCodeList" :key="item.id" class="hud-panel p-5 space-y-2">
-            <div class="flex justify-between items-start">
-              <span class="text-[9px] font-mono text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30 uppercase font-bold">{{ item.category }}</span>
-              <button v-if="hasAdminAccess" @click="deleteDocItem('penalCode', item.id)" class="text-red-400 hover:text-red-300 text-xs font-mono">Delete</button>
-            </div>
-            <h3 class="text-xs font-bold text-white font-title">{{ item.title }}</h3>
-            <div class="flex justify-between items-center pt-2 border-t border-purple-950 text-xs font-mono">
-              <span class="text-emerald-400 font-bold">${{ Number(item.fine).toLocaleString() }}</span>
-              <span class="text-red-400 font-bold">{{ item.jail }} Months</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- AGENT MODULES -->
-      <template v-if="currentUser">
-        <!-- CITIZEN REGISTRY -->
-        <div v-if="currentTab === 'citizens'" class="space-y-6">
-          <div class="hud-panel p-5 flex justify-between items-center">
-            <h2 class="text-base font-title font-bold text-white uppercase">Citizen Registry</h2>
-            <button @click="openCreateModal('citizen')" class="px-4 py-2 bg-purple-600 text-white font-mono text-xs font-bold rounded-xl">+ Create Citizen Dossier</button>
-          </div>
-          <input v-model="citizenSearch" placeholder="Search by name, ID or vehicle plate..." class="w-full bg-tactical-panel border border-purple-900 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div v-for="c in filteredCitizens" :key="c.id" class="hud-panel p-4 space-y-3">
-              <div class="flex items-center space-x-3">
-                <img :src="c.mugshot || 'https://placehold.co/100x120/140c1f/c084fc?text=NO+IMAGE'" @click="openLightbox(c.mugshot || 'https://placehold.co/300x400/000/fff?text=NO+IMAGE', c.fullName, 'Mugshot Dossier')" class="w-12 h-14 object-cover rounded-xl border border-purple-900 bg-black shrink-0 cursor-pointer hover:brightness-125">
-                <div class="flex-1 min-w-0">
-                  <h3 class="text-sm font-bold text-white font-title truncate">{{ c.fullName }}</h3>
-                  <p class="text-xs font-mono text-tactical-cyan">CID: {{ c.citizenId }}</p>
-                  <p class="text-[10px] text-amber-400 font-mono truncate">Vehicle Match: {{ c.autoMatchedVehicle || 'None' }}</p>
-                </div>
-              </div>
-              <div v-if="c.attachedCaseTitle" class="bg-tactical-bg p-2 rounded-lg text-[11px] font-mono text-purple-300 border border-purple-950">
-                <i class="fa-solid fa-paperclip mr-1 text-tactical-cyan"></i> Attached Case: {{ c.attachedCaseTitle }}
-              </div>
-              <div class="flex justify-between items-center pt-2 border-t border-purple-950">
-                <button @click="printRecordPDF('CITIZEN', c)" class="px-3 py-1 bg-purple-600/30 hover:bg-purple-600 text-tactical-cyan hover:text-white rounded-lg text-xs font-mono"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
-                <button @click="deleteDocItem('citizens', c.id)" class="px-2.5 py-1 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-lg text-xs font-mono">Delete</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- WEAPONS REGISTRY -->
-        <div v-if="currentTab === 'weapons'" class="space-y-6">
-          <div class="hud-panel p-5 flex justify-between items-center">
-            <h2 class="text-base font-title font-bold text-amber-400 uppercase">Firearms Registry</h2>
-            <button @click="openCreateModal('weapon')" class="px-4 py-2 bg-purple-600 text-white font-mono text-xs font-bold rounded-xl">+ Register Weapon</button>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div v-for="w in weaponsList" :key="w.id" class="hud-panel p-5 space-y-2 font-mono text-xs">
-              <div class="flex justify-between items-center">
-                <span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-lg font-bold">SERIAL: {{ w.serial }}</span>
-                <button @click="deleteDocItem('weapons', w.id)" class="text-red-400 hover:text-red-300 font-bold">Delete</button>
-              </div>
-              <h3 class="text-white font-bold text-sm font-title mt-2">{{ w.model }}</h3>
-              <p class="text-purple-300">Owner: {{ w.owner }}</p>
-              <p :class="w.stolen ? 'text-red-400' : 'text-emerald-400'" class="font-bold">Status: {{ w.stolen ? 'STOLEN FLAG' : 'CLEAN' }}</p>
-              <div class="pt-2"><button @click="printRecordPDF('WEAPON', w)" class="px-3 py-1 bg-purple-600/30 text-tactical-cyan rounded text-xs"><i class="fa-solid fa-file-pdf mr-1"></i> Export PDF</button></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- VEHICLE REGISTRY -->
-        <div v-if="currentTab === 'vehicles'" class="space-y-6">
-          <div class="hud-panel p-5 flex justify-between items-center">
-            <h2 class="text-base font-title font-bold text-white uppercase">Vehicle Registry</h2>
-            <button @click="openCreateModal('vehicle')" class="px-4 py-2 bg-purple-600 text-white font-mono text-xs font-bold rounded-xl">+ Register Vehicle</button>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div v-for="v in vehiclesList" :key="v.id" class="hud-panel p-5 space-y-2 font-mono text-xs">
-              <div class="flex justify-between items-center">
-                <span class="px-2 py-0.5 bg-purple-500/20 text-tactical-cyan border border-purple-500/40 font-bold rounded-lg">{{ v.plate }}</span>
-                <button @click="deleteDocItem('vehicles', v.id)" class="text-red-400 hover:text-red-300 font-bold">Delete</button>
-              </div>
-              <h3 class="text-white font-bold text-sm font-title mt-1">{{ v.model }}</h3>
-              <p class="text-purple-300">Owner: {{ v.owner }}</p>
-              <p class="text-purple-300">Color: {{ v.color }}</p>
-              <div class="pt-2"><button @click="printRecordPDF('VEHICLE', v)" class="px-3 py-1 bg-purple-600/30 text-tactical-cyan rounded text-xs"><i class="fa-solid fa-file-pdf mr-1"></i> Export PDF</button></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- FACE / OUTFIT RECOGNITION MATCHER -->
-        <div v-if="currentTab === 'ai_matcher'" class="space-y-6">
-          <div class="hud-panel p-5">
-            <h2 class="text-base font-title font-bold text-purple-400 uppercase flex items-center space-x-2">
-              <i class="fa-solid fa-wand-magic-sparkles"></i>
-              <span>Face & Outfit Similarity Gallery Matcher</span>
-            </h2>
-            <p class="text-xs text-purple-300 font-mono mt-0.5">Scans all uploaded photos across all database galleries to find color/shape similarities</p>
-          </div>
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="hud-panel p-6 space-y-4">
-              <h3 class="text-sm font-title font-bold text-white uppercase">Evidence Photo Input</h3>
-              <input v-model="aiMatcherImageUrl" type="url" placeholder="Paste evidence image URL or upload..." class="w-full bg-tactical-bg border border-purple-900 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none">
-              <input type="file" @change="handleFileUpload($event, 'aiMatcher')" class="w-full text-xs text-purple-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500">
-              <button @click="runAiVisualMatcher" :disabled="aiMatcherLoading || !aiMatcherImageUrl" class="w-full py-3 bg-purple-600 text-white font-bold text-xs uppercase rounded-xl shadow-lg">
-                <span>{{ aiMatcherLoading ? 'Scanning All Galleries...' : 'Execute Gallery Similarity Matcher' }}</span>
-              </button>
-            </div>
-            <div class="hud-panel p-6">
-              <h3 class="text-sm font-title font-bold text-white uppercase mb-3">Similarity Recognition Results</h3>
-              <div v-if="aiMatcherResult" class="space-y-4 font-mono text-xs">
-                <p class="text-purple-200 bg-tactical-bg p-3.5 rounded-xl border border-purple-950 leading-relaxed">{{ aiMatcherResult.analysis }}</p>
-                <div v-if="aiMatcherResult.matches.length > 0" class="space-y-2 max-h-60 overflow-y-auto">
-                  <div v-for="m in aiMatcherResult.matches" :key="m.id" class="p-3 bg-tactical-bg border border-purple-950 rounded-xl flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                      <img :src="m.img" class="w-10 h-10 object-cover rounded-lg border border-purple-800">
-                      <div>
-                        <p class="font-bold text-white">{{ m.title }}</p>
-                        <p class="text-tactical-cyan">Similarity Score: {{ m.score }}%</p>
-                      </div>
-                    </div>
-                    <button @click="switchTab(m.targetTab)" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg">Navigate ➔</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- CASE FILES -->
-        <div v-if="currentTab === 'cases'" class="space-y-6">
-          <div class="hud-panel p-5 flex justify-between items-center">
-            <h2 class="text-base font-title font-bold text-white uppercase">Case Files & Investigation Dossiers</h2>
-            <button @click="openCreateModal('case')" class="px-4 py-2 bg-purple-600 text-white font-mono text-xs font-bold rounded-xl">+ Create Case File</button>
-          </div>
-          <div class="space-y-4">
-            <div v-for="c in casesList" :key="c.id" class="hud-panel p-6 space-y-4">
-              <div class="flex justify-between items-start">
-                <div>
-                  <span class="px-2.5 py-0.5 bg-purple-500/20 text-tactical-cyan border border-purple-500/40 text-[10px] font-mono rounded-full font-bold uppercase">{{ c.templateName || 'Standard Case' }}</span>
-                  <h3 class="text-base font-bold text-white font-title mt-2">{{ c.title }}</h3>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <button @click="printRecordPDF('CASE', c)" class="px-3 py-1.5 bg-purple-600/30 text-tactical-cyan rounded-lg text-xs font-mono border border-purple-500/40"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
-                  <button @click="deleteDocItem('cases', c.id)" class="px-2.5 py-1 bg-red-600/20 text-red-400 hover:bg-red-600 rounded text-xs font-mono">Delete</button>
-                </div>
-              </div>
-              <div class="text-xs text-purple-200 font-mono bg-tactical-bg p-4 rounded-xl border border-purple-950 leading-relaxed whitespace-pre-line max-h-96 overflow-y-auto">
-                {{ c.summary }}
-              </div>
-              <!-- Attached Registries & Gallery inside Case -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-purple-950 text-xs font-mono">
-                <div>
-                  <span class="text-tactical-cyan font-bold block mb-1">ATTACHED REGISTRY / ENTITY:</span>
-                  <p class="text-purple-300">{{ c.attachedRegistry || 'None attached' }}</p>
-                </div>
-                <div>
-                  <span class="text-tactical-cyan font-bold block mb-1">EVIDENCE GALLERY & ATTACHED DOCUMENTS:</span>
-                  <div class="flex flex-wrap gap-2">
-                    <span v-for="docFile in c.attachedDocs" :key="docFile" class="px-2 py-1 bg-purple-950 text-purple-300 rounded text-[10px]"><i class="fa-solid fa-file mr-1"></i>{{ docFile }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ORGANISATIONS -->
-        <div v-if="currentTab === 'organizations'" class="space-y-6">
-          <div class="hud-panel p-5 flex justify-between items-center">
-            <h2 class="text-base font-title font-bold text-amber-400 uppercase">Criminal Organisations</h2>
-            <button @click="openCreateModal('org')" class="px-4 py-2 bg-purple-600 text-white font-mono text-xs font-bold rounded-xl">+ Create Organisation</button>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div v-for="org in orgsList" :key="org.id" class="hud-panel p-6 space-y-4 border-amber-500/30">
-              <div class="flex justify-between items-center">
-                <div>
-                  <span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-mono rounded-full font-bold uppercase">{{ org.templateName || 'Syndicate Profile' }}</span>
-                  <h3 class="text-base font-title font-bold text-white mt-1">{{ org.name }}</h3>
-                </div>
-                <div class="flex space-x-2">
-                  <button @click="printRecordPDF('ORG', org)" class="px-3 py-1 bg-purple-600/30 text-tactical-cyan rounded text-xs font-mono"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
-                  <button @click="deleteDocItem('organizations', org.id)" class="px-2.5 py-1 bg-red-600/20 text-red-400 rounded text-xs font-mono">Delete</button>
-                </div>
-              </div>
-              <div class="text-xs text-purple-200 font-mono bg-tactical-bg p-4 rounded-xl border border-purple-950 whitespace-pre-line max-h-80 overflow-y-auto">
-                {{ org.notes }}
-              </div>
-              <div class="pt-3 border-t border-purple-950 text-xs font-mono">
-                <span class="text-amber-400 font-bold">ATTACHED REGISTRY:</span> {{ org.attachedRegistry || 'None' }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- INTERROGATIONS -->
-        <div v-if="currentTab === 'interrogations'" class="space-y-6">
-          <div class="hud-panel p-5 flex justify-between items-center">
-            <h2 class="text-base font-title font-bold text-cyan-400 uppercase">Interrogations & Video Logs</h2>
-            <button @click="openCreateModal('interrogation')" class="px-4 py-2 bg-purple-600 text-white font-mono text-xs font-bold rounded-xl">+ Log Interrogation</button>
-          </div>
-          <div class="space-y-4">
-            <div v-for="log in interrogationsList" :key="log.id" class="hud-panel p-6 space-y-4">
-              <div class="flex justify-between items-center">
-                <div>
-                  <span class="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-mono rounded-full font-bold uppercase">{{ log.templateName || 'Standard Interrogation' }}</span>
-                  <h3 class="text-sm font-bold text-white font-title mt-1">Suspect: {{ log.suspect }}</h3>
-                </div>
-                <div class="flex space-x-2">
-                  <button @click="printRecordPDF('INTERROGATION', log)" class="px-3 py-1 bg-purple-600/30 text-tactical-cyan rounded text-xs font-mono"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
-                  <button @click="deleteDocItem('interrogations', log.id)" class="px-2.5 py-1 bg-red-600/20 text-red-400 rounded text-xs font-mono">Delete</button>
-                </div>
-              </div>
-              <div class="text-xs text-purple-200 font-mono bg-tactical-bg p-4 rounded-xl border border-purple-950 whitespace-pre-line max-h-80 overflow-y-auto">
-                {{ log.transcript }}
-              </div>
-              <div v-if="log.videoUrl" class="pt-2">
-                <span class="text-tactical-cyan font-mono text-xs block mb-1">INTERROGATION VIDEO RECORDING:</span>
-                <video controls class="w-full max-h-72 rounded-xl border border-purple-900 bg-black">
-                  <source :src="log.videoUrl" type="video/mp4">
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PHOTOGRAPHIC EVIDENCE GALLERY -->
-        <div v-if="currentTab === 'photo_evidence'" class="space-y-6">
-          <div class="hud-panel p-5">
-            <h2 class="text-base font-title font-bold text-purple-300 uppercase">Unified Photographic Evidence Gallery</h2>
-            <p class="text-xs text-purple-300 font-mono mt-0.5">All photos uploaded across the entire database with full metadata and info</p>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div v-for="p in unifiedPhotoGallery" :key="p.id" class="hud-panel p-4 space-y-3 flex flex-col justify-between">
-              <div>
-                <img :src="p.url" @click="openLightbox(p.url, p.title, p.info)" class="w-full h-40 object-cover rounded-xl border border-purple-900 bg-black cursor-pointer hover:brightness-125">
-                <h3 class="text-sm font-bold text-white font-title mt-2 truncate">{{ p.title }}</h3>
-                <p class="text-[11px] font-mono text-purple-300 line-clamp-2 mt-1">{{ p.info }}</p>
-              </div>
-              <div class="pt-2 border-t border-purple-950 flex justify-between items-center text-[10px] font-mono text-tactical-cyan">
-                <span>Source: {{ p.sourceModule }}</span>
-                <button @click="switchTab(p.targetTab)" class="px-2.5 py-1 bg-purple-600 text-white rounded">Go To Record</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- MDT REPORTS -->
-        <div v-if="currentTab === 'mdt_reports'" class="space-y-6">
-          <div class="hud-panel p-5 flex justify-between items-center">
-            <h2 class="text-base font-title font-bold text-blue-400 uppercase">MDT Reports & Upload Center</h2>
-            <button @click="openCreateModal('report')" class="px-4 py-2 bg-purple-600 text-white font-mono text-xs font-bold rounded-xl">+ Upload MDT Report</button>
-          </div>
-          <div class="space-y-4">
-            <div v-for="rep in mdtReportsList" :key="rep.id" class="hud-panel p-5 space-y-3 font-mono text-xs">
-              <div class="flex justify-between items-center">
-                <span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-500/40 rounded font-bold uppercase">REPORT: {{ rep.title }}</span>
-                <div class="flex space-x-2">
-                  <button @click="printRecordPDF('REPORT', rep)" class="px-3 py-1 bg-purple-600/30 text-tactical-cyan rounded"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
-                  <button @click="deleteDocItem('mdtReports', rep.id)" class="text-red-400 hover:text-red-300 font-bold">Delete</button>
-                </div>
-              </div>
-              <p class="text-purple-200 bg-tactical-bg p-3.5 rounded-xl border border-purple-950 leading-relaxed whitespace-pre-line">{{ rep.content }}</p>
-              <div v-if="rep.fileUrl" class="text-tactical-cyan">
-                <a :href="rep.fileUrl" target="_blank" class="hover:underline"><i class="fa-solid fa-paperclip mr-1"></i> Attached File / PDF Document</a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ADMIN PANEL -->
-        <div v-if="currentTab === 'admin' && hasAdminAccess" class="space-y-6">
-          <div class="hud-panel p-5 flex justify-between items-center">
-            <h2 class="text-base font-title font-bold text-purple-400 uppercase">Administration Panel</h2>
-            <div class="flex space-x-2 font-mono text-xs flex-wrap">
-              <button @click="adminSubTab = 'accounts'" :class="adminSubTab === 'accounts' ? 'bg-purple-600 text-white font-bold' : 'text-purple-300'" class="px-3 py-1.5 rounded-lg">Accounts</button>
-              <button @click="adminSubTab = 'permissions'" :class="adminSubTab === 'permissions' ? 'bg-purple-600 text-white font-bold' : 'text-purple-300'" class="px-3 py-1.5 rounded-lg">Permissions</button>
-              <button @click="adminSubTab = 'templates'" :class="adminSubTab === 'templates' ? 'bg-purple-600 text-white font-bold' : 'text-purple-300'" class="px-3 py-1.5 rounded-lg">Templates</button>
-              <button @click="adminSubTab = 'builtin_registries'" :class="adminSubTab === 'builtin_registries' ? 'bg-purple-600 text-white font-bold' : 'text-purple-300'" class="px-3 py-1.5 rounded-lg">Built-in Registries</button>
-            </div>
-          </div>
-
-          <!-- ACCOUNTS -->
-          <div v-if="adminSubTab === 'accounts'" class="hud-panel p-6 space-y-4">
-            <h3 class="text-sm font-title font-bold text-white uppercase">Issue New Agent Credentials</h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 font-mono text-xs">
-              <input v-model="newAgentForm.username" placeholder="Username (e.g. j.doe)" class="bg-tactical-bg p-2.5 rounded-xl border border-purple-900 text-white">
-              <input v-model="newAgentForm.badge" placeholder="Badge ID (e.g. CID-02)" class="bg-tactical-bg p-2.5 rounded-xl border border-purple-900 text-white">
-              <select v-model="newAgentForm.rank" class="bg-tactical-bg p-2.5 rounded-xl border border-purple-900 text-white">
-                <option v-for="r in allRanksList" :key="r" :value="r">{{ r }}</option>
-              </select>
-              <input v-model="newAgentForm.password" type="password" placeholder="Password" class="bg-tactical-bg p-2.5 rounded-xl border border-purple-900 text-white">
-            </div>
-            <button @click="adminCreateAgent" class="px-5 py-2.5 bg-purple-600 text-white text-xs font-title font-bold uppercase rounded-xl">Issue Credentials</button>
-          </div>
-
-          <!-- PERMISSIONS -->
-          <div v-if="adminSubTab === 'permissions'" class="hud-panel p-6 space-y-4">
-            <h3 class="text-sm font-title font-bold text-white uppercase">Rank Permissions Matrix</h3>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left font-mono text-xs">
-                <thead class="bg-tactical-bg text-purple-300 uppercase">
-                  <tr>
-                    <th class="p-3">Rank</th>
-                    <th class="p-3 text-center" v-for="sec in permissionSections" :key="sec">{{ sec }}</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-purple-950">
-                  <tr v-for="rank in allRanksList" :key="rank">
-                    <td class="p-3 font-bold text-white">{{ rank }}</td>
-                    <td v-for="sec in permissionSections" :key="sec" class="p-3 text-center">
-                      <input type="checkbox" :checked="getRankPermission(rank, sec)" @change="toggleRankPermission(rank, sec)">
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- TEMPLATE MANAGER -->
-          <div v-if="adminSubTab === 'templates'" class="hud-panel p-6 space-y-4 font-mono text-xs">
-            <h3 class="text-sm font-title font-bold text-white uppercase">Category Template Manager</h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <select v-model="newTemplateForm.category" class="bg-tactical-bg p-2.5 rounded-xl border border-purple-900 text-white">
-                <option value="cases">Case Files</option>
-                <option value="organizations">Criminal Organisations</option>
-                <option value="interrogations">Interrogations</option>
-                <option value="warrants">Warrants</option>
-              </select>
-              <input v-model="newTemplateForm.name" placeholder="Template Name" class="bg-tactical-bg p-2.5 rounded-xl border border-purple-900 text-white">
-              <input v-model="newTemplateForm.defaultText" placeholder="Default Template Body Text" class="bg-tactical-bg p-2.5 rounded-xl border border-purple-900 text-white md:col-span-2">
-            </div>
-            <button @click="createTemplate" class="px-5 py-2.5 bg-purple-600 text-white font-bold uppercase rounded-xl">Save Template</button>
-            <div class="space-y-2 pt-4 border-t border-purple-950">
-              <div v-for="t in templatesList" :key="t.id" class="p-3 bg-tactical-bg border border-purple-950 rounded-xl flex justify-between items-center">
-                <div><span class="text-tactical-cyan font-bold">[{{ t.category }}]</span> <span class="text-white font-bold">{{ t.name }}</span></div>
-                <button @click="deleteDocItem('templates', t.id)" class="text-red-400 hover:text-red-300">Delete</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- BUILTIN REGISTRIES MANAGER -->
-          <div v-if="adminSubTab === 'builtin_registries'" class="hud-panel p-6 space-y-4 font-mono text-xs">
-            <h3 class="text-sm font-title font-bold text-white uppercase">Edit Built-in Registries (Citizens, Weapons, Vehicles)</h3>
-            <p class="text-purple-300">Here Admin can review and edit master registries directly or create new registry categories.</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div class="p-4 bg-tactical-bg border border-purple-950 rounded-xl space-y-2">
-                <h4 class="font-bold text-tactical-cyan">Citizens Count: {{ citizensList.length }}</h4>
-                <button @click="switchTab('citizens')" class="px-3 py-1.5 bg-purple-600 text-white rounded">Manage Citizens</button>
-              </div>
-              <div class="p-4 bg-tactical-bg border border-purple-950 rounded-xl space-y-2">
-                <h4 class="font-bold text-amber-400">Weapons Count: {{ weaponsList.length }}</h4>
-                <button @click="switchTab('weapons')" class="px-3 py-1.5 bg-purple-600 text-white rounded">Manage Weapons</button>
-              </div>
-              <div class="p-4 bg-tactical-bg border border-purple-950 rounded-xl space-y-2">
-                <h4 class="font-bold text-emerald-400">Vehicles Count: {{ vehiclesList.length }}</h4>
-                <button @click="switchTab('vehicles')" class="px-3 py-1.5 bg-purple-600 text-white rounded">Manage Vehicles</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-    </div>
-  </main>
-
-  <!-- AUTH LOGIN MODAL -->
-  <div v-if="showLoginModal && !currentUser" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-    <div class="w-full max-w-md hud-panel p-6 relative">
-      <h2 class="text-xl font-title font-bold text-white uppercase text-center mb-6">C.I.D. Agent Sign In</h2>
-      <form @submit.prevent="handleLogin" class="space-y-4 font-mono text-xs">
-        <input v-model="authForm.username" type="text" required placeholder="Issued Username (e.g. Director)" class="w-full bg-tactical-bg border border-purple-900 rounded-xl px-3.5 py-2.5 text-white focus:outline-none">
-        <input v-model="authForm.password" type="password" required placeholder="Password" class="w-full bg-tactical-bg border border-purple-900 rounded-xl px-3.5 py-2.5 text-white focus:outline-none">
-        <button type="submit" class="w-full py-2.5 bg-purple-600 text-white font-title font-bold uppercase rounded-xl">Sign In</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- UNIVERSAL CREATION / EDIT MODAL (BIGGER SECTIONS) -->
-  <div v-if="activeModalType" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-    <div class="w-full max-w-3xl hud-panel p-8 relative space-y-6 max-h-[90vh] overflow-y-auto">
-      <button @click="activeModalType = null" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
-      <h3 class="text-lg font-title font-bold text-white uppercase border-b border-purple-950 pb-3">Create / Edit Record: {{ activeModalType }}</h3>
-      
-      <!-- TEMPLATE SELECTOR FOR CASES/ORGS/INTERROGATIONS/WARRANTS -->
-      <div v-if="['case', 'org', 'interrogation', 'warrant'].includes(activeModalType)" class="space-y-2 font-mono text-xs">
-        <label class="text-tactical-cyan font-bold">Select Template:</label>
-        <select v-model="selectedTemplateId" @change="applySelectedTemplate" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <option value="">-- Custom / No Template --</option>
-          <option v-for="t in getTemplatesForCategory(activeModalType)" :key="t.id" :value="t.id">{{ t.name }}</option>
-        </select>
-      </div>
-
-      <!-- DYNAMIC FORM FIELDS -->
-      <div class="space-y-4 font-mono text-xs">
-        <!-- CITIZEN FORM -->
-        <template v-if="activeModalType === 'citizen'">
-          <input v-model="modalForm.fullName" placeholder="Full Name" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.citizenId" placeholder="Citizen ID (e.g. CID-1042)" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.phone" placeholder="Phone Number" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.gang" placeholder="Gang / Affiliation" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.mugshot" placeholder="Mugshot Image URL" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input type="file" @change="handleFileUpload($event, 'citizenMugshot')" class="w-full text-xs text-purple-300">
-          <select v-model="modalForm.attachedCaseTitle" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-            <option value="">-- Attach Case File --</option>
-            <option v-for="cs in casesList" :key="cs.id" :value="cs.title">{{ cs.title }}</option>
-          </select>
-          <input v-model="modalForm.vehiclePlate" placeholder="Vehicle Plate (Auto matches vehicle & details)" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-        </template>
-
-        <!-- WEAPON FORM -->
-        <template v-if="activeModalType === 'weapon'">
-          <input v-model="modalForm.serial" placeholder="Serial Number" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.model" placeholder="Firearm Model" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.owner" placeholder="Registered Owner Name" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <label class="flex items-center space-x-2 text-slate-300"><input type="checkbox" v-model="modalForm.stolen"><span>Flagged as Stolen</span></label>
-        </template>
-
-        <!-- VEHICLE FORM -->
-        <template v-if="activeModalType === 'vehicle'">
-          <input v-model="modalForm.plate" placeholder="License Plate" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.model" placeholder="Vehicle Model" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.owner" placeholder="Owner Name" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.color" placeholder="Color" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-        </template>
-
-        <!-- CASE FORM -->
-        <template v-if="activeModalType === 'case'">
-          <input v-model="modalForm.title" placeholder="Case File Title" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <textarea v-model="modalForm.summary" rows="7" placeholder="Case Investigation Details..." class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white"></textarea>
-          <select v-model="modalForm.attachedRegistry" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-            <option value="">-- Attach Registry (Citizen/Weapon/Vehicle) --</option>
-            <option v-for="c in citizensList" :key="c.id" :value="'Citizen: ' + c.fullName">Citizen: {{ c.fullName }}</option>
-            <option v-for="w in weaponsList" :key="w.id" :value="'Weapon: ' + w.model + ' (' + w.serial + ')'">Weapon: {{ w.model }}</option>
-            <option v-for="v in vehiclesList" :key="v.id" :value="'Vehicle: ' + v.model + ' (' + v.plate + ')'">Vehicle: {{ v.model }} ({{ v.plate }})</option>
-          </select>
-          <input v-model="modalForm.evidenceImageUrl" placeholder="Evidence Photo URL for Gallery" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input type="file" @change="handleFileUpload($event, 'caseEvidence')" class="w-full text-xs text-purple-300">
-        </template>
-
-        <!-- ORG FORM -->
-        <template v-if="activeModalType === 'org'">
-          <input v-model="modalForm.name" placeholder="Organisation Name" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <textarea v-model="modalForm.notes" rows="7" placeholder="Organisation Notes & Structure..." class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white"></textarea>
-          <select v-model="modalForm.attachedRegistry" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-            <option value="">-- Attach Registry --</option>
-            <option v-for="c in citizensList" :key="c.id" :value="'Member: ' + c.fullName">Member: {{ c.fullName }}</option>
-          </select>
-          <input v-model="modalForm.evidenceImageUrl" placeholder="Organisation Gallery Photo URL" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-        </template>
-
-        <!-- INTERROGATION FORM -->
-        <template v-if="activeModalType === 'interrogation'">
-          <input v-model="modalForm.suspect" placeholder="Suspect Name" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <textarea v-model="modalForm.transcript" rows="7" placeholder="Interrogation Transcript..." class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white"></textarea>
-          <input v-model="modalForm.videoUrl" placeholder="Video Recording URL (.mp4)" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input type="file" @change="handleFileUpload($event, 'interrogationVideo')" class="w-full text-xs text-purple-300">
-        </template>
-
-        <!-- WARRANT FORM -->
-        <template v-if="activeModalType === 'warrant'">
-          <input v-model="modalForm.citizenName" placeholder="Target Subject Full Name" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.citizenId" placeholder="Citizen ID" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <textarea v-model="modalForm.reason" rows="7" placeholder="Warrant Justification & Probable Cause..." class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white"></textarea>
-        </template>
-
-        <!-- REPORT FORM -->
-        <template v-if="activeModalType === 'report'">
-          <input v-model="modalForm.title" placeholder="MDT Report Title" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <textarea v-model="modalForm.content" rows="7" placeholder="Detailed MDT Report Content..." class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white"></textarea>
-          <input v-model="modalForm.fileUrl" placeholder="Attached File / PDF URL" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input type="file" @change="handleFileUpload($event, 'reportFile')" class="w-full text-xs text-purple-300">
-        </template>
-
-        <!-- PENAL CODE FORM -->
-        <template v-if="activeModalType === 'penalCode'">
-          <input v-model="modalForm.title" placeholder="Offense Title" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model="modalForm.category" placeholder="Category (Felony/Misdemeanor)" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model.number="modalForm.fine" type="number" placeholder="Fine ($)" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-          <input v-model.number="modalForm.jail" type="number" placeholder="Jail (Months)" class="w-full bg-tactical-bg p-3 rounded-xl border border-purple-900 text-white">
-        </template>
-      </div>
-
-      <button @click="saveModalRecord" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-title font-bold uppercase rounded-xl shadow-lg">Save Record</button>
-    </div>
-  </div>
-
-  <!-- PRINTABLE PDF MODAL WITH LOGO -->
-  <div v-if="activePrintRecord" id="printableModalContent" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 p-6 overflow-y-auto">
-    <div class="bg-white text-slate-900 p-8 rounded-xl max-w-2xl w-full font-mono text-xs space-y-6 shadow-2xl">
-      <div class="flex justify-between items-center border-b-2 border-slate-900 pb-4">
-        <div class="flex items-center space-x-3">
-          <!-- S.A.S.P. LOGO -->
-          <div class="w-12 h-12 rounded-xl bg-purple-900 text-white flex items-center justify-center text-xl font-bold shadow">
-            <i class="fa-solid fa-shield-halved"></i>
-          </div>
-          <div>
-            <h1 class="text-lg font-bold uppercase tracking-wider">SAN ANDREAS STATE POLICE</h1>
-            <p class="text-xs font-semibold text-purple-900">CRIMINAL INVESTIGATION DIVISION // OFFICIAL EXPORT</p>
-          </div>
-        </div>
-        <button @click="activePrintRecord = null" class="no-print text-slate-500 hover:text-black font-bold text-base">✕ Close</button>
-      </div>
-
+    <div class="flex-1 overflow-y-auto p-6 grid xl:grid-cols-2 gap-8 content-start">
       <div class="space-y-4">
-        <h2 class="text-sm font-bold uppercase border-b border-slate-300 pb-1 text-purple-900">Record Type: {{ activePrintRecord.type }}</h2>
-        <div class="p-4 bg-slate-100 rounded-lg space-y-2 leading-relaxed whitespace-pre-line text-slate-800">
-          <p v-for="(val, key) in activePrintRecord.data" :key="key">
-            <strong>{{ key.toUpperCase() }}:</strong> {{ val }}
-          </p>
+        <select v-if="canEditRec&&tplFor(rec.obj.col).length" @change="applyTpl($event.target.value);$event.target.value=''" class="inp"><option value="">-- Load template --</option><option v-for="t in tplFor(rec.obj.col)" :key="t.name">{{ t.name }}</option></select>
+        <div v-for="f in cfg.collections[rec.obj.col].fields" :key="f.k">
+          <label class="text-slate-500">{{ f.l }}</label>
+          <textarea v-if="f.t==='a'" v-model="rec.obj[f.k]" :disabled="!canEditRec" :rows="rowsFor(rec.obj[f.k])" class="inp"></textarea>
+          <label v-else-if="f.t==='b'" class="flex items-center gap-2 mt-1"><input type="checkbox" v-model="rec.obj[f.k]" :disabled="!canEditRec"><span>{{ rec.obj[f.k]?'Yes':'No' }}</span></label>
+          <input v-else v-model="rec.obj[f.k]" :disabled="!canEditRec" class="inp">
         </div>
       </div>
-
-      <div class="pt-8 border-t-2 border-slate-900 flex justify-between items-end">
-        <div>
-          <p class="text-[10px] text-slate-500 uppercase">OFFICIAL AUTHORIZED SIGNATURE</p>
-          <p class="font-bold text-sm uppercase">{{ currentUser ? agentProfile.name : 'Authorized CID Agent' }}</p>
-          <p class="text-xs">{{ currentUser ? agentProfile.rank : 'Special Agent' }} ({{ currentUser ? agentProfile.badge : 'CID-01' }})</p>
-        </div>
-        <button @click="triggerPrintWindow" class="no-print px-5 py-2.5 bg-slate-900 text-white font-bold rounded-lg uppercase shadow">Print / Save PDF</button>
+      <div class="space-y-6">
+        <div class="space-y-2"><h4 class="text-tc font-bold uppercase">Attached records (visible from both sides)</h4>
+          <div v-for="l in linkedFor(rec.obj)" :key="l.rec.id" class="flex items-center justify-between p-2 bg-bg border border-purple-950 rounded-xl">
+            <span class="truncate"><span class="text-amber-400">{{ cfg.collections[l.rec.col].label }}:</span> <span class="text-white">{{ recTitle(l.rec) }}</span><span v-if="!l.mine" class="text-slate-600"> (linked from there)</span></span>
+            <span class="shrink-0"><button v-if="level(l.rec.col)!=='none'" @click="openRec(l.rec)" class="text-tc mr-3">Open ➔</button><button v-if="canEditRec" @click="detach(l)" class="del">Detach</button></span></div>
+          <p v-if="!linkedFor(rec.obj).length" class="text-slate-500">Nothing attached.</p>
+          <div v-if="canEditRec&&!rec.isNew" class="flex gap-2"><select v-model="lkCol" class="inp !w-48"><option value="">Registry...</option><option v-for="(c,k) in cfg.collections" :key="k" :value="k" v-show="level(k)!=='none'">{{ c.label }}</option></select>
+            <select v-model="lkId" class="inp"><option value="">Record...</option><option v-for="r in lkChoices" :key="r.id" :value="r.id">{{ recTitle(r) }}</option></select><button @click="attach" class="btn">Attach</button></div>
+          <p v-if="rec.isNew" class="text-slate-500">Create the record first, then attach other records.</p></div>
+        <template v-if="rec.obj.col==='citizens'">
+          <div class="space-y-2"><h4 class="text-tc font-bold uppercase">Auto-matched vehicles (name / Citizen ID)</h4><div class="grid grid-cols-2 gap-2">
+            <div v-for="v in matched('vehicles')" :key="v.id" class="p-3 bg-bg border border-purple-950 rounded-xl"><p class="text-white font-bold">{{ v.model }} ({{ v.plate }})</p><p class="text-slate-400">{{ v.color }}</p></div>
+            <p v-if="!matched('vehicles').length" class="text-slate-500 col-span-2">No matching vehicles.</p></div></div>
+          <div class="space-y-2"><h4 class="text-tc font-bold uppercase">Auto-matched weapons</h4><div class="grid grid-cols-2 gap-2">
+            <div v-for="w in matched('weapons')" :key="w.id" class="p-3 bg-bg border border-purple-950 rounded-xl"><p class="text-white font-bold">{{ w.model }} ({{ w.serial }})</p><p :class="w.stolen?'text-red-400':'text-emerald-400'">{{ w.stolen?'STOLEN':'Clean' }}</p></div>
+            <p v-if="!matched('weapons').length" class="text-slate-500 col-span-2">No matching weapons.</p></div></div>
+        </template>
+        <div><h4 class="text-tc font-bold uppercase mb-2">Files (PDF, documents, video, audio)</h4><file-box :target="rec.obj" :edit="canEditRec" :by="user&&user.name" @changed="saveTarget"></file-box></div>
+        <div><h4 class="text-tc font-bold uppercase mb-2">Gallery</h4><photo-gallery :target="rec.obj" :edit="canEditRec" :by="user&&user.name" @zoom="(o,i)=>openZoom(o,i,canEditRec)" @changed="saveTarget"></photo-gallery></div>
       </div>
     </div>
+    <div class="px-6 py-3 border-t border-purple-950 flex items-center gap-3 shrink-0"><p v-if="recErr" class="text-red-400">{{ recErr }}</p>
+      <span class="flex-1"></span><button v-if="rec.isNew" @click="saveNew" :disabled="busy" class="btn">Create</button><button v-if="rec.isNew" @click="closeRec" class="btn !bg-slate-700">Cancel</button></div>
   </div>
-
 </div>
 
-<!-- SCRIPT ENGINE -->
+<!-- MAP POI GALLERY -->
+<div v-if="gal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"><div class="w-full max-w-3xl hud p-6 relative max-h-[90vh] overflow-y-auto space-y-3">
+  <button @click="gal=null" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  <h3 class="text-sm font-title font-bold text-white uppercase">Photos: {{ gal.name }}</h3>
+  <photo-gallery :target="gal" :edit="true" :by="user&&user.name" @zoom="(o,i)=>openZoom(o,i,true)" @changed="saveTarget"></photo-gallery></div></div>
+
+<!-- ZOOM VIEWER -->
+<div v-if="zoom&&zp" class="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-4" @click="zoom=null">
+  <div class="flex flex-col lg:flex-row w-full max-w-6xl gap-4 max-h-[94vh]" @click.stop>
+    <div class="flex-1 overflow-auto flex items-center justify-center relative min-h-[40vh]">
+      <img :src="zp.url" :style="{transform:'scale('+zs+')'}" @click="zs=zs>1?1:2.5" :class="zs>1?'cursor-zoom-out':'cursor-zoom-in'" class="max-h-[85vh] max-w-full object-contain transition-transform">
+      <button v-if="zoom.i>0" @click="zoom.i--;zs=1" class="absolute left-2 top-1/2 text-white text-3xl">‹</button>
+      <button v-if="zoom.i<zoom.obj.gallery.length-1" @click="zoom.i++;zs=1" class="absolute right-2 top-1/2 text-white text-3xl">›</button></div>
+    <div class="w-full lg:w-80 hud p-4 space-y-2 font-mono text-xs overflow-y-auto">
+      <div class="flex justify-between"><h4 class="text-tc font-bold uppercase">Photo Details</h4><button @click="zoom=null" class="text-slate-400">✕</button></div>
+      <label class="text-slate-500">Title</label><input v-model="zp.title" @change="persistZoom" :disabled="!zoom.edit" class="inp">
+      <label class="text-slate-500">Description / notes</label><textarea v-model="zp.desc" @change="persistZoom" :disabled="!zoom.edit" rows="6" class="inp"></textarea>
+      <label class="text-slate-500">Date taken</label><input v-model="zp.taken" @change="persistZoom" :disabled="!zoom.edit" placeholder="YYYY-MM-DD" class="inp">
+      <label class="text-slate-500">Location</label><input v-model="zp.place" @change="persistZoom" :disabled="!zoom.edit" class="inp">
+      <p class="text-slate-500">Uploaded {{ zp.date }} by {{ zp.by||'unknown' }}</p>
+      <button v-if="zoom.edit" @click="delPhoto" class="del">Delete photo</button></div></div></div>
+<div v-if="lightboxSrc" @click="lightboxSrc=null" class="fixed inset-0 z-[310] bg-black/90 flex items-center justify-center cursor-pointer"><img :src="lightboxSrc" class="max-w-[85%] max-h-[85%] border-2 border-pu rounded"></div>
+
+<!-- PRINT SHEET (teleported so only it prints) -->
+<teleport to="body">
+<div v-if="pdoc" id="pdoc" class="fixed inset-0 z-[400] bg-black/95 overflow-y-auto p-6">
+  <div class="noprint max-w-4xl mx-auto flex gap-3 mb-4 justify-end"><button @click="printNow" class="btn">Print / Save as PDF</button><button @click="pdoc=null" class="btn !bg-slate-700">✕ Close</button></div>
+  <div class="sheet bg-white text-slate-900 max-w-4xl mx-auto p-10 text-sm" style="font-family:Inter,sans-serif">
+    <div class="flex items-center gap-4 border-b-4 border-slate-900 pb-4 mb-6">
+      <img :src="LOGO" class="h-20 w-20 object-contain" onerror="this.style.display='none'">
+      <div class="flex-1"><h1 class="text-xl font-extrabold uppercase tracking-wide">San Andreas State Police</h1><p class="font-bold text-slate-700">Criminal Investigation Division</p><p v-if="pdoc.kind" class="font-bold text-red-700 uppercase">{{ pdoc.kind }}</p></div>
+      <div class="text-right text-xs text-slate-600"><p>{{ date }} {{ time }} (Athens time)</p><p>Printed by {{ user?user.name+' ('+user.badge+')':'public access' }}</p></div></div>
+    <h2 class="text-lg font-bold uppercase mb-4">{{ pdoc.title }}</h2>
+    <table v-if="pdoc.head" class="w-full text-xs border-collapse mb-4"><thead><tr><th v-for="h in pdoc.head" :key="h" class="border border-slate-400 bg-slate-100 p-1.5 text-left">{{ h }}</th></tr></thead>
+      <tbody><tr v-for="(r,i) in pdoc.table" :key="i"><td v-for="(c,j) in r" :key="j" class="border border-slate-300 p-1.5 align-top">{{ c }}</td></tr></tbody></table>
+    <div v-for="r in (pdoc.rows||[])" :key="r[0]" class="mb-3"><p class="text-[10px] font-bold uppercase text-slate-500">{{ r[0] }}</p><p class="whitespace-pre-line leading-relaxed" :class="r[2]?'border border-slate-200 p-3 rounded':''">{{ r[1] }}</p></div>
+    <div v-if="(pdoc.links||[]).length" class="mb-4"><p class="font-bold uppercase border-b border-slate-300 mb-1">Attached records</p><p v-for="l in pdoc.links" :key="l">• {{ l }}</p></div>
+    <div v-if="(pdoc.files||[]).length" class="mb-4"><p class="font-bold uppercase border-b border-slate-300 mb-1">Files on record</p><p v-for="l in pdoc.files" :key="l">• {{ l }}</p></div>
+    <div v-if="(pdoc.photos||[]).length"><p class="font-bold uppercase border-b border-slate-300 mb-2">Photographic evidence</p>
+      <div class="grid grid-cols-3 gap-3"><div v-for="p in pdoc.photos" :key="p.id" style="break-inside:avoid"><img :src="p.url" crossorigin="anonymous" class="w-full h-40 object-cover border border-slate-300"><p class="text-[10px] font-bold">{{ p.title||'Untitled' }}</p><p class="text-[10px] text-slate-600">{{ [p.taken,p.place,p.desc].filter(x=>x).join(' · ') }}</p></div></div></div>
+    <div class="mt-12 pt-3 border-t-2 border-slate-900 flex justify-between text-xs text-slate-600"><span>{{ pdoc.sign||'Authorized CID Agent' }}</span><span>CONFIDENTIAL — S.A.S.P. C.I.D.</span></div>
+  </div>
+</div>
+</teleport>
+</div>
+
 <script>
-function openLightbox(url, title, desc) {
-  document.getElementById('lightboxImg').src = url;
-  document.getElementById('lightboxTitle').innerText = title || 'Evidence Image';
-  document.getElementById('lightboxDesc').innerText = desc || 'CID File Attachment';
-  document.getElementById('lightboxModal').style.display = 'flex';
-}
-function closeLightbox() { document.getElementById('lightboxModal').style.display = 'none'; }
-</script>
-
-<!-- Firebase SDKs & Main App Setup -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-  import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-      apiKey: "AIzaSyDWnxx2UGh_iThnwvK4CDfw8hT9xoGhOn0",
+/* ===================== CONFIGURATION ===================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDWnxx2UGh_iThnwvK4CDfw8hT9xoGhOn0",
   authDomain: "cid-upd.firebaseapp.com",
   projectId: "cid-upd",
   storageBucket: "cid-upd.firebasestorage.app",
   messagingSenderId: "820704136638",
   appId: "1:820704136638:web:da68199a5e0a7293277def"
-  };
+};
+const LOGO = 'images/logo.png';   // put your logo file here (PNG with transparent background works best)
+/* ========================================================= */
+const { createApp, reactive, ref, computed, watch, onMounted, nextTick } = Vue;
+const configured = !String(FIREBASE_CONFIG.apiKey).startsWith('PASTE');
+let fdb, fauth, fstore;
+if (configured) { firebase.initializeApp(FIREBASE_CONFIG); fdb = firebase.firestore(); fauth = firebase.auth(); fstore = firebase.storage(); }
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+const clean=o=>JSON.parse(JSON.stringify(o));
+const RANKS=['Director','Assistant Director','High Command','Detective III','Detective II','Detective I','Probationary Detective'];
+const isTop=r=>r==='Director'||r==='Assistant Director';
+const CATS=[{id:'gang',title:'CRIMINAL ORGANIZATIONS'},{id:'service',title:'PUBLIC SERVICES'},{id:'job',title:'CIVILIAN JOBS'},{id:'asset',title:'CRIMINAL ASSETS'}];
+const ICONS=['police','hospital','doj','city','food','mec','bar','pawn','tech','gun','pill','weed','tattoo','strip','skate','pet','tailor','smoke'];
+const F=(k,l,t)=>({k,l,t:t||'t'});
+const COL=(label,icon,fields)=>({label,icon,fields,builtin:true});
+const defCfg=()=>({
+  perms:{'Probationary Detective':{interrogations:'none'}},
+  templates:{
+    cases:[{name:'Narcotics Operation',body:'SUBJECT: ...\nLOCATION: ...\nPROBABLE CAUSE: Observed distribution of controlled narcotics.'},{name:'RICO Syndicate Case',body:'ORGANISATION: ...\nCHARGES: Racketeering, Illegal Firearms Trading, Money Laundering.'}],
+    organizations:[{name:'Gang Dossier',body:'TURF & TERRITORY: ...\nLEADERSHIP: ...\nOPERATIONAL ASSETS: ...'}],
+    interrogations:[{name:'Standard Miranda Log',body:'MIRANDA RIGHTS READ: YES\nSUSPECT RESPONSE: ...\nTRANSCRIPT:\nAgent: ...\nSuspect: ...'}],
+    warrants:[{name:'Felony Arrest Warrant',body:'REASON FOR WARRANT: Probable cause established for violent felony.\nEVIDENCE ATTACHED: ...'}],
+    reports:[{name:'Incident Report',body:'DATE/TIME: ...\nLOCATION: ...\nOFFICERS INVOLVED: ...\nNARRATIVE: ...'}]
+  },
+  collections:{
+    citizens:COL('Citizen Registry','fa-solid fa-address-card',[F('fullName','Full Name'),F('citizenId','Citizen ID'),F('phone','Phone'),F('gang','Gang / Affiliation'),F('notes','Notes','a')]),
+    weapons:COL('Weapons Registry','fa-solid fa-gun text-amber-400',[F('serial','Serial Number'),F('model','Model'),F('owner','Owner (full name)'),F('ownerCid','Owner Citizen ID (optional)'),F('stolen','Flagged stolen','b')]),
+    vehicles:COL('Vehicle Registry','fa-solid fa-car',[F('plate','License Plate'),F('model','Model'),F('color','Color'),F('owner','Owner (full name)'),F('ownerCid','Owner Citizen ID (optional)')]),
+    cases:COL('Case Files','fa-solid fa-folder-open',[F('title','Case Title'),F('status','Status'),F('summary','Investigation details','a')]),
+    organizations:COL('Organisations','fa-solid fa-sitemap text-amber-400',[F('name','Organisation Name'),F('notes','Notes & structure','a')]),
+    interrogations:COL('Interrogations','fa-solid fa-comments text-cyan-400',[F('suspect','Suspect Name'),F('date','Date'),F('transcript','Transcript','a')]),
+    warrants:COL('Request Warrants','fa-solid fa-triangle-exclamation text-red-400',[F('citizenName','Subject Full Name'),F('citizenId','Citizen ID'),F('reason','Probable cause','a')]),
+    documents:COL('Documents','fa-solid fa-file-lines text-sky-300',[F('title','Document Title'),F('docType','Type'),F('description','Description','a')]),
+    directives:COL('Directives & News','fa-solid fa-bullhorn',[F('title','Headline'),F('body','Directive / news','a')]),
+    reports:COL('MDT Reports','fa-solid fa-clipboard-list text-emerald-400',[F('title','Report Title'),F('reportNo','Report No.'),F('summary','Summary','a')])
+  }
+});
+const G=(x,y,name,address,type='Gang',color='#B00707',radius=100,img='x.jpg')=>({cat:'gang',x,y,name,type,address,icon:'',color,radius,img});
+const S=(x,y,name,type,address,icon,color,img)=>({cat:'service',x,y,name,type,address,icon,color,radius:0,img});
+const J=(x,y,name,type,address,icon,img)=>({cat:'job',x,y,name,type,address,icon,color:'#ffffff',radius:0,img});
+const DEFAULT_MAP=[
+G(197.25,-441.5,'STR','Eclipse Blvd'),G(314.17,3215.78,'LKC','Paleto Bay'),G(-1464.65,219.04,'Nuestra Familia','Ineseno Road'),G(1674.23,2285.34,'G Units','Grapeseed'),G(1226,-710,'CVL','Favelas'),G(48.82,-636,'Gente Nueva','Rockford Dr'),G(-443.35,-969.18,'LS 19','Bay City'),G(23,-1113,'GG','Little Seoul'),G(898,-1358,'CDN','Popular La Mesa'),G(673,-1781,'North Stars','Dutch London x Carson Avenue'),G(385.22,-1422.04,'BSB','Upper Forum Drive'),G(873,-1036,'OTB','Popular'),G(402,-341,'WSR','Gentry Lane'),G(400,-763,'Gulag Gang','Alta Street x Las Lagunas'),G(550,-518,'7 Sins','Alta Street x Vinewood Blvd'),G(530,-1430,'MS 13','Innocence Boulevard x Strawberry Avenue'),G(1013.15,-611.11,'Black Serpents','Mirror Park Boulevard'),G(-176.58,-100.8,'SSR','North Sheldon Avenue'),G(-559.3,-748.01,'Vlaxoi','West Eclipse Graveyard'),G(267.65,-1527.77,'SMK','Forum Dr.'),G(-18.47,-1952.87,'Savage','Exeptionalist Way'),G(479.67,1669.72,'Nortenos 14','Stab City'),G(1146.9,-1377.58,'East Side Ballas','El Rancho Blvd'),G(632.93,-1551.89,'Banished','Mac Donalds'),G(590.23,-2035.35,'De Fox','Chum Street'),G(534.52,-1882.13,'Jelly Boys','Dutch London Railways'),G(1265.41,-899.9,'Mexicans','Nikola Place Mirror Park'),
+G(-2048.62,413.66,'Hasienda Napoles','Great Ocean Highway','Island','#ffffff',300,'hasienda.jpg'),G(2998.13,-2998.13,'Cayo Perico','Cayo Perico','Island','#ffffff',300,'cayo.jpg'),G(3145.66,2246.44,'Darkwood','Catfish','Island','#ffffff',200,'darkwood.jpg'),
+S(710.5,-1161.5,'MRPD','Police Station','Mission Row','police','#4facfe','mrpd.jpg'),S(472.73,-818.34,'EMS','Medical Station','Alta St','hospital','#ffffff','ems.jpg'),S(107.11,-943.06,'DoJ/Cityhall','Government Facilities','San Andreas Avenue','doj','#ffffff','cityhall.jpg'),
+J(1368,1729,'Marina Restaurant','Food','Sandy Shores','food','marina.jpg'),J(-421.5,-1315.75,'Vista','Bar','Vespucci Beach','bar','vista.jpg'),J(-484,-1111.75,'Pizza This','Food','Vespucci/Luna Park','food','pizzathis.jpg'),J(471.72,-1540.53,'Vanilla Unicorn','Strip Club','Strawberry','strip','vanilla.jpg'),J(-240.5,-1429.75,'Back Side Skate Boards','Skate Shop','Bay City Avenue','skate','skates.jpg'),J(779.98,1096.16,'Animal Ark','Petshop','Route 68','pet','animal.jpg'),J(876.5,-1150.75,'Darnell Bros','Tailor','Popular Str.','tailor','darnelbros.jpg'),J(583,-585,'Ammunation Vinewood','Ammunation','Algonquin Blvd','gun','ammusandy.jpg'),J(958,-1176,'Ammunation La Mesa','Ammunation','Great Ocean Hwy','gun','ammupaleto.jpg'),J(218.25,3082,"Horny's",'Food','Great Ocean Hwy','food','hornys.jpg'),J(1234.5,-1554.75,'Blazing Tattoo','Tattoo Shop','Innocence Blvd','tattoo','blazingtattoo.jpg'),J(136.12,-393.72,'SmoKing','Smokes Store','Eclipse Blvd','smoke','smoking.jpg'),J(-251.25,-1412,'LD Organics','Shop','Bay City Ave','weed','ldorganics.jpg'),J(-56.5,-1226.75,"O'Deas",'Pharmacy','S Rockford Drive','pill','odeas.jpg'),J(495.5,-689,'Dollar Pills','Pharmacy','Hawick Avenue','pill','dollarpill.jpg'),J(986.76,-1863.34,'Memory Lanes','Food','Orchavadille','food','memorylanes.jpg'),J(1125,-1085,'Burgershot','Food','San Andreas Ave & El Rancho Blvd','food','burgershot.jpg'),J(1123,-835,'Amir','Food','Strawberry Ave','food','amir.jpg'),J(-75.5,-1248,'Wigwam','Food','Palomino Ave','food','wigwam.jpg'),J(647.29,-1064.27,'The Last Light Pub','Bar','San Andreas Ave','bar','lastlight.jpg'),J(470.25,-431.98,'Sightings Restaurant','Food','Los Santos International Airport','food','sightings.jpg'),J(43.49,-1086.82,'Digital Den Little Seoul','Tech Store','Palomino Ave, Little Seoul','tech','digitalseoul.jpg'),J(528.78,-415.2,'Digital Den Vinewood','Tech Store','Vinewood Blvd','tech','digitalvinewood.jpg'),J(-256,-680.5,'Nocturnal','Food/Bar','Dorset Drive & Boulevard Del Perro','bar','nocturnal.jpg'),J(-1432.73,-240.24,'Oasis','Beach Bar','Great Ocean Hwy, Pacific Bluffs','bar','oasis.jpg'),J(667,-410,'The Palace','Night Club','Power Str.','strip','thepalace.jpg'),J(1123.5,-767,'Pawnshop Mirror Park','Pawnshop','E Mirror Drive','pawn','pawnmirror.jpg'),J(-437.4,-804.54,'Pawnshop Del Perro','Pawnshop','Boulevard Del Perro','pawn','pawndelperro.jpg'),J(1127.73,-1028.37,'Hayes','Mechanic','W Mirror Drive','mec','hayes.jpg'),J(-536.69,-1062.07,'Strokemasters','Mechanic','Magelan Avenue, Luna Park','mec','strokemaster.jpg'),J(1014,-1969.25,"Helmut's",'Mechanic','Orchavadille Avenue','mec','helmuts.jpg'),J(491.5,3392,'Harmony Garage','Mechanic','Great Ocean Hwy, Paleto','mec','harmony.jpg'),J(1470.5,1666.25,"Seaton Sand's",'Mechanic','Zacunto Ave, Sandy Shores','mec','seaton.jpg'),J(223.5,-634.5,'Los Santos Customs','Mechanic','Eastbourne Way & Carcer Way','mec','ls.jpg'),J(765.95,-660.36,"Auto's",'Mechanic','Elgin Avenue','mec','auto.jpg'),J(294.05,-1363.39,"Benny's",'Mechanic','Alta St.','mec','x.jpg'),J(1031.05,-643.6,'Road Hunters','Mechanic','Mirror Park Blvd','mec','x.jpg'),
+{cat:'asset',x:376.73,y:-565.71,name:'Weed Processing',type:'Asset',address:'Las Lagunas',icon:'',color:'#ffffff',radius:0,img:'x.jpg'}
+];
 
-  const { createApp, ref, computed, onMounted, nextTick } = Vue;
+/* ---------- storage / image helpers ---------- */
+const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=()=>rej(new Error('load'));i.src=src;});
+const toEmail=u=>u.trim().toLowerCase()+'@sasp.internal';
+const toBlob=f=>new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);c.toBlob(b=>res(b),'image/jpeg',.82);};im.onerror=()=>res(null);im.src=fr.result;};fr.onerror=()=>res(null);fr.readAsDataURL(f);});
+async function upload(file,folder){
+  const name=(file.name||'photo.jpg').replace(/[^\w.\-]/g,'_'),ref=fstore.ref(`${folder}/${uid()}-${name}`);
+  const snap=await ref.put(file);return await snap.ref.getDownloadURL();
+}
+const delStored=url=>{try{if(/firebasestorage|appspot/.test(url))fstore.refFromURL(url).delete().catch(()=>{});}catch(e){}};
 
-  createApp({
-    setup() {
-      const currentTab = ref('dashboard');
-      const adminSubTab = ref('accounts');
-      const currentUser = ref(null);
-      const showLoginModal = ref(false);
-      const currentTime = ref('');
+/* ---------- face / outfit analysis ---------- */
+let modelsReady=null;
+const loadModels=()=>modelsReady||(modelsReady=(async()=>{const u='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+  await faceapi.nets.ssdMobilenetv1.loadFromUri(u);await faceapi.nets.faceLandmark68Net.loadFromUri(u);await faceapi.nets.faceRecognitionNet.loadFromUri(u);})());
+function outfitHist(img,box){
+  const W=img.naturalWidth||img.width,H=img.naturalHeight||img.height;let sx,sy,sw,sh;
+  if(box){sw=box.width*2.4;sh=box.height*2.6;sx=box.x+box.width/2-sw/2;sy=box.y+box.height*1.35;}else{sx=W*.25;sy=H*.35;sw=W*.5;sh=H*.45;}
+  sx=Math.max(0,sx);sy=Math.max(0,sy);sw=Math.min(sw,W-sx);sh=Math.min(sh,H-sy);if(sw<8||sh<8)return null;
+  const c=document.createElement('canvas');c.width=c.height=48;const x=c.getContext('2d');x.drawImage(img,sx,sy,sw,sh,0,0,48,48);
+  const d=x.getImageData(0,0,48,48).data,B=new Array(53).fill(0);let n=0;
+  for(let i=0;i<d.length;i+=4){const r=d[i]/255,g=d[i+1]/255,b=d[i+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),v=mx,s=mx?(mx-mn)/mx:0;let h=0;
+    if(mx!==mn){h=mx===r?((g-b)/(mx-mn))%6:mx===g?(b-r)/(mx-mn)+2:(r-g)/(mx-mn)+4;h=(h*60+360)%360;}
+    let bin;if(v<.2)bin=0;else if(s<.15)bin=1+Math.min(3,Math.floor(v*4));else bin=5+Math.floor(h/30)%12*4+(s>.5?2:0)+(v>.5?1:0);B[bin]++;n++;}
+  return B.map(v=>+(v/n).toFixed(3));
+}
+async function indexPhoto(p){
+  try{await loadModels();const img=await loadImg(p.url);
+    const det=await faceapi.detectAllFaces(img,new faceapi.SsdMobilenetv1Options({minConfidence:.4})).withFaceLandmarks().withFaceDescriptors();
+    p.fd=JSON.stringify(det.map(d=>Array.from(d.descriptor).map(v=>+v.toFixed(3))));
+    p.oh=outfitHist(img,det[0]&&det[0].detection.box)||[];p.ix=1;
+  }catch(e){p.ix=-1;}
+}
+const fdCache=new Map();const faceDescs=p=>{if(!p.fd)return[];let v=fdCache.get(p.id+p.fd.length);if(!v){try{v=JSON.parse(p.fd);}catch(e){v=[];}fdCache.set(p.id+p.fd.length,v);}return v;};
 
-      // Modal State Flags
-      const activeModalType = ref(null);
-      const modalForm = ref({});
-      const activePrintRecord = ref(null);
-      const selectedTemplateId = ref('');
+/* ---------- main app ---------- */
+const app=createApp({
+  setup(){
+    const cfg=reactive(defCfg()),recs=reactive({}),mapLocs=ref([]),penal=ref([]),accounts=ref([]);
+    const user=ref(null),tab=ref('dashboard'),atab=ref('accounts'),showLogin=ref(false),loginError=ref(''),q=ref(''),busy=ref(false),msg=ref('');
+    const time=ref(''),date=ref('');
+    const auth=reactive({u:'',p:''}),na=reactive({username:'',badge:'',rank:'Detective I',password:''});
+    const nt=reactive({key:'cases',name:'',body:''}),nr=reactive({label:'',fields:''});
+    const nl=reactive({name:'',cat:'gang',type:'Gang',address:'',x:0,y:0,icon:'',color:'#B00707',radius:100,img:'x.jpg'});
+    const rec=ref(null),recErr=ref(''),gal=ref(null),zoom=ref(null),zs=ref(1),pdoc=ref(null),lightboxSrc=ref(null),lkCol=ref(''),lkId=ref(''),evSrc=ref('');
+    const mImg=ref(''),mMode=ref('face'),mBusy=ref(false),mStatus=ref(''),mResults=ref([]);
+    const msOpen=ref(true),msq=ref(''),mOpen=reactive({gang:true,service:false,job:false,asset:false}),layerOn=reactive({gang:true,service:true,job:true,asset:true});
+    let map=null,groups={},markers={},unsubs=[],profUnsub=null,accUnsub=null,remote=false,lastCfg='';
 
-      const authForm = ref({ username: '', password: '' });
-      const agentProfile = ref({ name: '', rank: '', badge: '' });
-      const citizenSearch = ref('');
-      const aiMatcherImageUrl = ref('');
-      const aiMatcherLoading = ref(false);
-      const aiMatcherResult = ref(null);
-      const newAgentForm = ref({ username: '', badge: '', rank: 'Detective I', password: '' });
-      const newTemplateForm = ref({ category: 'cases', name: '', defaultText: '' });
+    /* ---- permissions ---- */
+    const isAdmin=computed(()=>!!user.value&&isTop(user.value.rank));
+    const rankLevel=(r,k)=>isTop(r)?'edit':((cfg.perms[r]||{})[k]||(r==='Probationary Detective'?'view':'edit'));
+    const level=k=>{const u=user.value;if(!u)return(k==='warrants'||k==='penal'||k==='directives')?'view':'none';return rankLevel(u.rank,k);};
+    const setPerm=(r,k,v)=>{(cfg.perms[r]||(cfg.perms[r]={}))[k]=v;};
+    const permKeys=computed(()=>[...Object.keys(cfg.collections),'penal','evidence','matcher']);
+    const permLabel=k=>cfg.collections[k]?cfg.collections[k].label:({penal:'Penal Code',evidence:'Evidence',matcher:'Matcher'})[k];
 
-      // Real-Time Reactive Collections from Firestore
-      const accountsList = ref([]);
-      const citizensList = ref([]);
-      const weaponsList = ref([]);
-      const vehiclesList = ref([]);
-      const casesList = ref([]);
-      const orgsList = ref([]);
-      const interrogationsList = ref([]);
-      const warrants = ref([]);
-      const mapLocations = ref([]);
-      const penalCodeList = ref([]);
-      const templatesList = ref([]);
-      const mdtReportsList = ref([]);
+    /* ---- navigation ---- */
+    const col=computed(()=>cfg.collections[tab.value]);
+    const go=t=>{tab.value=t;q.value='';if(t==='map')nextTick(fixMap);};
+    const nav=t=>'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-title tracking-wider transition '+(tab.value===t?'bg-purple-600/20 text-white border border-purple-500/40 font-bold':'text-slate-400 hover:bg-purple-900/30 hover:text-slate-200');
+    const subFields=c=>c.fields.slice(1).filter(f=>f.t!=='a').slice(0,2);
+    const rowsFor=v=>Math.min(40,Math.max(8,String(v||'').split('\n').length+2));
+    const recTitle=r=>{const c=cfg.collections[r.col];return(c&&r[c.fields[0].k])||'(untitled)';};
+    const shown=(it,f)=>{const v=it[f.k];if(typeof v==='boolean')return v?'Yes':'No';if(it.col==='warrants'&&f.k==='citizenId'&&!user.value)return '••••••';return v||'-';};
+    const itemsOf=k=>Object.values(recs).filter(r=>r.col===k).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const listItems=computed(()=>{const c=col.value;if(!c)return[];const s=norm(q.value),all=itemsOf(tab.value);return s?all.filter(it=>c.fields.some(f=>norm(it[f.k]).includes(s))):all;});
+    const penalList=computed(()=>{const s=norm(q.value);return s?penal.value.filter(p=>norm(p.title+p.category).includes(s)):penal.value;});
+    const tplCols=computed(()=>Object.entries(cfg.collections).filter(([k,c])=>c.fields.some(f=>f.t==='a')));
+    const tplFor=k=>cfg.templates[k]||[];
+    const fmt=t=>t?new Date(t).toLocaleString('en-GB',{timeZone:'Europe/Athens'}):'';
+    const agentNav=computed(()=>{const ord=['citizens','weapons','vehicles','matcher','cases','organizations','interrogations','documents','evidence','reports'];
+      const rest=Object.keys(cfg.collections).filter(k=>!ord.includes(k)&&k!=='warrants'&&k!=='directives');
+      return [...ord,...rest].filter(k=>k==='matcher'||k==='evidence'||cfg.collections[k]).filter(k=>level(k)!=='none').map(k=>
+        k==='matcher'?{id:k,label:'Face / Outfit Matcher',icon:'fa-solid fa-wand-magic-sparkles text-purple-400'}:
+        k==='evidence'?{id:k,label:'Photographic Evidence',icon:'fa-solid fa-images text-purple-300'}:{id:k,label:cfg.collections[k].label,icon:cfg.collections[k].icon});});
+    const tick=()=>{const n=new Date(),z={timeZone:'Europe/Athens'};date.value=n.toLocaleDateString('sv-SE',z);time.value=n.toLocaleTimeString('en-GB',z);};
+    const fail=e=>{console.error(e);msg.value=(e&&e.message)||String(e);};
 
-      const allRanksList = ['Director', 'Assistant Director', 'High Command', 'Detective III', 'Detective II', 'Detective I', 'Probationary Detective'];
-      const permissionSections = ['citizens', 'weapons', 'vehicles', 'cases', 'organizations', 'interrogations', 'photo_evidence', 'mdt_reports', 'ai_matcher'];
-      const rolePermissions = ref({
-        'Director': { citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, photo_evidence: true, mdt_reports: true, ai_matcher: true },
-        'Assistant Director': { citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, photo_evidence: true, mdt_reports: true, ai_matcher: true },
-        'High Command': { citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, photo_evidence: true, mdt_reports: true, ai_matcher: true },
-        'Detective III': { citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, photo_evidence: true, mdt_reports: true, ai_matcher: true },
-        'Detective II': { citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, photo_evidence: true, mdt_reports: true, ai_matcher: true },
-        'Detective I': { citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, photo_evidence: true, mdt_reports: true, ai_matcher: true },
-        'Probationary Detective': { citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: false, photo_evidence: true, mdt_reports: true, ai_matcher: false }
-      });
+    /* ---- auth ---- */
+    const login=async()=>{loginError.value='';busy.value=true;try{await fauth.signInWithEmailAndPassword(toEmail(auth.u),auth.p);auth.p='';showLogin.value=false;}catch(e){loginError.value='Sign-in failed: '+e.message.replace('Firebase: ','');}busy.value=false;};
+    const logout=async()=>{await fauth.signOut();go('dashboard');};
+    const addAgent=async()=>{
+      const un=na.username.trim().toLowerCase();
+      if(!un||!na.badge.trim()||na.password.length<6)return alert('Username, badge and a password (min 6) are required.');
+      if(accounts.value.some(a=>norm(a.badge)===norm(na.badge)||norm(a.name)===un))return alert('Username and badge must be unique.');
+      busy.value=true;let sec;
+      try{sec=firebase.initializeApp(FIREBASE_CONFIG,'sec'+Date.now());const cr=await sec.auth().createUserWithEmailAndPassword(toEmail(un),na.password);
+        await fdb.collection('users').doc(cr.user.uid).set({username:na.username.trim(),badge:na.badge.trim(),rank:na.rank,createdAt:new Date().toISOString()});
+        await sec.auth().signOut();na.username=na.badge=na.password='';alert('Credentials issued.');
+      }catch(e){fail(e);}finally{if(sec)sec.delete();busy.value=false;}
+    };
+    const saveAcc=a=>fdb.collection('users').doc(a.id).update({badge:a.badge,rank:a.rank}).catch(fail);
+    const changePw=async()=>{const old=prompt('Current password:');if(!old)return;const nw=prompt('New password (min 6 characters):');if(!nw||nw.length<6)return;
+      try{const u=fauth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,old));await u.updatePassword(nw);alert('Password changed.');}catch(e){fail(e);}};
+    const delAcc=a=>{if(a.id===user.value.id)return alert('You cannot remove yourself.');if(confirm('Remove this agent\'s access? (The login itself can be deleted in the Firebase console.)'))fdb.collection('users').doc(a.id).delete().catch(fail);};
 
-      let gtaMapInstance = null;
-      const mapBounds = [[-3500, -3000], [5000, 4500]];
+    /* ---- live data ---- */
+    const listenRecords=()=>{
+      unsubs.forEach(f=>f());unsubs=[];Object.keys(recs).forEach(k=>delete recs[k]);
+      const base=fdb.collection('records'),qy=user.value?base:base.where('col','in',['warrants','directives']);
+      unsubs.push(qy.onSnapshot(s=>{s.docChanges().forEach(ch=>{
+        const id=ch.doc.id;
+        if(ch.type==='removed'){delete recs[id];if(rec.value&&rec.value.obj.id===id&&!rec.value.isNew)rec.value=null;return;}
+        if(rec.value&&!rec.value.isNew&&rec.value.obj.id===id)return; // don't overwrite what's being edited
+        recs[id]={...ch.doc.data(),id};
+        if(rec.value&&rec.value.obj.id===id)rec.value.obj=recs[id];
+      });},fail));
+    };
+    const startPublic=()=>{
+      fdb.collection('config').doc('main').onSnapshot(s=>{
+        if(s.exists){const d=s.data(),b=defCfg();remote=true;
+          Object.keys(cfg).forEach(k=>delete cfg[k]);
+          Object.assign(cfg,{perms:d.perms||{},templates:d.templates||b.templates,collections:{...b.collections,...(d.collections||{})}});
+          lastCfg=JSON.stringify(cfg);nextTick(()=>remote=false);
+        }else if(isAdmin.value)fdb.collection('config').doc('main').set(clean(cfg)).catch(fail);
+      },fail);
+      fdb.collection('penal').onSnapshot(s=>{penal.value=s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(a.category||'').localeCompare(b.category||''));},fail);
+      fdb.collection('map').onSnapshot(s=>{mapLocs.value=s.docs.map(d=>({...d.data(),id:d.id}));},fail);
+    };
+    watch(()=>JSON.stringify(cfg),s=>{if(remote||!isAdmin.value||s===lastCfg)return;lastCfg=s;clearTimeout(watch.t);watch.t=setTimeout(()=>fdb.collection('config').doc('main').set(clean(cfg)).catch(fail),700);});
+    const setUser=u=>{
+      if(profUnsub){profUnsub();profUnsub=null;}if(accUnsub){accUnsub();accUnsub=null;}
+      if(!u){user.value=null;accounts.value=[];listenRecords();return;}
+      profUnsub=fdb.collection('users').doc(u.uid).onSnapshot(async s=>{
+        if(!s.exists){loginError.value='This login has no agent profile. Ask a Director to grant access.';showLogin.value=true;await fauth.signOut();return;}
+        const was=!!user.value,d=s.data();user.value={id:u.uid,name:d.username,badge:d.badge,rank:d.rank};
+        if(!was){listenRecords();if(isTop(user.value.rank)){accUnsub=fdb.collection('users').onSnapshot(x=>{accounts.value=x.docs.map(d=>({id:d.id,name:d.data().username,badge:d.data().badge,rank:d.data().rank}));},fail);
+          fdb.collection('config').doc('main').get().then(c=>{if(!c.exists)fdb.collection('config').doc('main').set(clean(cfg));});}}
+      },fail);
+    };
 
-      // Computed Properties
-      const filteredCitizens = computed(() => {
-        if (!citizenSearch.value) return citizensList.value;
-        const q = citizenSearch.value.toLowerCase();
-        return citizensList.value.filter(c => c.fullName.toLowerCase().includes(q) || (c.citizenId && c.citizenId.toLowerCase().includes(q)) || (c.vehiclePlate && c.vehiclePlate.toLowerCase().includes(q)));
-      });
+    /* ---- records ---- */
+    const canEditRec=computed(()=>!!rec.value&&level(rec.value.obj.col)==='edit');
+    const openRec=r=>{if(!r)return;recErr.value='';lkCol.value=lkId.value='';rec.value={obj:r,isNew:false};};
+    const newRec=key=>{const o=reactive({id:uid(),col:key,ts:Date.now(),by:user.value?user.value.name:'',gallery:[],files:[],links:[]});cfg.collections[key].fields.forEach(f=>o[f.k]=f.t==='b'?false:'');recErr.value='';rec.value={obj:o,isNew:true};};
+    const closeRec=()=>{rec.value=null;};
+    const saveRaw=o=>fdb.collection('records').doc(o.id).set(clean(o)).catch(fail);
+    const saveNew=async()=>{
+      const o=rec.value.obj,c=cfg.collections[o.col];
+      if(!String(o[c.fields[0].k]).trim()){recErr.value='"'+c.fields[0].l+'" is required.';return;}
+      if(o.col==='citizens'&&o.citizenId&&itemsOf('citizens').some(x=>norm(x.citizenId)===norm(o.citizenId))){recErr.value='Citizen ID already exists.';return;}
+      if(o.col==='warrants'&&user.value)Object.assign(o,{issuedAt:date.value,issuedBy:user.value.name,issuedRank:user.value.rank,issuedBadge:user.value.badge});
+      busy.value=true;await saveRaw(o);busy.value=false;recs[o.id]=o;rec.value={obj:recs[o.id],isNew:false};
+    };
+    watch(()=>rec.value&&!rec.value.isNew?JSON.stringify(rec.value.obj):null,s=>{if(s===null||!canEditRec.value)return;clearTimeout(watch.r);const o=rec.value.obj;watch.r=setTimeout(()=>saveRaw(o),800);});
+    const delRec=r=>{if(!confirm('Delete this record?'))return;(r.files||[]).forEach(f=>delStored(f.url));(r.gallery||[]).forEach(p=>delStored(p.url));fdb.collection('records').doc(r.id).delete().catch(fail);};
+    const applyTpl=name=>{const o=rec.value.obj,t=tplFor(o.col).find(x=>x.name===name),f=cfg.collections[o.col].fields.find(f=>f.t==='a');if(t&&f){o[f.k]=t.body;o.template=t.name;}};
+    const saveTarget=o=>{if(rec.value&&rec.value.obj===o&&rec.value.isNew)return;if(o.col)saveRaw(o);else saveLoc(o);};
+    const matched=key=>{const c=rec.value&&rec.value.obj;if(!c)return[];return itemsOf(key).filter(i=>(c.citizenId&&norm(i.ownerCid)===norm(c.citizenId))||(c.fullName&&norm(i.owner)===norm(c.fullName)));};
 
-      const hasAdminAccess = computed(() => {
-        if (!agentProfile.value) return false;
-        return agentProfile.value.rank === 'Director' || agentProfile.value.rank === 'Assistant Director';
-      });
+    /* ---- links (two-way) ---- */
+    const linkedFor=o=>{const out=[],seen=new Set();
+      (o.links||[]).forEach(l=>{const r=recs[l.id];if(r&&!seen.has(r.id)){seen.add(r.id);out.push({rec:r,mine:true});}});
+      Object.values(recs).forEach(r=>{if(!seen.has(r.id)&&(r.links||[]).some(l=>l.id===o.id)){seen.add(r.id);out.push({rec:r,mine:false});}});
+      return out.filter(l=>user.value||['warrants','directives'].includes(l.rec.col));};
+    const lkChoices=computed(()=>lkCol.value?itemsOf(lkCol.value).filter(r=>rec.value&&r.id!==rec.value.obj.id&&!linkedFor(rec.value.obj).some(l=>l.rec.id===r.id)):[]);
+    const attach=()=>{if(!lkId.value)return;const o=rec.value.obj;(o.links||(o.links=[])).push({c:lkCol.value,id:lkId.value});lkId.value='';};
+    const detach=l=>{const o=l.mine?rec.value.obj:l.rec;o.links=(o.links||[]).filter(x=>x.id!==(l.mine?l.rec.id:rec.value.obj.id));if(!l.mine)saveRaw(o);};
 
-      // Unified Gallery compiling all photos uploaded across modules
-      const unifiedPhotoGallery = computed(() => {
-        let gallery = [];
-        citizensList.value.forEach(c => { if(c.mugshot) gallery.push({ id: c.id, url: c.mugshot, title: c.fullName, info: `Citizen ID: ${c.citizenId} | Gang: ${c.gang || 'None'}`, sourceModule: 'Citizens', targetTab: 'citizens' }); });
-        casesList.value.forEach(c => { if(c.evidenceImageUrl) gallery.push({ id: c.id, url: c.evidenceImageUrl, title: c.title, info: `Case File Evidence`, sourceModule: 'Cases', targetTab: 'cases' }); });
-        orgsList.value.forEach(o => { if(o.evidenceImageUrl) gallery.push({ id: o.id, url: o.evidenceImageUrl, title: o.name, info: `Organisation Dossier Photo`, sourceModule: 'Organisations', targetTab: 'organizations' }); });
-        return gallery;
-      });
+    /* ---- photo zoom ---- */
+    const zp=computed(()=>zoom.value?zoom.value.obj.gallery[zoom.value.i]:null);
+    const openZoom=(obj,i,edit)=>{zs.value=1;zoom.value={obj,i,edit};};
+    const persistZoom=()=>{if(zoom.value)saveTarget(zoom.value.obj);};
+    const delPhoto=()=>{if(!confirm('Delete this photo?'))return;const z=zoom.value;delStored(z.obj.gallery[z.i].url);z.obj.gallery.splice(z.i,1);saveTarget(z.obj);if(!z.obj.gallery.length)zoom.value=null;else z.i=Math.min(z.i,z.obj.gallery.length-1);};
 
-      // --- FIREBASE AUTHENTICATION (PERSISTENT) ---
-      const handleLogin = async () => {
-        try {
-          const cleanUser = authForm.value.username.trim().toLowerCase();
-          const internalEmail = `${cleanUser}@sasp.internal`;
-          const userCred = await signInWithEmailAndPassword(auth, internalEmail, authForm.value.password);
-          const docSnap = await getDoc(doc(db, "users", userCred.user.uid));
-          if (docSnap.exists()) {
-            const u = docSnap.data();
-            agentProfile.value = { name: u.username, rank: u.rank, badge: u.badge };
-          }
-          showLoginModal.value = false;
-          authForm.value = { username: '', password: '' };
-        } catch (err) {
-          alert("Sign In Failed: Invalid Credentials!");
-          console.error(err);
+    /* ---- evidence / photos ---- */
+    const allPhotos=computed(()=>{const out=[];
+      Object.values(recs).forEach(r=>{const c=cfg.collections[r.col];if(!c||level(r.col)==='none')return;(r.gallery||[]).forEach((p,i)=>out.push({p,i,obj:r,src:r.col,srcLabel:c.label,name:recTitle(r)}));});
+      mapLocs.value.forEach(l=>(l.gallery||[]).forEach((p,i)=>out.push({p,i,obj:l,src:'_map',srcLabel:'Map location',name:l.name})));
+      return out;});
+    const evidenceList=computed(()=>{const s=norm(q.value);return allPhotos.value.filter(e=>(!evSrc.value||e.src===evSrc.value)&&(!s||norm([e.p.title,e.p.desc,e.p.place,e.p.by,e.p.taken,e.name].join(' ')).includes(s))).sort((a,b)=>(b.p.date||'').localeCompare(a.p.date||''));});
+    const openOwner=e=>{if(e.src==='_map'){go('map');return;}openRec(e.obj);};
+
+    /* ---- printing ---- */
+    const printNow=()=>window.print();
+    const printRecord=o=>{
+      const c=cfg.collections[o.col];
+      const rows=c.fields.map(f=>[f.l,f.t==='b'?(o[f.k]?'Yes':'No'):(o[f.k]||'-'),f.t==='a']);
+      if(o.issuedBy)rows.push(['Issued','Issued '+o.issuedAt+' by '+o.issuedBy+' ('+(o.issuedRank||'')+' '+(o.issuedBadge||'')+')']);
+      pdoc.value={title:c.label+': '+recTitle(o),kind:o.col==='warrants'?'Official Warrant':'',rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sign:o.issuedBy?o.issuedBy+' — '+(o.issuedRank||'')+' ('+(o.issuedBadge||'')+')':''};
+    };
+    const printList=()=>{const c=col.value,f=c.fields.filter(f=>f.t!=='a').slice(0,5);pdoc.value={title:c.label+' — list',head:f.map(x=>x.l),table:listItems.value.map(r=>f.map(x=>shown(r,x)))};};
+    const printPenal=()=>{pdoc.value={title:'San Andreas Penal Code Schedule',head:['Category','Charge','Fine','Jail (months)'],table:penalList.value.map(p=>[p.category,p.title,'$'+Number(p.fine||0).toLocaleString(),p.jail||0])};};
+    const printEvidence=()=>{pdoc.value={title:'Photographic Evidence Log',photos:evidenceList.value.slice(0,60).map(e=>({...e.p,title:(e.p.title||'Untitled')+' ['+e.name+']'}))};};
+
+    /* ---- penal code ---- */
+    const savePenal=p=>fdb.collection('penal').doc(p.id).set(clean({category:p.category||'General',title:p.title||'',fine:Number(p.fine)||0,jail:Number(p.jail)||0})).catch(fail);
+    const addPenal=()=>fdb.collection('penal').add({category:'General',title:'New charge',fine:0,jail:0}).catch(fail);
+    const delPenal=p=>{if(confirm('Delete this charge?'))fdb.collection('penal').doc(p.id).delete().catch(fail);};
+    const num=v=>Number(String(v??'').replace(/[^0-9.\-]/g,''))||0;
+    const importPenal=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const r=new FileReader();r.onload=async ev=>{try{
+      const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      if(!rows.length)return alert('No rows found.');if(!confirm('Replace the whole schedule with '+rows.length+' imported charges?'))return;
+      const old=await fdb.collection('penal').get();let b=fdb.batch(),n=0;const flush=async()=>{await b.commit();b=fdb.batch();n=0;};
+      for(const d of old.docs){b.delete(d.ref);if(++n>=400)await flush();}
+      for(const x of rows){b.set(fdb.collection('penal').doc(),{category:String(x.Category||x.category||'General'),title:String(x.Title||x.title||x.Offense||'Charge'),fine:num(x.Fine??x.fine),jail:num(x.Jail??x.jail)});if(++n>=400)await flush();}
+      await b.commit();
+    }catch(err){fail(err);}};r.readAsArrayBuffer(f);};
+
+    /* ---- admin: templates / registries / map ---- */
+    const addTpl=()=>{if(!nt.name.trim()||!nt.body.trim())return;(cfg.templates[nt.key]||(cfg.templates[nt.key]=[])).push({name:nt.name.trim(),body:nt.body});nt.name=nt.body='';};
+    const delTpl=(k,i)=>{if(confirm('Delete template?'))cfg.templates[k].splice(i,1);};
+    const addRegistry=()=>{
+      const label=nr.label.trim();if(!label||!nr.fields.trim())return alert('Name and fields are required.');
+      let key=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||uid();if(cfg.collections[key])key+='_'+uid().slice(-3);
+      const fields=nr.fields.split(',').map(s=>{const [n,t]=s.trim().split(':');return F('f_'+uid(),n.trim(),t==='a'||t==='b'?t:'t');}).filter(f=>f.l);
+      cfg.collections[key]={label,icon:'fa-solid fa-folder',fields,builtin:false};nr.label=nr.fields='';
+    };
+    const delRegistry=k=>{if(confirm('Delete this registry? Its records stay in the database but become hidden.')){delete cfg.collections[k];delete cfg.templates[k];}};
+    const addField=c=>c.fields.push(F('f_'+uid(),'New field','t'));
+    const delField=(c,i)=>{if(c.fields.length<2)return alert('A registry needs at least one field.');if(confirm('Remove this field from the form? Existing data stays stored.'))c.fields.splice(i,1);};
+    const moveField=(c,i,d)=>{const j=i+d;if(j<0||j>=c.fields.length)return;const [f]=c.fields.splice(i,1);c.fields.splice(j,0,f);};
+    const saveLoc=l=>fdb.collection('map').doc(l.id).set(clean(l)).catch(fail);
+    const addLoc=()=>{if(!nl.name.trim())return;fdb.collection('map').add({...clean(nl),gallery:[]}).catch(fail);nl.name=nl.address='';};
+    const delLoc=l=>{if(confirm('Delete location?')){(l.gallery||[]).forEach(p=>delStored(p.url));fdb.collection('map').doc(l.id).delete().catch(fail);}};
+    const seedMap=async()=>{
+      if(!confirm('Add the default locations that are not already on the map?'))return;
+      const have=new Set(mapLocs.value.map(l=>l.cat+'|'+norm(l.name)));let b=fdb.batch(),n=0;
+      for(const l of DEFAULT_MAP){if(have.has(l.cat+'|'+norm(l.name)))continue;b.set(fdb.collection('map').doc(),{...l,gallery:[]});if(++n>=400){await b.commit();b=fdb.batch();n=0;}}
+      await b.commit().catch(fail);
+    };
+
+    /* ---- map (ported from your map file) ---- */
+    const BOUNDS=[[-3500,-3000],[5000,4500]];
+    let fitted=false;
+    const fixMap=()=>setTimeout(()=>{if(map){map.invalidateSize();if(!fitted){map.fitBounds(BOUNDS);fitted=true;}}},60);
+    const mapZoomIn=()=>map&&map.zoomIn(.5),mapZoomOut=()=>map&&map.zoomOut(.5),mapResetView=()=>map&&map.fitBounds(BOUNDS);
+    const popup=l=>{const src=(l.gallery&&l.gallery[0]&&l.gallery[0].url)||(l.img?'images/'+l.img:'');
+      return `<div class="pc">${src?`<img src="${esc(src)}" class="pi" onclick="window.__openImg(this.src)" onerror="this.style.display='none'">`:''}<span class="pt">${esc(l.name)}</span>${l.type?`<div class="pr"><b>Type:</b><span>${esc(l.type)}</span></div>`:''}${l.address?`<div class="pr"><b>Address:</b><span>${esc(l.address)}</span></div>`:''}</div>`;};
+    const buildMap=()=>{
+      const el=document.getElementById('gta-map');if(!el)return;
+      if(!map){map=L.map(el,{crs:L.CRS.Simple,minZoom:-2.5,maxZoom:2,zoomSnap:.1,zoomControl:false});L.imageOverlay('icons/map.jpg',BOUNDS).addTo(map);map.fitBounds(BOUNDS);
+        CATS.forEach(c=>groups[c.id]=L.layerGroup().addTo(map));
+        map.on('contextmenu',e=>{const x=e.latlng.lng.toFixed(2),y=e.latlng.lat.toFixed(2);
+          L.popup().setLatLng(e.latlng).setContent(`<div style="width:240px"><b style="color:#a855f7">COORDINATES</b><div style="background:#111;border:1px solid #333;padding:6px;margin:6px 0;font-family:monospace;user-select:all">x: ${x}, y: ${y}</div>${isAdmin.value?`<button class="btn" onclick="window.__addAt(${x},${y})">+ Add location here</button>`:''}</div>`).openOn(map);});}
+      Object.values(groups).forEach(g=>g.clearLayers());markers={};
+      mapLocs.value.forEach(l=>{
+        const g=groups[l.cat];if(!g)return;const c=[Number(l.y)||0,Number(l.x)||0],col=/^#[0-9a-f]{3,8}$/i.test(l.color||'')?l.color:'#a855f7';let m;
+        if(l.cat==='gang'){L.circle(c,{color:col,fillColor:col,fillOpacity:.2,radius:Number(l.radius)||100}).addTo(g);m=L.circleMarker(c,{radius:4,color:'#fff',fillColor:col,fillOpacity:1});}
+        else if(l.icon){const s=l.icon==='mec'?35:28;m=L.marker(c,{icon:L.icon({iconUrl:`icons/${l.icon}.jpg`,iconSize:[s,s],iconAnchor:[s/2,s/2]})});}
+        else m=L.circleMarker(c,{radius:6,color:'#fff',fillColor:col,fillOpacity:1,weight:2});
+        m.bindPopup(popup(l)).addTo(g);markers[l.id]=m;});
+      CATS.forEach(c=>{if(!layerOn[c.id])map.removeLayer(groups[c.id]);});
+    };
+    const flyTo=l=>{if(!map)return;map.flyTo([Number(l.y)||0,Number(l.x)||0],1);setTimeout(()=>markers[l.id]&&markers[l.id].openPopup(),350);};
+    watch(mapLocs,()=>{clearTimeout(watch.m);watch.m=setTimeout(()=>nextTick(buildMap),300);},{deep:true});
+    watch(layerOn,()=>{if(!map)return;CATS.forEach(c=>layerOn[c.id]?map.addLayer(groups[c.id]):map.removeLayer(groups[c.id]));},{deep:true});
+    window.__openImg=s=>{lightboxSrc.value=s;};
+    window.__addAt=(x,y)=>{if(!isAdmin.value)return;nl.x=+x;nl.y=+y;tab.value='admin';atab.value='map';};
+
+    /* ---- matcher ---- */
+    const mFile=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const b=await toBlob(f);if(!b)return;const fr=new FileReader();fr.onload=()=>mImg.value=fr.result;fr.readAsDataURL(b);mResults.value=[];};
+    const runMatch=async()=>{
+      mBusy.value=true;mResults.value=[];
+      try{
+        mStatus.value='Loading face models (first run takes a few seconds)...';await loadModels();
+        const qi=await loadImg(mImg.value);
+        const det=await faceapi.detectAllFaces(qi,new faceapi.SsdMobilenetv1Options({minConfidence:.4})).withFaceLandmarks().withFaceDescriptors();
+        if(mMode.value!=='outfit'&&!det.length){mStatus.value='No face detected in the evidence photo. Try a clearer face, or use Outfit mode.';return;}
+        const qd=det.map(d=>d.descriptor),qo=outfitHist(qi,det[0]&&det[0].detection.box)||[];
+        const best=new Map();let unindexed=0;
+        for(const e of allPhotos.value){
+          if(e.p.ix!==1){unindexed++;continue;}
+          let fs=0,os=0,detail=[];
+          if(mMode.value!=='outfit'){const ds=faceDescs(e.p);let dmin=9;ds.forEach(d=>qd.forEach(x=>{const dist=faceapi.euclideanDistance(x,d);if(dist<dmin)dmin=dist;}));
+            if(dmin<9){fs=Math.max(0,(1-dmin/1.1))*100;detail.push('face distance '+dmin.toFixed(2));}}
+          if(mMode.value!=='face'&&e.p.oh&&e.p.oh.length&&qo.length){os=e.p.oh.reduce((a,v,j)=>a+Math.min(v,qo[j]||0),0)*100;detail.push('outfit colours '+Math.round(os)+'%');}
+          let score=mMode.value==='face'?fs:mMode.value==='outfit'?os:(fs?fs*.65+os*.35:0);
+          if(mMode.value==='face'&&!fs)continue;
+          if(score<(mMode.value==='outfit'?45:40))continue;
+          const key=e.obj.id,prev=best.get(key);if(!prev||score>prev.score)best.set(key,{...e,score:Math.round(score),detail:detail.join(' · ')});
         }
-      };
+        mResults.value=[...best.values()].sort((a,b)=>b.score-a.score).slice(0,40);
+        mStatus.value=`${mResults.value.length} similar match(es) found. `+(unindexed?`${unindexed} photo(s) are not indexed yet and were skipped. `:'')+'Treat results as leads, not proof.';
+      }catch(e){mStatus.value='Matcher error: '+e.message;}finally{mBusy.value=false;}
+    };
+    const indexAll=async()=>{
+      mBusy.value=true;const todo=allPhotos.value.filter(x=>x.p.ix!==1);let n=0;const touched=new Set();
+      for(const e of todo){mStatus.value=`Indexing ${++n}/${todo.length}...`;await indexPhoto(e.p);touched.add(e.obj);}
+      for(const o of touched)saveTarget(o);
+      mStatus.value='Indexing finished.'+(todo.some(x=>x.p.ix===-1)?' Some photos could not be read; see the note about Storage CORS.':'');mBusy.value=false;
+    };
 
-      const handleLogout = async () => {
-        await signOut(auth);
-        currentUser.value = null;
-        currentTab.value = 'dashboard';
-      };
+    watch(tab,t=>{if(cfg.collections[t]&&t!=='warrants'&&level(t)==='none')go('map');});
+    onMounted(()=>{
+      tick();setInterval(tick,1000);nextTick(buildMap);
+      if(!configured)return;
+      startPublic();fauth.onAuthStateChanged(setUser);
+    });
 
-      const adminCreateAgent = async () => {
-        if (!newAgentForm.value.username || !newAgentForm.value.password) return alert("Specify username and password!");
-        try {
-          const cleanUser = newAgentForm.value.username.trim().toLowerCase();
-          const internalEmail = `${cleanUser}@sasp.internal`;
-          const userCred = await createUserWithEmailAndPassword(auth, internalEmail, newAgentForm.value.password);
-          await setDoc(doc(db, "users", userCred.user.uid), {
-            username: newAgentForm.value.username,
-            badge: newAgentForm.value.badge,
-            rank: newAgentForm.value.rank,
-            createdAt: new Date().toISOString()
-          });
-          alert("Credentials Issued Successfully!");
-          newAgentForm.value = { username: '', badge: '', rank: 'Detective I', password: '' };
-        } catch (err) { alert("Error: " + err.message); }
-      };
+    return{LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,auth,na,nt,nr,nl,rec,recErr,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+      mImg,mMode,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
+      agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
+      zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,printList,printPenal,printEvidence,savePenal,addPenal,delPenal,importPenal,
+      addTpl,delTpl,addRegistry,delRegistry,addField,delField,moveField,saveLoc,addLoc,delLoc,seedMap,fixMap,flyTo,mFile,runMatch,indexAll};
+  }
+});
 
-      // --- FIRESTORE REAL-TIME BINDINGS ---
-      const bindRealtimeCollection = (collName, targetRef) => {
-        onSnapshot(collection(db, collName), (snapshot) => {
-          targetRef.value = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-          if (collName === 'mapLocations' && currentTab.value === 'map') nextTick(() => initGtaMap());
-        });
-      };
-
-      const addDocItem = async (collName, dataObj) => {
-        try {
-          await addDoc(collection(db, collName), { ...dataObj, createdAt: new Date().toISOString() });
-        } catch (err) { console.error("Firestore Add Error:", err); }
-      };
-
-      const deleteDocItem = async (collName, docId) => {
-        try { await deleteDoc(doc(db, collName, docId)); } catch (err) { console.error("Firestore Delete Error:", err); }
-      };
-
-      // --- FILE UPLOAD HANDLER (Simulated / Local URL) ---
-      const handleFileUpload = (event, targetField) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        const fakeUrl = URL.createObjectURL(file);
-        if (targetField === 'citizenMugshot') modalForm.value.mugshot = fakeUrl;
-        else if (targetField === 'caseEvidence') modalForm.value.evidenceImageUrl = fakeUrl;
-        else if (targetField === 'interrogationVideo') modalForm.value.videoUrl = fakeUrl;
-        else if (targetField === 'reportFile') modalForm.value.fileUrl = fakeUrl;
-        else if (targetField === 'aiMatcher') aiMatcherImageUrl.value = fakeUrl;
-      };
-
-      // --- TEMPLATES & MODAL HANDLERS ---
-      const openCreateModal = (type) => {
-        activeModalType.value = type;
-        modalForm.value = {};
-        selectedTemplateId.value = '';
-      };
-
-      const getTemplatesForCategory = (cat) => templatesList.value.filter(t => t.category === (cat === 'case' ? 'cases' : cat === 'org' ? 'organizations' : cat));
-
-      const applySelectedTemplate = () => {
-        const t = templatesList.value.find(item => item.id === selectedTemplateId.value);
-        if (!t) return;
-        if (activeModalType.value === 'case') { modalForm.value.title = t.name; modalForm.value.summary = t.defaultText; modalForm.value.templateName = t.name; }
-        else if (activeModalType.value === 'org') { modalForm.value.name = t.name; modalForm.value.notes = t.defaultText; modalForm.value.templateName = t.name; }
-        else if (activeModalType.value === 'interrogation') { modalForm.value.transcript = t.defaultText; modalForm.value.templateName = t.name; }
-        else if (activeModalType.value === 'warrant') { modalForm.value.reason = t.defaultText; modalForm.value.templateName = t.name; }
-      };
-
-      const saveModalRecord = () => {
-        let coll = '';
-        if (activeModalType.value === 'citizen') {
-          // Automatic vehicle match check
-          if (modalForm.value.vehiclePlate) {
-            const vMatch = vehiclesList.value.find(v => v.plate.toLowerCase() === modalForm.value.vehiclePlate.toLowerCase());
-            if (vMatch) modalForm.value.autoMatchedVehicle = `${vMatch.model} (${vMatch.plate}) - Owner: ${vMatch.owner}`;
-          }
-          coll = 'citizens';
-        }
-        else if (activeModalType.value === 'weapon') coll = 'weapons';
-        else if (activeModalType.value === 'vehicle') coll = 'vehicles';
-        else if (activeModalType.value === 'case') coll = 'cases';
-        else if (activeModalType.value === 'org') coll = 'organizations';
-        else if (activeModalType.value === 'interrogation') coll = 'interrogations';
-        else if (activeModalType.value === 'warrant') coll = 'warrants';
-        else if (activeModalType.value === 'report') coll = 'mdtReports';
-        else if (activeModalType.value === 'penalCode') coll = 'penalCode';
-
-        if (coll) {
-          addDocItem(coll, { ...modalForm.value });
-          activeModalType.value = null;
-        }
-      };
-
-      const createTemplate = () => {
-        if (!newTemplateForm.value.name) return;
-        addDocItem('templates', { ...newTemplateForm.value });
-        newTemplateForm.value = { category: 'cases', name: '', defaultText: '' };
-      };
-
-      // --- SIMILARITY GALLERY MATCHER ---
-      const runAiVisualMatcher = () => {
-        if (!aiMatcherImageUrl.value) return;
-        aiMatcherLoading.value = true;
-        setTimeout(() => {
-          aiMatcherLoading.value = false;
-          let matches = unifiedPhotoGallery.value.map(p => ({
-            ...p,
-            score: (Math.random() * 25 + 72).toFixed(1) // Similarity score calculation
-          })).sort((a,b) => b.score - a.score).slice(0, 4);
-
-          aiMatcherResult.value = {
-            analysis: 'Cross-gallery feature extraction completed. High shape/color similarity matches identified across database records.',
-            matches: matches
-          };
-        }, 1000);
-      };
-
-      // --- UTILS & PDF PRINTING ---
-      const switchTab = (tab) => {
-        currentTab.value = tab;
-        if (tab === 'map') nextTick(() => initGtaMap());
-      };
-
-      const navClass = (tab) => [
-        'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-mono text-xs transition duration-200',
-        currentTab.value === tab ? 'bg-purple-600/20 text-white border border-purple-500/40 font-bold' : 'text-purple-300 hover:text-white'
-      ];
-
-      const hasPermission = (sec) => {
-        if (!agentProfile.value || !agentProfile.value.rank) return true;
-        const p = rolePermissions.value[agentProfile.value.rank];
-        return p ? p[sec] : true;
-      };
-
-      const getRankPermission = (rank, sec) => rolePermissions.value[rank] ? rolePermissions.value[rank][sec] : true;
-      const toggleRankPermission = (rank, sec) => {
-        if (!rolePermissions.value[rank]) rolePermissions.value[rank] = {};
-        rolePermissions.value[rank][sec] = !getRankPermission(rank, sec);
-      };
-
-      const printRecordPDF = (type, recordData) => {
-        activePrintRecord.value = { type, data: recordData };
-      };
-      const triggerPrintWindow = () => { window.print(); };
-
-      // --- MAP ---
-      const initGtaMap = () => {
-        const container = document.getElementById('gtaMapContainer');
-        if (!container) return;
-        if (gtaMapInstance) { gtaMapInstance.remove(); gtaMapInstance = null; }
-        
-        gtaMapInstance = L.map('gtaMapContainer', { crs: L.CRS.Simple, minZoom: -2.5, maxZoom: 2, zoomSnap: 0.1, zoomControl: false, attributionControl: false });
-        L.imageOverlay('icons/map.jpg', mapBounds).addTo(gtaMapInstance);
-        gtaMapInstance.fitBounds(mapBounds);
-
-        mapLocations.value.forEach(loc => {
-          L.circleMarker([loc.y, loc.x], { radius: 6, color: '#ffffff', fillColor: loc.color || '#c084fc', fillOpacity: 1 })
-           .bindPopup(`<div class="popup-container"><span class="popup-title">${loc.name}</span><div style="font-size:11px">${loc.address || ''}</div></div>`)
-           .addTo(gtaMapInstance);
-        });
-      };
-      const mapZoomIn = () => { if (gtaMapInstance) gtaMapInstance.zoomIn(0.5); };
-      const mapZoomOut = () => { if (gtaMapInstance) gtaMapInstance.zoomOut(0.5); };
-      const mapResetView = () => { if (gtaMapInstance) gtaMapInstance.fitBounds(mapBounds); };
-
-      // App Initialization & Persistent Login
-      onMounted(() => {
-        setInterval(() => { currentTime.value = new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Athens' }); }, 1000);
-
-        onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            currentUser.value = user;
-            const uSnap = await getDoc(doc(db, "users", user.uid));
-            if (uSnap.exists()) {
-              const uData = uSnap.data();
-              agentProfile.value = { name: uData.username, rank: uData.rank, badge: uData.badge };
-            }
-          } else { currentUser.value = null; }
-        });
-
-        bindRealtimeCollection('users', accountsList);
-        bindRealtimeCollection('citizens', citizensList);
-        bindRealtimeCollection('weapons', weaponsList);
-        bindRealtimeCollection('vehicles', vehiclesList);
-        bindRealtimeCollection('cases', casesList);
-        bindRealtimeCollection('organizations', orgsList);
-        bindRealtimeCollection('interrogations', interrogationsList);
-        bindRealtimeCollection('warrants', warrants);
-        bindRealtimeCollection('mapLocations', mapLocations);
-        bindRealtimeCollection('penalCode', penalCodeList);
-        bindRealtimeCollection('templates', templatesList);
-        bindRealtimeCollection('mdtReports', mdtReportsList);
-      });
-
-      return {
-        currentTab, adminSubTab, currentUser, showLoginModal, currentTime,
-        activeModalType, modalForm, activePrintRecord, selectedTemplateId,
-        authForm, agentProfile, citizenSearch, aiMatcherImageUrl, aiMatcherLoading,
-        aiMatcherResult, newAgentForm, newTemplateForm, accountsList, citizensList,
-        weaponsList, vehiclesList, casesList, orgsList, interrogationsList, warrants,
-        mapLocations, penalCodeList, templatesList, mdtReportsList, allRanksList,
-        permissionSections, rolePermissions, filteredCitizens, hasAdminAccess, unifiedPhotoGallery,
-        handleLogin, handleLogout, adminCreateAgent, handleFileUpload, openCreateModal,
-        getTemplatesForCategory, applySelectedTemplate, saveModalRecord, createTemplate,
-        runAiVisualMatcher, switchTab, navClass, hasPermission, getRankPermission,
-        toggleRankPermission, deleteDocItem, printRecordPDF, triggerPrintWindow,
-        initGtaMap, mapZoomIn, mapZoomOut, mapResetView
-      };
-    }
-  }).mount('#app');
+/* ---- components ---- */
+app.component('photo-gallery',{
+  props:['target','edit','by'],emits:['zoom','changed'],
+  data(){return{url:'',busy:false,err:''};},
+  methods:{
+    async add(url){const g=this.target.gallery||(this.target.gallery=[]);g.push({id:uid(),url,title:'',desc:'',taken:'',place:'',date:new Date().toISOString().slice(0,10),by:this.by||'',ix:0});
+      const p=g[g.length-1];this.$emit('changed',this.target);await indexPhoto(p);this.$emit('changed',this.target);},
+    async addUrl(){const u=this.url.trim();if(!/^https?:\/\//i.test(u))return;this.url='';await this.add(u);},
+    async upload(e){this.busy=true;this.err='';
+      try{for(const f of e.target.files){const b=await toBlob(f);if(!b)continue;b.name=f.name;const url=await upload(b,'photos');await this.add(url);}}
+      catch(x){this.err='Upload failed: '+x.message;}
+      e.target.value='';this.busy=false;}
+  },
+  template:`<div class="space-y-3">
+    <div v-if="edit" class="flex flex-wrap gap-2">
+      <input v-model="url" placeholder="Photo link (https://...)" class="inp !w-auto flex-1" @keyup.enter="addUrl"><button @click="addUrl" class="btn">+ Add link</button>
+      <label class="btn !bg-emerald-600 cursor-pointer">{{ busy?'Uploading...':'Upload photos' }}<input type="file" accept="image/*" multiple class="hidden" @change="upload"></label></div>
+    <p v-if="err" class="text-red-400 text-xs">{{ err }}</p>
+    <div class="grid grid-cols-3 md:grid-cols-5 gap-3">
+      <div v-for="(p,i) in (target.gallery||[])" :key="p.id" class="cursor-pointer" @click="$emit('zoom',target,i)">
+        <img :src="p.url" class="aspect-square w-full object-cover rounded-xl border border-purple-950 bg-black hover:border-purple-400">
+        <p class="text-[10px] text-slate-400 truncate mt-1">{{ p.title||'Untitled' }}</p></div></div>
+    <p v-if="!(target.gallery||[]).length" class="text-slate-500 text-xs">No photos yet.</p></div>`
+});
+app.component('file-box',{
+  props:['target','edit','by'],emits:['changed'],
+  data(){return{busy:false,err:''};},
+  methods:{
+    async upload(e){this.busy=true;this.err='';
+      try{for(const f of e.target.files){const url=await upload(f,'files');(this.target.files||(this.target.files=[])).push({id:uid(),url,name:f.name,type:f.type||'',size:f.size,date:new Date().toISOString().slice(0,10),by:this.by||''});}this.$emit('changed',this.target);}
+      catch(x){this.err='Upload failed: '+x.message;}
+      e.target.value='';this.busy=false;},
+    remove(i){if(!confirm('Remove this file?'))return;delStored(this.target.files[i].url);this.target.files.splice(i,1);this.$emit('changed',this.target);},
+    kb(s){return s>1048576?(s/1048576).toFixed(1)+' MB':Math.round(s/1024)+' KB';}
+  },
+  template:`<div class="space-y-3">
+    <label v-if="edit" class="btn !bg-emerald-600 cursor-pointer inline-block">{{ busy?'Uploading...':'Upload files' }}<input type="file" multiple class="hidden" @change="upload"></label>
+    <p v-if="err" class="text-red-400 text-xs">{{ err }}</p>
+    <div v-for="(f,i) in (target.files||[])" :key="f.id" class="p-3 bg-bg border border-purple-950 rounded-xl space-y-2">
+      <div class="flex items-center justify-between gap-2"><a :href="f.url" target="_blank" rel="noopener" class="text-tc truncate">📎 {{ f.name }}</a><span class="text-slate-500 shrink-0">{{ kb(f.size) }} · {{ f.date }} · {{ f.by }}</span><button v-if="edit" @click="remove(i)" class="del">✕</button></div>
+      <video v-if="(f.type||'').startsWith('video')" :src="f.url" controls preload="metadata" class="w-full max-h-96 rounded-lg bg-black"></video>
+      <audio v-else-if="(f.type||'').startsWith('audio')" :src="f.url" controls class="w-full"></audio></div>
+    <p v-if="!(target.files||[]).length" class="text-slate-500 text-xs">No files yet.</p></div>`
+});
+app.mount('#app');
 </script>
 </body>
 </html>
