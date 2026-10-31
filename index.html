@@ -47,29 +47,9 @@ tailwind.config = {
 <!-- Vue 3 CDN -->
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
-<!-- Firebase SDKs (Module Mode exposed to Global Window) -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-  import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyDWnxx2UGh_iThnwvK4CDfw8hT9xoGhOn0",
-  authDomain: "cid-upd.firebaseapp.com",
-  projectId: "cid-upd",
-  storageBucket: "cid-upd.firebasestorage.app",
-  messagingSenderId: "820704136638",
-  appId: "1:820704136638:web:da68199a5e0a7293277def"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  window.auth = getAuth(app);
-  window.db = getFirestore(app);
-  window.fb = {
-    signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword,
-    collection, onSnapshot, doc, setDoc, addDoc, deleteDoc, getDoc
-  };
-</script>
+<!-- Eruda Console for Mobile Debugging -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
 
 <style>
 body {
@@ -287,12 +267,9 @@ body {
         </div>
       </div>
 
-      <!-- 2. MAP WITH CUSTOM HUD CONTROLS -->
+      <!-- 2. MAP -->
       <div v-if="currentTab === 'map'" class="h-full flex relative overflow-hidden">
-        <!-- Map Canvas -->
         <div id="gtaMapContainer" class="w-full h-full bg-black z-10"></div>
-
-        <!-- Tactical HUD Controls (Top Right Overlay) -->
         <div class="absolute top-4 right-4 z-20 flex flex-col space-y-2">
           <button @click="mapZoomIn" class="w-10 h-10 hud-panel flex items-center justify-center text-tactical-cyan hover:text-white hover:border-tactical-cyan transition font-mono text-sm shadow-lg" title="Zoom In">
             <i class="fa-solid fa-plus"></i>
@@ -626,7 +603,7 @@ body {
       <button @click="showLoginModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       <h2 class="text-xl font-title font-bold text-white uppercase text-center mb-6">C.I.D. Agent Sign In</h2>
       <form @submit.prevent="handleLogin" class="space-y-4">
-        <input v-model="authForm.username" type="text" required placeholder="Issued Username" class="w-full bg-tactical-bg border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none">
+        <input v-model="authForm.username" type="text" required placeholder="Issued Username (e.g. Director)" class="w-full bg-tactical-bg border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none">
         <input v-model="authForm.password" type="password" required placeholder="Password" class="w-full bg-tactical-bg border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none">
         <button type="submit" class="w-full py-2.5 bg-blue-600 text-white font-title font-bold uppercase rounded-xl">Sign In</button>
       </form>
@@ -773,344 +750,356 @@ function openLightbox(url, title, desc) {
 function closeLightbox() {
   document.getElementById('lightboxModal').style.display = 'none';
 }
+</script>
 
-const { createApp, ref, computed, onMounted, nextTick } = Vue;
+<!-- Firebase SDKs & Main App Setup -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-createApp({
-  setup() {
-    const currentTab = ref('dashboard');
-    const adminSubTab = ref('accounts');
-    const currentUser = ref(null);
-    const showLoginModal = ref(false);
-    const currentTime = ref('');
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "SENDER_ID",
+    appId: "APP_ID"
+  };
 
-    // Modal State Flags
-    const showCreateCitizenModal = ref(false);
-    const showCreateWeaponModal = ref(false);
-    const showCreateVehicleModal = ref(false);
-    const showCreateCaseModal = ref(false);
-    const showCreateOrgModal = ref(false);
-    const showCreateInterrogationModal = ref(false);
-    const showCreateWarrantModal = ref(false);
-    const selectedCitizenCard = ref(null);
-    const activePrintWarrant = ref(null);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-    const authForm = ref({ username: '', password: '' });
-    const agentProfile = ref({ name: '', rank: '', badge: '' });
-    const citizenSearch = ref('');
-    const aiMatcherImageUrl = ref('');
-    const aiMatcherLoading = ref(false);
-    const aiMatcherResult = ref(null);
-    const newAgentForm = ref({ username: '', badge: '', rank: 'Detective I', password: '' });
+  const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
-    // Forms
-    const newCitizen = ref({ fullName: '', citizenId: '', phone: '', gang: '', mugshot: '' });
-    const newWeapon = ref({ serial: '', model: '', owner: '', stolen: false });
-    const newVehicle = ref({ plate: '', model: '', owner: '', color: '', stolen: false });
-    const newCase = ref({ title: '', summary: '', templateUsed: '' });
-    const newOrg = ref({ name: '', notes: '' });
-    const newInterrogation = ref({ suspect: '', transcript: '' });
-    const newWarrant = ref({ citizenName: '', citizenId: '', reason: '', templateName: '' });
-    const newMapLoc = ref({ name: '', category: 'Gangs', x: 0, y: 0, address: '', color: '#B00707', img: 'x.jpg' });
+  createApp({
+    setup() {
+      const currentTab = ref('dashboard');
+      const adminSubTab = ref('accounts');
+      const currentUser = ref(null);
+      const showLoginModal = ref(false);
+      const currentTime = ref('');
 
-    // Real-Time Reactive Collections from Firestore
-    const accountsList = ref([]);
-    const citizensList = ref([]);
-    const weaponsList = ref([]);
-    const vehiclesList = ref([]);
-    const casesList = ref([]);
-    const orgsList = ref([]);
-    const interrogationsList = ref([]);
-    const warrants = ref([]);
-    const mapLocations = ref([]);
+      // Modal State Flags
+      const showCreateCitizenModal = ref(false);
+      const showCreateWeaponModal = ref(false);
+      const showCreateVehicleModal = ref(false);
+      const showCreateCaseModal = ref(false);
+      const showCreateOrgModal = ref(false);
+      const showCreateInterrogationModal = ref(false);
+      const showCreateWarrantModal = ref(false);
+      const selectedCitizenCard = ref(null);
+      const activePrintWarrant = ref(null);
 
-    const penalCodeList = ref([
-      { id: 1, title: 'Armed Robbery of Commercial Store', category: 'Felony', fine: 15000, jail: 30 },
-      { id: 2, title: 'Attempted Murder on Law Enforcement', category: 'Felony', fine: 50000, jail: 60 },
-      { id: 3, title: 'Possessing Illegal Class 2 Firearm', category: 'Felony', fine: 20000, jail: 25 }
-    ]);
+      const authForm = ref({ username: '', password: '' });
+      const agentProfile = ref({ name: '', rank: '', badge: '' });
+      const citizenSearch = ref('');
+      const aiMatcherImageUrl = ref('');
+      const aiMatcherLoading = ref(false);
+      const aiMatcherResult = ref(null);
+      const newAgentForm = ref({ username: '', badge: '', rank: 'Detective I', password: '' });
 
-    const allRanksList = ['Director', 'Assistant Director', 'High Command', 'Detective III', 'Detective II', 'Detective I', 'Probationary Detective'];
-    const rolePermissions = ref({
-      'Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-      'Assistant Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-      'High Command': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-      'Detective III': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-      'Detective II': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-      'Detective I': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
-      'Probationary Detective': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: false, ai_matcher: false }
-    });
+      // Forms
+      const newCitizen = ref({ fullName: '', citizenId: '', phone: '', gang: '', mugshot: '' });
+      const newWeapon = ref({ serial: '', model: '', owner: '', stolen: false });
+      const newVehicle = ref({ plate: '', model: '', owner: '', color: '', stolen: false });
+      const newCase = ref({ title: '', summary: '', templateUsed: '' });
+      const newOrg = ref({ name: '', notes: '' });
+      const newInterrogation = ref({ suspect: '', transcript: '' });
+      const newWarrant = ref({ citizenName: '', citizenId: '', reason: '', templateName: '' });
+      const newMapLoc = ref({ name: '', category: 'Gangs', x: 0, y: 0, address: '', color: '#B00707', img: 'x.jpg' });
 
-    // GTA Map Global Variables
-    const mapBounds = [[-3500, -3000], [5000, 4500]];
-    let gtaMapInstance = null;
+      // Real-Time Reactive Collections from Firestore
+      const accountsList = ref([]);
+      const citizensList = ref([]);
+      const weaponsList = ref([]);
+      const vehiclesList = ref([]);
+      const casesList = ref([]);
+      const orgsList = ref([]);
+      const interrogationsList = ref([]);
+      const warrants = ref([]);
+      const mapLocations = ref([]);
 
-    // Computed Properties
-    const activeWarrantsCount = computed(() => warrants.value.length);
-    const filteredCitizens = computed(() => {
-      if (!citizenSearch.value) return citizensList.value;
-      return citizensList.value.filter(c => c.fullName.toLowerCase().includes(citizenSearch.value.toLowerCase()));
-    });
-    const hasAdminAccess = computed(() => {
-      if (!agentProfile.value) return false;
-      return agentProfile.value.rank === 'Director' || agentProfile.value.rank === 'Assistant Director';
-    });
+      const penalCodeList = ref([
+        { id: 1, title: 'Armed Robbery of Commercial Store', category: 'Felony', fine: 15000, jail: 30 },
+        { id: 2, title: 'Attempted Murder on Law Enforcement', category: 'Felony', fine: 50000, jail: 60 },
+        { id: 3, title: 'Possessing Illegal Class 2 Firearm', category: 'Felony', fine: 20000, jail: 25 }
+      ]);
 
-    // --- FIREBASE AUTHENTICATION (USERNAME MASKING) ---
-    const handleLogin = async () => {
-      try {
-        const internalEmail = `${authForm.value.username.trim().toLowerCase()}@sasp.internal`;
-        const userCred = await window.fb.signInWithEmailAndPassword(window.auth, internalEmail, authForm.value.password);
-        
-        const docSnap = await window.fb.getDoc(window.fb.doc(window.db, "users", userCred.user.uid));
-        if (docSnap.exists()) {
-          const u = docSnap.data();
-          agentProfile.value = { name: u.username, rank: u.rank, badge: u.badge };
+      const allRanksList = ['Director', 'Assistant Director', 'High Command', 'Detective III', 'Detective II', 'Detective I', 'Probationary Detective'];
+      const rolePermissions = ref({
+        'Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
+        'Assistant Director': { admin: true, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
+        'High Command': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
+        'Detective III': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
+        'Detective II': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
+        'Detective I': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: true, ai_matcher: true },
+        'Probationary Detective': { admin: false, citizens: true, weapons: true, vehicles: true, cases: true, organizations: true, interrogations: false, ai_matcher: false }
+      });
+
+      // GTA Map Global Variables
+      const mapBounds = [[-3500, -3000], [5000, 4500]];
+      let gtaMapInstance = null;
+
+      // Computed Properties
+      const activeWarrantsCount = computed(() => warrants.value.length);
+      const filteredCitizens = computed(() => {
+        if (!citizenSearch.value) return citizensList.value;
+        return citizensList.value.filter(c => c.fullName.toLowerCase().includes(citizenSearch.value.toLowerCase()));
+      });
+      const hasAdminAccess = computed(() => {
+        if (!agentProfile.value) return false;
+        return agentProfile.value.rank === 'Director' || agentProfile.value.rank === 'Assistant Director';
+      });
+
+      // --- FIREBASE AUTHENTICATION (USERNAME MASKING) ---
+      const handleLogin = async () => {
+        try {
+          const cleanUser = authForm.value.username.trim().toLowerCase();
+          const internalEmail = `${cleanUser}@sasp.internal`;
+          const userCred = await signInWithEmailAndPassword(auth, internalEmail, authForm.value.password);
+          
+          const docSnap = await getDoc(doc(db, "users", userCred.user.uid));
+          if (docSnap.exists()) {
+            const u = docSnap.data();
+            agentProfile.value = { name: u.username, rank: u.rank, badge: u.badge };
+          }
+          showLoginModal.value = false;
+          authForm.value = { username: '', password: '' };
+        } catch (err) {
+          alert("Sign In Failed: Invalid Agent Credentials!");
+          console.error(err);
         }
-        showLoginModal.value = false;
-        authForm.value = { username: '', password: '' };
-      } catch (err) {
-        alert("Sign In Failed: Invalid Agent Credentials!");
-        console.error(err);
-      }
-    };
+      };
 
-    const handleLogout = async () => {
-      await window.fb.signOut(window.auth);
-      currentUser.value = null;
-      currentTab.value = 'dashboard';
-    };
+      const handleLogout = async () => {
+        await signOut(auth);
+        currentUser.value = null;
+        currentTab.value = 'dashboard';
+      };
 
-    const adminCreateAgent = async () => {
-      if (!newAgentForm.value.username || !newAgentForm.value.password) {
-        alert("Please specify Username and Password!");
-        return;
-      }
-      try {
-        const internalEmail = `${newAgentForm.value.username.trim().toLowerCase()}@sasp.internal`;
-        const userCred = await window.fb.createUserWithEmailAndPassword(window.auth, internalEmail, newAgentForm.value.password);
-        
-        await window.fb.setDoc(window.fb.doc(window.db, "users", userCred.user.uid), {
-          username: newAgentForm.value.username,
-          badge: newAgentForm.value.badge,
-          rank: newAgentForm.value.rank,
-          createdAt: new Date().toISOString()
+      const adminCreateAgent = async () => {
+        if (!newAgentForm.value.username || !newAgentForm.value.password) {
+          alert("Please specify Username and Password!");
+          return;
+        }
+        try {
+          const cleanUser = newAgentForm.value.username.trim().toLowerCase();
+          const internalEmail = `${cleanUser}@sasp.internal`;
+          const userCred = await createUserWithEmailAndPassword(auth, internalEmail, newAgentForm.value.password);
+          
+          await setDoc(doc(db, "users", userCred.user.uid), {
+            username: newAgentForm.value.username,
+            badge: newAgentForm.value.badge,
+            rank: newAgentForm.value.rank,
+            createdAt: new Date().toISOString()
+          });
+
+          alert("Credentials Issued Successfully!");
+          newAgentForm.value = { username: '', badge: '', rank: 'Detective I', password: '' };
+        } catch (err) {
+          alert("Error issuing credentials: " + err.message);
+        }
+      };
+
+      // --- FIRESTORE REAL-TIME BINDINGS ---
+      const bindRealtimeCollection = (collName, targetRef) => {
+        onSnapshot(collection(db, collName), (snapshot) => {
+          targetRef.value = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+          if (collName === 'mapLocations' && currentTab.value === 'map') {
+            nextTick(() => initGtaMap());
+          }
         });
+      };
 
-        alert("Credentials Issued Successfully!");
-        newAgentForm.value = { username: '', badge: '', rank: 'Detective I', password: '' };
-      } catch (err) {
-        alert("Error issuing credentials: " + err.message);
-      }
-    };
+      const addDocItem = async (collName, dataObj) => {
+        try {
+          await addDoc(collection(db, collName), {
+            ...dataObj,
+            createdAt: new Date().toISOString()
+          });
+        } catch (err) {
+          console.error("Firestore Add Error:", err);
+        }
+      };
 
-    // --- FIRESTORE REAL-TIME BINDINGS ---
-    const bindRealtimeCollection = (collName, targetRef) => {
-      window.fb.onSnapshot(window.fb.collection(window.db, collName), (snapshot) => {
-        targetRef.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (collName === 'mapLocations' && currentTab.value === 'map') {
+      const deleteDocItem = async (collName, docId) => {
+        try {
+          await deleteDoc(doc(db, collName, docId));
+        } catch (err) {
+          console.error("Firestore Delete Error:", err);
+        }
+      };
+
+      // --- FORM CREATION HANDLERS ---
+      const createCitizen = () => {
+        addDocItem('citizens', { ...newCitizen.value, gallery: [newCitizen.value.mugshot || ''] });
+        newCitizen.value = { fullName: '', citizenId: '', phone: '', gang: '', mugshot: '' };
+        showCreateCitizenModal.value = false;
+      };
+      const createWeapon = () => {
+        addDocItem('weapons', { ...newWeapon.value });
+        newWeapon.value = { serial: '', model: '', owner: '', stolen: false };
+        showCreateWeaponModal.value = false;
+      };
+      const createVehicle = () => {
+        addDocItem('vehicles', { ...newVehicle.value });
+        newVehicle.value = { plate: '', model: '', owner: '', color: '', stolen: false };
+        showCreateVehicleModal.value = false;
+      };
+      const createCase = () => {
+        addDocItem('cases', { ...newCase.value });
+        newCase.value = { title: '', summary: '', templateUsed: '' };
+        showCreateCaseModal.value = false;
+      };
+      const createOrg = () => {
+        addDocItem('organizations', { ...newOrg.value });
+        newOrg.value = { name: '', notes: '' };
+        showCreateOrgModal.value = false;
+      };
+      const createInterrogation = () => {
+        addDocItem('interrogations', { ...newInterrogation.value });
+        newInterrogation.value = { suspect: '', transcript: '' };
+        showCreateInterrogationModal.value = false;
+      };
+      const createWarrant = () => {
+        addDocItem('warrants', { ...newWarrant.value });
+        newWarrant.value = { citizenName: '', citizenId: '', reason: '', templateName: '' };
+        showCreateWarrantModal.value = false;
+      };
+      const addMapLocation = () => {
+        addDocItem('mapLocations', { ...newMapLoc.value });
+        newMapLoc.value = { name: '', category: 'Gangs', x: 0, y: 0, address: '', color: '#B00707', img: 'x.jpg' };
+      };
+
+      // Utility & Map Handlers
+      const switchTab = (tab) => {
+        currentTab.value = tab;
+        if (tab === 'map') {
           nextTick(() => initGtaMap());
         }
-      });
-    };
+      };
 
-    const addDocItem = async (collName, dataObj) => {
-      try {
-        await window.fb.addDoc(window.fb.collection(window.db, collName), {
-          ...dataObj,
-          createdAt: new Date().toISOString()
+      const navClass = (tab) => [
+        'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-mono text-xs transition duration-200',
+        currentTab.value === tab ? 'bg-blue-600/20 text-white border border-blue-500/40 font-bold' : 'text-slate-400 hover:text-white'
+      ];
+
+      const hasPermission = (sec) => {
+        if (!agentProfile.value || !agentProfile.value.rank) return true;
+        const p = rolePermissions.value[agentProfile.value.rank];
+        return p ? p[sec] : true;
+      };
+
+      const getRankPermission = (rank, sec) => rolePermissions.value[rank] ? rolePermissions.value[rank][sec] : true;
+      const toggleRankPermission = (rank, sec) => {
+        if (!rolePermissions.value[rank]) rolePermissions.value[rank] = {};
+        rolePermissions.value[rank][sec] = !getRankPermission(rank, sec);
+      };
+
+      const printWarrantPDF = (w) => { activePrintWarrant.value = w; };
+      const triggerPrintWindow = () => { window.print(); };
+
+      const runAiVisualMatcher = () => {
+        if (!aiMatcherImageUrl.value) return;
+        aiMatcherLoading.value = true;
+        setTimeout(() => {
+          aiMatcherLoading.value = false;
+          aiMatcherResult.value = {
+            analysis: 'Face / Outfit scan processed. High probability match located in database records.',
+            confidence: 94.8,
+            matchedCitizen: citizensList.value[0] || null
+          };
+        }, 1200);
+      };
+
+      // --- LOCAL LEAFLET GTA MAP INITIALIZATION ---
+      const initGtaMap = () => {
+        const container = document.getElementById('gtaMapContainer');
+        if (!container) return;
+        if (gtaMapInstance) { gtaMapInstance.remove(); gtaMapInstance = null; }
+        
+        const mapImageUrl = 'icons/map.jpg';
+
+        gtaMapInstance = L.map('gtaMapContainer', { 
+          crs: L.CRS.Simple, 
+          minZoom: -2.5, 
+          maxZoom: 2, 
+          zoomSnap: 0.1, 
+          zoomControl: false,
+          attributionControl: false 
         });
-      } catch (err) {
-        console.error("Firestore Add Error:", err);
-      }
-    };
 
-    const deleteDocItem = async (collName, docId) => {
-      try {
-        await window.fb.deleteDoc(window.fb.doc(window.db, collName, docId));
-      } catch (err) {
-        console.error("Firestore Delete Error:", err);
-      }
-    };
+        L.imageOverlay(mapImageUrl, mapBounds).addTo(gtaMapInstance);
+        gtaMapInstance.fitBounds(mapBounds);
 
-    // --- FORM CREATION HANDLERS ---
-    const createCitizen = () => {
-      addDocItem('citizens', { ...newCitizen.value, gallery: [newCitizen.value.mugshot || ''] });
-      newCitizen.value = { fullName: '', citizenId: '', phone: '', gang: '', mugshot: '' };
-      showCreateCitizenModal.value = false;
-    };
-    const createWeapon = () => {
-      addDocItem('weapons', { ...newWeapon.value });
-      newWeapon.value = { serial: '', model: '', owner: '', stolen: false };
-      showCreateWeaponModal.value = false;
-    };
-    const createVehicle = () => {
-      addDocItem('vehicles', { ...newVehicle.value });
-      newVehicle.value = { plate: '', model: '', owner: '', color: '', stolen: false };
-      showCreateVehicleModal.value = false;
-    };
-    const createCase = () => {
-      addDocItem('cases', { ...newCase.value });
-      newCase.value = { title: '', summary: '', templateUsed: '' };
-      showCreateCaseModal.value = false;
-    };
-    const createOrg = () => {
-      addDocItem('organizations', { ...newOrg.value });
-      newOrg.value = { name: '', notes: '' };
-      showCreateOrgModal.value = false;
-    };
-    const createInterrogation = () => {
-      addDocItem('interrogations', { ...newInterrogation.value });
-      newInterrogation.value = { suspect: '', transcript: '' };
-      showCreateInterrogationModal.value = false;
-    };
-    const createWarrant = () => {
-      addDocItem('warrants', { ...newWarrant.value });
-      newWarrant.value = { citizenName: '', citizenId: '', reason: '', templateName: '' };
-      showCreateWarrantModal.value = false;
-    };
-    const addMapLocation = () => {
-      addDocItem('mapLocations', { ...newMapLoc.value });
-      newMapLoc.value = { name: '', category: 'Gangs', x: 0, y: 0, address: '', color: '#B00707', img: 'x.jpg' };
-    };
+        mapLocations.value.forEach(loc => {
+          const coords = [loc.y, loc.x];
+          let imgPath = loc.img ? (loc.img.startsWith('http') ? loc.img : 'images/' + loc.img) : 'images/x.jpg';
+          const popupContent = `
+            <div class="popup-container">
+              <img src="${imgPath}" class="popup-img" onclick="openLightbox('${imgPath}', '${loc.name}', '${loc.address || ''}')" onerror="this.src='https://placehold.co/300x150/000000/38bdf8?text=NO+IMAGE'">
+              <span class="popup-title">${loc.name}</span>
+              <div style="font-size:11px; font-family:monospace;">${loc.address || ''}</div>
+            </div>
+          `;
+          L.circleMarker(coords, { radius: 6, color: '#ffffff', fillColor: loc.color || '#38bdf8', fillOpacity: 1 }).bindPopup(popupContent).addTo(gtaMapInstance);
+        });
+      };
 
-    // Utility & Map Handlers
-    const switchTab = (tab) => {
-      currentTab.value = tab;
-      if (tab === 'map') {
-        nextTick(() => initGtaMap());
-      }
-    };
+      const mapZoomIn = () => { if (gtaMapInstance) gtaMapInstance.zoomIn(0.5); };
+      const mapZoomOut = () => { if (gtaMapInstance) gtaMapInstance.zoomOut(0.5); };
+      const mapResetView = () => { if (gtaMapInstance) gtaMapInstance.fitBounds(mapBounds); };
 
-    const navClass = (tab) => [
-      'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-mono text-xs transition duration-200',
-      currentTab.value === tab ? 'bg-blue-600/20 text-white border border-blue-500/40 font-bold' : 'text-slate-400 hover:text-white'
-    ];
+      // App Initialization
+      onMounted(() => {
+        setInterval(() => {
+          currentTime.value = new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Athens' });
+        }, 1000);
 
-    const hasPermission = (sec) => {
-      if (!agentProfile.value || !agentProfile.value.rank) return true;
-      const p = rolePermissions.value[agentProfile.value.rank];
-      return p ? p[sec] : true;
-    };
-
-    const getRankPermission = (rank, sec) => rolePermissions.value[rank] ? rolePermissions.value[rank][sec] : true;
-    const toggleRankPermission = (rank, sec) => {
-      if (!rolePermissions.value[rank]) rolePermissions.value[rank] = {};
-      rolePermissions.value[rank][sec] = !getRankPermission(rank, sec);
-    };
-
-    const printWarrantPDF = (w) => { activePrintWarrant.value = w; };
-    const triggerPrintWindow = () => { window.print(); };
-
-    const runAiVisualMatcher = () => {
-      if (!aiMatcherImageUrl.value) return;
-      aiMatcherLoading.value = true;
-      setTimeout(() => {
-        aiMatcherLoading.value = false;
-        aiMatcherResult.value = {
-          analysis: 'Face / Outfit scan processed. High probability match located in database records.',
-          confidence: 94.8,
-          matchedCitizen: citizensList.value[0] || null
-        };
-      }, 1200);
-    };
-
-    // --- LOCAL LEAFLET GTA MAP INITIALIZATION ---
-    const initGtaMap = () => {
-      const container = document.getElementById('gtaMapContainer');
-      if (!container) return;
-      if (gtaMapInstance) { gtaMapInstance.remove(); gtaMapInstance = null; }
-      
-      // Local path inside your GitHub repo / folder
-      const mapImageUrl = 'icons/map.jpg';
-
-      gtaMapInstance = L.map('gtaMapContainer', { 
-        crs: L.CRS.Simple, 
-        minZoom: -2.5, 
-        maxZoom: 2, 
-        zoomSnap: 0.1, 
-        zoomControl: false,
-        attributionControl: false 
-      });
-
-      L.imageOverlay(mapImageUrl, mapBounds).addTo(gtaMapInstance);
-      gtaMapInstance.fitBounds(mapBounds);
-
-      mapLocations.value.forEach(loc => {
-        const coords = [loc.y, loc.x];
-        let imgPath = loc.img ? (loc.img.startsWith('http') ? loc.img : 'images/' + loc.img) : 'images/x.jpg';
-        const popupContent = `
-          <div class="popup-container">
-            <img src="${imgPath}" class="popup-img" onclick="openLightbox('${imgPath}', '${loc.name}', '${loc.address || ''}')" onerror="this.src='https://placehold.co/300x150/000000/38bdf8?text=NO+IMAGE'">
-            <span class="popup-title">${loc.name}</span>
-            <div style="font-size:11px; font-family:monospace;">${loc.address || ''}</div>
-          </div>
-        `;
-        L.circleMarker(coords, { radius: 6, color: '#ffffff', fillColor: loc.color || '#38bdf8', fillOpacity: 1 }).bindPopup(popupContent).addTo(gtaMapInstance);
-      });
-    };
-
-    // --- CUSTOM HUD CONTROLS HANDLERS ---
-    const mapZoomIn = () => {
-      if (gtaMapInstance) gtaMapInstance.zoomIn(0.5);
-    };
-
-    const mapZoomOut = () => {
-      if (gtaMapInstance) gtaMapInstance.zoomOut(0.5);
-    };
-
-    const mapResetView = () => {
-      if (gtaMapInstance) gtaMapInstance.fitBounds(mapBounds);
-    };
-
-    // App Initialization
-    onMounted(() => {
-      setInterval(() => {
-        currentTime.value = new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Athens' });
-      }, 1000);
-
-      // Auth Listener
-      window.fb.onAuthStateChanged(window.auth, async (user) => {
-        if (user) {
-          currentUser.value = user;
-          const uSnap = await window.fb.getDoc(window.fb.doc(window.db, "users", user.uid));
-          if (uSnap.exists()) {
-            const uData = uSnap.data();
-            agentProfile.value = { name: uData.username, rank: uData.rank, badge: uData.badge };
+        // Auth State Listener
+        onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            currentUser.value = user;
+            const uSnap = await getDoc(doc(db, "users", user.uid));
+            if (uSnap.exists()) {
+              const uData = uSnap.data();
+              agentProfile.value = { name: uData.username, rank: uData.rank, badge: uData.badge };
+            }
+          } else {
+            currentUser.value = null;
           }
-        } else {
-          currentUser.value = null;
-        }
+        });
+
+        // Bind Firestore Collections
+        bindRealtimeCollection('users', accountsList);
+        bindRealtimeCollection('citizens', citizensList);
+        bindRealtimeCollection('weapons', weaponsList);
+        bindRealtimeCollection('vehicles', vehiclesList);
+        bindRealtimeCollection('cases', casesList);
+        bindRealtimeCollection('organizations', orgsList);
+        bindRealtimeCollection('interrogations', interrogationsList);
+        bindRealtimeCollection('warrants', warrants);
+        bindRealtimeCollection('mapLocations', mapLocations);
       });
 
-      // Bind Firestore Collections Real-Time
-      bindRealtimeCollection('users', accountsList);
-      bindRealtimeCollection('citizens', citizensList);
-      bindRealtimeCollection('weapons', weaponsList);
-      bindRealtimeCollection('vehicles', vehiclesList);
-      bindRealtimeCollection('cases', casesList);
-      bindRealtimeCollection('organizations', orgsList);
-      bindRealtimeCollection('interrogations', interrogationsList);
-      bindRealtimeCollection('warrants', warrants);
-      bindRealtimeCollection('mapLocations', mapLocations);
-    });
-
-    return {
-      currentTab, adminSubTab, currentUser, showLoginModal, currentTime,
-      showCreateCitizenModal, showCreateWeaponModal, showCreateVehicleModal,
-      showCreateCaseModal, showCreateOrgModal, showCreateInterrogationModal, showCreateWarrantModal,
-      selectedCitizenCard, activePrintWarrant, authForm, agentProfile, citizenSearch,
-      aiMatcherImageUrl, aiMatcherLoading, aiMatcherResult, newAgentForm,
-      newCitizen, newWeapon, newVehicle, newCase, newOrg, newInterrogation, newWarrant, newMapLoc,
-      allRanksList, rolePermissions, penalCodeList, accountsList, citizensList, weaponsList, vehiclesList,
-      casesList, orgsList, interrogationsList, warrants, mapLocations, activeWarrantsCount, filteredCitizens,
-      hasAdminAccess, handleLogin, handleLogout, adminCreateAgent, switchTab, navClass, hasPermission,
-      getRankPermission, toggleRankPermission, deleteDocItem, createCitizen, createWeapon, createVehicle,
-      createCase, createOrg, createInterrogation, createWarrant, addMapLocation, printWarrantPDF,
-      triggerPrintWindow, runAiVisualMatcher, initGtaMap, mapZoomIn, mapZoomOut, mapResetView
-    };
-  }
-}).mount('#app');
+      return {
+        currentTab, adminSubTab, currentUser, showLoginModal, currentTime,
+        showCreateCitizenModal, showCreateWeaponModal, showCreateVehicleModal,
+        showCreateCaseModal, showCreateOrgModal, showCreateInterrogationModal, showCreateWarrantModal,
+        selectedCitizenCard, activePrintWarrant, authForm, agentProfile, citizenSearch,
+        aiMatcherImageUrl, aiMatcherLoading, aiMatcherResult, newAgentForm,
+        newCitizen, newWeapon, newVehicle, newCase, newOrg, newInterrogation, newWarrant, newMapLoc,
+        allRanksList, rolePermissions, penalCodeList, accountsList, citizensList, weaponsList, vehiclesList,
+        casesList, orgsList, interrogationsList, warrants, mapLocations, activeWarrantsCount, filteredCitizens,
+        hasAdminAccess, handleLogin, handleLogout, adminCreateAgent, switchTab, navClass, hasPermission,
+        getRankPermission, toggleRankPermission, deleteDocItem, createCitizen, createWeapon, createVehicle,
+        createCase, createOrg, createInterrogation, createWarrant, addMapLocation, printWarrantPDF,
+        triggerPrintWindow, runAiVisualMatcher, initGtaMap, mapZoomIn, mapZoomOut, mapResetView
+      };
+    }
+  }).mount('#app');
 </script>
 </body>
 </html>
