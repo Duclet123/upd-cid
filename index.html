@@ -854,13 +854,17 @@ function closeLightbox() {
       });
 
       // --- FIREBASE AUTHENTICATION (USERNAME MASKING) ---
-      const handleLogin = async () => {
+const handleLogin = async () => {
         try {
           const cleanUser = authForm.value.username.trim().toLowerCase();
           const internalEmail = `${cleanUser}@sasp.internal`;
           const userCred = await signInWithEmailAndPassword(auth, internalEmail, authForm.value.password);
           
           const docSnap = await getDoc(doc(db, "users", userCred.user.uid));
+          
+          // --- ΠΡΟΣΘΕΣΕ ΑΥΤΗ ΤΗ ΓΡΑΜΜΗ ΓΙΑ ΝΑ ΔΟΥΜΕ ΣΤin CONSOLE ΤΙ ΒΡΙΣΚΕΙ ---
+          console.log("Firestore User Data:", docSnap.exists() ? docSnap.data() : "Document not found!");
+
           if (docSnap.exists()) {
             const u = docSnap.data();
             agentProfile.value = { name: u.username, rank: u.rank, badge: u.badge };
