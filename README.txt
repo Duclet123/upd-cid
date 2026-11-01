@@ -29,44 +29,43 @@ UPD CID TERMINAL
   documents, πλήρες admin map με galleries, roster κάτω από directives χωρίς
   High Command cards, icon mobile δίπλα στην ώρα και έλεγχος συγκρούσεων records.
 
-ΑΠΑΡΑΙΤΗΤΗ ΕΝΗΜΕΡΩΣΗ FIRESTORE RULES
+FIRESTORE RULES
 Firebase Console → Firestore Database → Rules: επικόλλησε το firestore.rules
-αυτής της έκδοσης και πάτησε Publish. Χρειάζεται ΝΕΟ Publish ακόμη κι αν είχες
-περάσει τα προηγούμενα Rules. Τα νέα saves γράφουν record και ιστορικό ατομικά.
+του repo και πάτησε Publish, αν δεν το είχες κάνει για την έκδοση ιστορικού/κάδου.
+Η τρέχουσα διόρθωση warrants δεν τροποποιεί τα Rules. Τα saves γράφουν record
+και ιστορικό ατομικά.
 Χωρίς τα νέα Rules, saves/ιστορικό/κάδος/εγκρίσεις θα απορρίπτονται.
 Διατηρούνται οι συλλογές και τα υπάρχοντα IDs. Δεν χρειάζεται reset δεδομένων.
 Συνδέσου μία φορά ως Director/Assistant Director για συγχρονισμό δημόσιου roster.
 Map locations και οι φωτογραφίες τους παραμένουν δημόσια όπως πριν.
 
-ΚΑΘΗΜΕΡΙΝΟ ΑΔΕΙΑΣΜΑ ΚΑΔΟΥ — ΕΝΕΡΓΟΠΟΙΗΣΗ ΜΙΑ ΦΟΡΑ
-Το .github/workflows/empty-trash.yml εκτελεί το scripts/empty-trash.mjs κάθε μέρα
-στις 02:17 UTC (04:17 Ελλάδας τον χειμώνα, 05:17 το καλοκαίρι).
-Αδειάζει όσα αντικείμενα βρίσκονταν στον κάδο κατά την έναρξη της εκτέλεσης.
-Δεν πρόκειται για ατομική διατήρηση 24 ωρών από κάθε διαγραφή: κάτι που μπήκε
-λίγο πριν την εκκαθάριση μπορεί να παραμείνει για λιγότερες από 24 ώρες.
-Το GitHub μπορεί να καθυστερήσει scheduled jobs ή να απενεργοποιήσει το schedule
-μετά από μεγάλη αδράνεια του repository. Έλεγχε τα αποτελέσματα στο Actions.
-Χωρίς το παρακάτω secret, το job αποτυγχάνει ρητά και ΔΕΝ αδειάζει ο κάδος.
-Δεν απαιτεί Firebase Storage ή προγραμματισμένη Firebase Cloud Function.
-Οι συνηθισμένες Firestore αναγνώσεις/εγγραφές/διαγραφές μετρούν στα quotas.
+ΚΑΔΟΣ — ΧΩΡΙΣ ΑΥΤΟΜΑΤΗ ΕΚΚΑΘΑΡΙΣΗ
+Δεν υπάρχει πλέον προγραμματισμένη διαγραφή. Τα records μένουν στον κάδο μέχρι
+να επαναφερθούν ή να γίνει ρητή χειροκίνητη εκκαθάριση από διαχειριστή.
+Το workflow "Empty terminal trash manually" έχει μόνο workflow_dispatch και
+δεν εκτελείται από cron. Δεν χρειάζεται secret για να κρατάς και να επαναφέρεις
+records στον κάδο.
+Για προαιρετική χειροκίνητη οριστική εκκαθάριση από GitHub Actions χρειάζεται
+FIREBASE_SERVICE_ACCOUNT repository secret για cid-upd, με ξεχωριστό service
+account και Cloud Datastore User. Μην ανεβάσεις το JSON key ως αρχείο στο repo.
+Στο Run workflow το dry_run=true μετρά χωρίς διαγραφή. Μόνο το dry_run=false
+κάνει οριστική εκκαθάριση, συμπεριλαμβανομένου του ιστορικού των διαγραμμένων.
+Η επαναφορά και η εκκαθάριση προστατεύονται από ταυτόχρονη εκτέλεση.
 
-1. Δημιούργησε ξεχωριστό Google Cloud service account για το project cid-upd.
-   Δώσε Cloud Datastore User (roles/datastore.user). Το credential έχει πρόσβαση
-   στη βάση· χρησιμοποίησε το αποκλειστικά για αυτή τη δουλειά.
-2. Δημιούργησε JSON private key γι' αυτό το account.
-3. GitHub → Duclet123/upd-cid → Settings → Secrets and variables → Actions →
-   New repository secret. Name: FIREBASE_SERVICE_ACCOUNT. Value: ΟΛΟ το JSON.
-   Μην ανεβάσεις το JSON ως αρχείο στο repo και μην το στείλεις σε chat.
-4. Actions → Empty terminal trash daily → Run workflow → άφησε dry_run=true.
-   Έλεγξε ότι ολοκληρώνεται επιτυχώς. Η δοκιμή μετρά αντικείμενα χωρίς διαγραφή.
-5. Η καθημερινή προγραμματισμένη εκτέλεση κάνει πραγματική εκκαθάριση.
-   Για χειροκίνητη πραγματική εκτέλεση, βάλε dry_run=false.
-
-Η εκκαθάριση κλειδώνει κάθε αντικείμενο πριν το διαγράψει. Αν κερδίσει πρώτα
-η επαναφορά, η εκκαθάριση το προσπερνά. Αν έχει αρχίσει η εκκαθάριση, η επαναφορά
-απορρίπτεται. Σε αποτυχία διαγραφής ιστορικού, το κλειδωμένο αντικείμενο παραμένει
-για επανάληψη την επόμενη φορά. Δεν μένουν ορφανά history subcollections μετά
-από επιτυχημένη εκκαθάριση. Τα εξωτερικά αρχεία εικόνων δεν διαγράφονται.
+ΔΙΟΡΘΩΣΕΙΣ DRAFT WARRANTS / ΠΛΟΗΓΗΣΗΣ / ΦΩΤΟΓΡΑΦΙΩΝ
+Το παλιό config/main είχε citizenName/citizenId αντί για targets στο warrant.
+Το νέο normalizeConfig αναβαθμίζει το σχήμα κατά τη φόρτωση και εγγυάται array
+πολλαπλών στόχων. Τα παλιά ονόματα/IDs παραμένουν στα υπάρχοντα records και
+εμφανίζονται ως Other targets όταν ανοίγεις τέτοιο παλιό warrant.
+Οι επιλογές πολιτών έχουν αναζήτηση, checkbox και μετρητή επιλογών. Εμφανίζεται
+ξεκάθαρο μήνυμα αν λείπει view permission στο Citizen Registry ή αποτύχει η φόρτωση.
+Η δημιουργία διατηρεί το draft στη φόρμα όταν αποτύχει η αποθήκευση.
+Η ενότητα λέγεται Draft Warrants και βρίσκεται μετά τα Interrogations.
+Vehicle Registry μετά το Citizen Registry και Universal Matcher μετά το MDT Reports.
+Αφαιρέθηκαν όλες οι μαζικές εκτυπώσεις (λίστες, Penal Code, evidence log).
+Παραμένει εκτύπωση ανά record/document.
+Κάθε citizen card έχει profile image: Profile photo URL, αλλιώς πρώτη φωτογραφία
+gallery, αλλιώς ενσωματωμένο avatar. Το URL αλλάζει από Edit Record του πολίτη.
 
 ΕΛΕΓΧΟΙ
 Δεν χρειάζεται build για το site. Για τις δοκιμές ανάπτυξης: npm install, npm test.
@@ -76,7 +75,12 @@ Map locations και οι φωτογραφίες τους παραμένουν �
 καρτέλα πολίτη, ενιαία αναζήτηση, κάδος/επαναφορά και image comparison.
 Τα cleanup tests καλύπτουν preview, διαγραφή ιστορικού πριν από το trash record,
 σύγκρουση με επαναφορά, επανάληψη μετά από αποτυχία και λάθος project credentials.
-Δεν έγινε πλήρης δοκιμή στον browser ή εκτέλεση Rules σε Firebase Emulator.
+Εκτελέστηκαν επιπλέον πραγματικά σενάρια σε τοπικό Cloud Firestore Emulator:
+δημιουργία draft για δύο πολίτες μαζί με audit, submit, έγκριση Director,
+απόρριψη μη εξουσιοδοτημένης έγκρισης, ιδιωτικό history, trash/restore.
+Για επανάληψη: FIRESTORE_EMULATOR_JAR=/path/emulator.jar python tests/run-firestore-rules.py
+Το emulator test χρησιμοποιεί μόνο localhost και το demo-cid, ποτέ την παραγωγή.
+Δεν έγινε πλήρης οπτική δοκιμή στον browser.
 Η πραγματική ποιότητα matcher/CORS χρειάζεται έλεγχο με δικές σου GTA εικόνες.
 
 ΠΕΡΙΟΡΙΣΜΟΙ

@@ -177,8 +177,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <div class="flex flex-wrap gap-3 w-full md:w-auto">
               <input v-model="q" placeholder="Search..." class="inp !w-full md:!w-64">
               <button v-if="level('penal')==='edit'" @click="addPenal" class="btn">+ Add charge</button>
-              <label v-if="level('penal')==='edit'" class="btn !bg-amber-600 cursor-pointer">Import Excel<input type="file" accept=".xlsx,.xls,.csv" @change="importPenal" class="hidden"></label>
-              <button @click="printPenal" class="btn !bg-slate-700">Print PDF</button></div>
+              <label v-if="level('penal')==='edit'" class="btn !bg-amber-600 cursor-pointer">Import Excel<input type="file" accept=".xlsx,.xls,.csv" @change="importPenal" class="hidden"></label></div>
           </div>
           <p v-if="level('penal')==='edit'" class="text-sm font-mono text-slate-500">Import columns: Category, Title, Fine, Jail. Changes save automatically.</p>
           <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -203,14 +202,13 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <h2 class="text-xl font-title font-bold text-white uppercase"><i :class="col.icon" class="mr-3 text-2xl"></i>{{ col.label }}</h2>
             <div class="flex flex-wrap gap-3 w-full md:w-auto">
               <input v-model="q" placeholder="Search..." class="inp !w-full md:!w-72">
-              <button @click="printList" class="btn !bg-slate-700">Print list PDF</button>
-              <button v-if="level(tab)==='edit'" @click="newRec(tab)" class="btn text-base">+ New {{ tab === 'warrants' ? 'Request' : 'Record' }}</button></div>
+              <button v-if="level(tab)==='edit'" @click="newRec(tab)" class="btn text-base">+ New {{ tab === 'warrants' ? 'Draft Warrant' : 'Record' }}</button></div>
           </div>
           <div v-if="tab==='cases'||tab==='warrants'" class="hud p-4 flex flex-wrap gap-3"><select v-model="statusFilter" class="inp !w-auto"><option value="">All statuses</option><option v-for="st in (tab==='cases'?CASE_STATUSES:REQUEST_STATUSES)" :key="st">{{ st }}</option></select><select v-if="tab==='cases'" v-model="leadFilter" class="inp !w-auto"><option value="">All lead detectives</option><option v-for="name in [...new Set(itemsOf('cases').map(r=>r.lead).filter(Boolean))]" :key="name">{{ name }}</option></select><span class="text-xs text-slate-400 self-center">{{ listItems.length }} results</span></div>
           <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
             <div v-for="it in listItems" :key="it.id" class="hud p-5 space-y-3 font-mono text-sm hover:border-tc transition">
               <div class="flex items-center gap-4 cursor-pointer" @click="openRec(it)">
-                <img v-if="it.gallery&&it.gallery[0]" :src="it.gallery[0].url" class="w-16 h-20 object-cover rounded-xl border border-slate-700 bg-black shrink-0">
+                <img v-if="tab==='citizens'||(it.gallery&&it.gallery[0])" :src="tab==='citizens'?citizenPhoto(it):it.gallery[0].url" @error="imageFallback" class="w-16 h-20 object-cover rounded-xl border border-slate-700 bg-black shrink-0">
                 <div v-else class="w-16 h-20 rounded-xl border border-purple-950 flex items-center justify-center text-slate-600 shrink-0 text-2xl"><i class="fa-regular fa-image"></i></div>
                 <div class="flex-1 min-w-0">
                   <h3 class="text-base font-bold text-white font-title truncate mb-1">{{ recTitle(it) }}</h3>
@@ -234,8 +232,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <div><h2 class="text-xl font-title font-bold text-emerald-400 uppercase">Photographic Evidence</h2><p class="text-sm text-slate-400 font-mono mt-1">Every photo uploaded anywhere in the system, with its details. {{ evidenceList.length }} photos.</p></div>
             <div class="flex flex-wrap gap-3 w-full md:w-auto">
               <input v-model="q" placeholder="Search title, notes, place, agent..." class="inp !w-full md:!w-72">
-              <select v-model="evSrc" class="inp !w-full md:!w-56"><option value="">All sources</option><option v-for="(c,k) in cfg.collections" :key="k" :value="k">{{ c.label }}</option><option value="_map">Map locations</option></select>
-              <button @click="printEvidence" class="btn !bg-slate-700">Print PDF</button></div>
+              <select v-model="evSrc" class="inp !w-full md:!w-56"><option value="">All sources</option><option v-for="(c,k) in cfg.collections" :key="k" :value="k">{{ c.label }}</option><option value="_map">Map locations</option></select></div>
           </div>
           <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-6">
             <div v-for="e in evidenceList" :key="e.p.id" class="hud p-3 font-mono text-xs space-y-2">
@@ -248,7 +245,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           </div>
         </div>
 
-        <div v-if="tab==='trash'&&user" class="space-y-4"><div class="hud p-6"><h2 class="text-xl font-bold text-white">Trash</h2><p class="text-sm text-amber-300 mt-2">Daily cleanup removes items present at the start of the scheduled run (02:17 UTC). Automatic cleanup must first be enabled by an administrator. Items may be kept for less than 24 hours.</p><button @click="loadTrash" class="btn !bg-slate-700 mt-3">Refresh</button></div><p v-if="trashError" class="text-red-400">{{ trashError }}</p><div v-for="row in trashRows" :key="row.id" class="hud p-4 flex gap-4 justify-between items-center"><div><p class="text-white font-bold">{{ recTitle(row.record) }}</p><p class="text-xs text-slate-400">{{ cfg.collections[row.col]?.label||row.col }} · {{ row.deletedBy }} · {{ fmt(row.deletedAt) }}</p></div><button v-if="level(row.col)==='edit'" @click="restoreTrash(row)" :disabled="busy" class="btn !bg-emerald-700">Restore</button></div><p v-if="!trashRows.length&&!trashError" class="text-slate-500">Trash is empty.</p></div>
+        <div v-if="tab==='trash'&&user" class="space-y-4"><div class="hud p-6"><h2 class="text-xl font-bold text-white">Trash</h2><p class="text-sm text-amber-300 mt-2">Records remain here until restored or explicitly removed by an administrator. There is no automatic cleanup.</p><button @click="loadTrash" class="btn !bg-slate-700 mt-3">Refresh</button></div><p v-if="trashError" class="text-red-400">{{ trashError }}</p><div v-for="row in trashRows" :key="row.id" class="hud p-4 flex gap-4 justify-between items-center"><div><p class="text-white font-bold">{{ recTitle(row.record) }}</p><p class="text-xs text-slate-400">{{ cfg.collections[row.col]?.label||row.col }} · {{ row.deletedBy }} · {{ fmt(row.deletedAt) }}</p></div><button v-if="level(row.col)==='edit'" @click="restoreTrash(row)" :disabled="busy" class="btn !bg-emerald-700">Restore</button></div><p v-if="!trashRows.length&&!trashError" class="text-slate-500">Trash is empty.</p></div>
         <!-- UNIVERSAL MATCHER -->
         <div v-if="tab==='matcher'" class="space-y-6 max-w-7xl mx-auto">
           <div class="hud p-6 md:p-8"><h2 class="text-xl font-title font-bold text-purple-400 uppercase">Universal Recognition Matcher</h2>
@@ -487,11 +484,12 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
     </div>
     
     <div class="flex-1 overflow-y-auto p-6 md:p-8 grid lg:grid-cols-2 gap-10 content-start bg-bg">
-      <section v-if="rec.obj.col==='warrants'" class="lg:col-span-2 hud p-5 space-y-3"><div class="flex flex-wrap gap-3 justify-between items-center"><h4 class="text-white font-bold">REQUEST · {{ requestState(rec.obj) }}</h4><button v-if="!rec.isNew&&canEditRec" @click="transitionRequest('Submitted')" :disabled="busy" class="btn !bg-amber-700">Submit for approval</button></div><p class="text-xs text-slate-400">{{ (rec.obj.targets||[]).length }} registered target(s). One request can cover multiple citizens.</p><p v-if="rec.obj.workflow?.submittedBy" class="text-xs">Submitted by {{ rec.obj.workflow.submittedBy }} · {{ fmt(rec.obj.workflow.submittedAt) }}</p><p v-if="rec.obj.workflow?.reviewedBy" class="text-xs">{{ requestState(rec.obj) }} by {{ rec.obj.workflow.reviewedBy }} · {{ fmt(rec.obj.workflow.reviewedAt) }}</p><p v-if="rec.obj.workflow?.note" class="whitespace-pre-wrap text-amber-200">{{ rec.obj.workflow.note }}</p><div v-if="!rec.isNew&&isAdmin&&level('warrants')==='edit'&&requestState(rec.obj)==='Submitted'" class="space-y-3"><textarea v-model="reviewDraft" placeholder="Review comment (required for rejection)" rows="3" class="inp"></textarea><div class="flex gap-3"><button @click="transitionRequest('Approved')" :disabled="busy" class="btn !bg-emerald-700">Approve</button><button @click="transitionRequest('Rejected')" :disabled="busy" class="btn !bg-red-800">Reject</button></div></div><p v-if="['Submitted','Approved'].includes(requestState(rec.obj))" class="text-xs text-slate-400">This request is locked for editing.</p></section>
+      <section v-if="rec.obj.col==='warrants'" class="lg:col-span-2 hud p-5 space-y-3"><div class="flex flex-wrap gap-3 justify-between items-center"><h4 class="text-white font-bold">DRAFT WARRANT · {{ requestState(rec.obj) }}</h4><button v-if="!rec.isNew&&canEditRec" @click="transitionRequest('Submitted')" :disabled="busy" class="btn !bg-amber-700">Submit for approval</button></div><p class="text-xs text-slate-400">{{ (rec.obj.targets||[]).length }} registered target(s). One request can cover multiple citizens.</p><p v-if="rec.obj.workflow?.submittedBy" class="text-xs">Submitted by {{ rec.obj.workflow.submittedBy }} · {{ fmt(rec.obj.workflow.submittedAt) }}</p><p v-if="rec.obj.workflow?.reviewedBy" class="text-xs">{{ requestState(rec.obj) }} by {{ rec.obj.workflow.reviewedBy }} · {{ fmt(rec.obj.workflow.reviewedAt) }}</p><p v-if="rec.obj.workflow?.note" class="whitespace-pre-wrap text-amber-200">{{ rec.obj.workflow.note }}</p><div v-if="!rec.isNew&&isAdmin&&level('warrants')==='edit'&&requestState(rec.obj)==='Submitted'" class="space-y-3"><textarea v-model="reviewDraft" placeholder="Review comment (required for rejection)" rows="3" class="inp"></textarea><div class="flex gap-3"><button @click="transitionRequest('Approved')" :disabled="busy" class="btn !bg-emerald-700">Approve</button><button @click="transitionRequest('Rejected')" :disabled="busy" class="btn !bg-red-800">Reject</button></div></div><p v-if="['Submitted','Approved'].includes(requestState(rec.obj))" class="text-xs text-slate-400">This request is locked for editing.</p></section>
       <section v-if="historyOpen&&user" class="lg:col-span-2 hud p-5 space-y-3"><h4 class="text-white font-bold">Change history · latest 50 entries</h4><p v-if="historyBusy">Loading…</p><p v-if="historyError" class="text-red-400">{{ historyError }}</p><p v-if="!historyBusy&&!historyError&&!historyRows.length" class="text-slate-400">No history yet. Earlier changes cannot be reconstructed.</p><details v-for="entry in historyRows" :key="entry.id" class="bg-bg rounded-lg p-3 border border-purple-950"><summary class="cursor-pointer text-tc">{{ fmt(entry.at) }} · {{ entry.actorName }} · {{ entry.action }} · v{{ entry.version }}</summary><div v-for="(change,key) in entry.changes" :key="key" class="mt-3 border-t border-purple-950 pt-2"><p class="font-bold text-white">{{ historyField(key) }}</p><div class="grid md:grid-cols-2 gap-3 mt-2"><div><p class="text-xs text-slate-500">Before</p><p class="text-xs whitespace-pre-wrap break-words">{{ change.before }}</p></div><div><p class="text-xs text-slate-500">After</p><p class="text-xs whitespace-pre-wrap break-words">{{ change.after }}</p></div></div></div></details></section>
       <div class="space-y-6">
         <select v-if="recMode==='edit' && tplFor(rec.obj.col).length" @change="applyTpl($event.target.value);$event.target.value=''" class="inp !border-tc shadow-lg shadow-purple-900/20"><option value="">-- Load document template --</option><option v-for="t in tplFor(rec.obj.col)" :key="t.name">{{ t.name }}</option></select>
         
+        <div v-if="rec.obj.col==='citizens'" class="flex items-center gap-4"><img :src="citizenPhoto(rec.obj)" @error="imageFallback" class="w-24 h-28 object-cover rounded-xl border border-purple-700"><p class="text-xs text-slate-400">Set Profile photo URL below. If empty, the first gallery image is used.</p></div>
         <p v-if="rec.obj.col==='documents'" class="text-sm text-amber-300">Visible to Public: Yes publishes this document and its attachments to visitors. No limits it to authorized detectives.</p>
         <div v-for="f in cfg.collections[rec.obj.col].fields" :key="f.k" class="space-y-1.5" :class="recMode==='preview' && (f.t==='a' || f.t==='c') ? 'bg-panel p-4 rounded-xl border border-purple-950/50' : ''">
           <label class="text-slate-500 text-[11px] uppercase tracking-wider font-bold">{{ f.l }}</label>
@@ -505,13 +503,18 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
              <option v-for="a in accounts" :key="a.id" :value="a.name">{{ a.name }}</option>
           </select>
           
-          <div v-else-if="f.t==='c'" class="space-y-2 max-h-64 overflow-y-auto p-3 border border-purple-950 rounded-xl">
+          <div v-else-if="f.t==='c'||(rec.obj.col==='warrants'&&f.k==='targets')" class="space-y-2 max-h-64 overflow-y-auto p-3 border border-purple-950 rounded-xl">
             <p class="text-xs text-slate-400">Select one or more citizens. Selected: {{ (rec.obj[f.k]||[]).length }}</p>
-            <label v-for="cz in itemsOf('citizens')" :key="cz.id" class="flex gap-3 items-center py-1">
-              <input type="checkbox" v-model="rec.obj[f.k]" :value="cz.id" :disabled="recMode!=='edit'||!canEditRec" class="accent-purple-500">
-              <span>{{ cz.fullName }} ({{ cz.citizenId }})</span>
+            <input v-model="citizenSearch" placeholder="Find citizen by name or Citizen ID…" class="inp" :disabled="recMode!=='edit'||!canEditRec">
+            <p v-if="level('citizens')==='none'" class="text-amber-300 text-xs">Your rank needs Citizen Registry view permission to select registered citizens.</p>
+            <p v-else-if="recordLoads.citizens==='loading'" class="text-tc text-xs">Loading Citizen Registry…</p>
+            <p v-else-if="recordLoads.citizens==='error'" class="text-red-400 text-xs">Citizen Registry could not load. Check Firestore Rules and permissions.</p>
+            <label v-for="cz in pickerCitizens" :key="cz.id" class="flex gap-3 items-center py-1">
+              <input type="checkbox" :checked="Array.isArray(rec.obj[f.k])&&rec.obj[f.k].includes(cz.id)" @change="toggleCitizen(rec.obj,f.k,cz.id,$event.target.checked)" :disabled="recMode!=='edit'||!canEditRec" class="accent-purple-500">
+              <img :src="citizenPhoto(cz)" @error="imageFallback" class="w-8 h-10 object-cover rounded border border-purple-950"><span>{{ cz.fullName }} ({{ cz.citizenId }})</span>
             </label>
-            <p v-if="!itemsOf('citizens').length" class="text-slate-500">No accessible citizens. Use Other targets for unregistered persons.</p>
+            <p v-if="itemsOf('citizens').length&&!pickerCitizens.length" class="text-slate-400 text-xs">No matching citizens.</p>
+            <p v-if="!itemsOf('citizens').length&&recordLoads.citizens!=='loading'" class="text-slate-500">No accessible citizens. Use Other targets for unregistered persons.</p>
           </div>
 
           <select v-else-if="rec.obj.col==='cases'&&f.k==='status'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="inp"><option v-if="rec.obj[f.k]&&!CASE_STATUSES.includes(rec.obj[f.k])" :value="rec.obj[f.k]">{{ rec.obj[f.k] }} (legacy)</option><option value="">-- Select status --</option><option v-for="status in CASE_STATUSES" :key="status">{{ status }}</option></select>
@@ -536,7 +539,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
     </div>
     
     <div v-if="recMode==='edit'" class="px-6 py-4 border-t border-purple-950 flex items-center gap-4 shrink-0 bg-panel rounded-b-xl"><p v-if="recErr" class="text-red-400 font-bold bg-red-900/20 px-4 py-2 rounded-lg border border-red-900/40">{{ recErr }}</p>
-      <span class="flex-1"></span><button v-if="rec.isNew" @click="saveNew" :disabled="busy" class="btn text-base py-3 px-8 shadow-[0_0_15px_rgba(147,51,234,0.4)]">Create Document</button></div>
+      <span class="flex-1"></span><button v-if="rec.isNew" @click="saveNew" :disabled="busy" class="btn text-base py-3 px-8 shadow-[0_0_15px_rgba(147,51,234,0.4)]">{{ rec.obj.col==='warrants'?'Create Draft Warrant':'Create Document' }}</button></div>
   </div>
 </div>
 
@@ -613,10 +616,10 @@ const defCfg=()=>({
     reports:[{name:'Incident Report',body:'DATE/TIME: ...\nLOCATION: ...\nNARRATIVE: ...'}]
   },
   collections:{
-    citizens:COL('Citizen Registry','fa-solid fa-address-card',[F('fullName','Full Name'),F('citizenId','Citizen ID'),F('phone','Phone'),F('gang','Gang / Affiliation'),F('notes','Notes','a')]),
+    citizens:COL('Citizen Registry','fa-solid fa-address-card',[F('fullName','Full Name'),F('citizenId','Citizen ID'),F('phone','Phone'),F('gang','Gang / Affiliation'),F('notes','Notes','a'),F('profilePhoto','Profile photo URL')]),
     weapons:COL('Weapons Registry','fa-solid fa-gun text-amber-400',[F('serial','Serial Number'),F('model','Model'),F('owner','Owner (full name)'),F('ownerCid','Owner Citizen ID (optional)'),F('stolen','Flagged stolen','b')]),
     vehicles:COL('Vehicle Registry','fa-solid fa-car',[F('plate','License Plate'),F('model','Model'),F('color','Color'),F('owner','Owner (full name)'),F('ownerCid','Owner Citizen ID (optional)')]),
-    warrants:COL('Requests','fa-solid fa-triangle-exclamation text-red-400',[F('targets','Citizen Registry — select one or more','c'),F('otherTargets','Other targets / unidentified persons','a'),F('reason','Probable cause & details','a')]),
+    warrants:COL('Draft Warrants','fa-solid fa-triangle-exclamation text-red-400',[F('targets','Citizen Registry — select one or more','c'),F('otherTargets','Other targets / unidentified persons','a'),F('reason','Probable cause & details','a')]),
     cases:COL('Case Files','fa-solid fa-folder-open',[F('fileNo','File Number'),F('title','Case Title'),F('status','Status'),F('lead','Lead Detective','u'),F('summary','Investigation details','a')]),
     organizations:COL('Organisations','fa-solid fa-sitemap text-amber-400',[F('fileNo','File Number'),F('name','Organisation Name'),F('lead','Lead Detective','u'),F('notes','Notes & structure','a')]),
     interrogations:COL('Interrogations','fa-solid fa-comments text-cyan-400',[F('fileNo','Case/File Number'),F('suspect','Suspect Name'),F('date','Date'),F('transcript','Transcript','a')]),
@@ -626,6 +629,19 @@ const defCfg=()=>({
   }
 });
 
+const DEFAULT_AVATAR='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="200" viewBox="0 0 160 200"><rect width="160" height="200" fill="#140c1f"/><circle cx="80" cy="70" r="30" fill="#a855f7"/><path d="M25 185v-25a55 55 0 01110 0v25" fill="#a855f7"/></svg>');
+const normalizeConfig=data=>{
+  const defaults=defCfg(),out={perms:data.perms||{},templates:data.templates||defaults.templates,collections:{...defaults.collections,...(data.collections||{})}};
+  const warrant=out.collections.warrants;warrant.label='Draft Warrants';
+  const existing=Array.isArray(warrant.fields)?warrant.fields:[];
+  const required=[F('targets','Citizen Registry — select one or more','c'),F('reason','Probable cause & details','a'),F('otherTargets','Other targets / unidentified persons','a')];
+  warrant.fields=[...required,...existing.filter(f=>!['targets','reason','otherTargets','citizenName','citizenId'].includes(f.k))];
+  for(const key of ['cases','organizations','interrogations'])if(!out.collections[key].fields.some(f=>f.k==='fileNo'))out.collections[key].fields.unshift(F('fileNo','File Number'));
+  if(!out.collections.cases.fields.some(f=>f.k==='status'))out.collections.cases.fields.push(F('status','Status'));
+  if(!out.collections.documents.fields.some(f=>f.k==='isPublic'))out.collections.documents.fields.push(F('isPublic','Visible to Public','b'));
+  if(!out.collections.citizens.fields.some(f=>f.k==='profilePhoto'))out.collections.citizens.fields.push(F('profilePhoto','Profile photo URL'));
+  return out;
+};
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=()=>rej(new Error('load'));i.src=src;});
 const toEmail=u=>u.trim().toLowerCase()+'@upd.internal';
 const toBlob=f=>new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);c.toBlob(b=>res(b),'image/jpeg',.82);};im.onerror=()=>res(null);im.src=fr.result;};fr.onerror=()=>res(null);fr.readAsDataURL(f);});
@@ -673,7 +689,7 @@ const app=createApp({
     const nav=t=>'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-title tracking-wider transition '+(tab.value===t?'bg-purple-600/30 text-white border border-purple-500/50 font-bold shadow-lg shadow-purple-900/10':'text-slate-400 hover:bg-purple-900/30 hover:text-slate-200');
     const subFields=c=>c.fields.slice(1).filter(f=>f.t!=='a'&&f.t!=='c').slice(0,2);
     const rowsFor=v=>Math.min(40,Math.max(8,String(v||'').split('\n').length+2));
-    const recTitle=r=>{const c=cfg.collections[r.col];if(r.col==='warrants')return (r.targets||[]).map(id=>recs[id]?.fullName||id).concat(r.otherTargets?[r.otherTargets]:[]).join(', ')||'Request';return(c&&c.fields.length&&r[c.fields[0].k])||'(untitled)';};
+    const recTitle=r=>{const c=cfg.collections[r.col];if(r.col==='warrants')return (r.targets||[]).map(id=>recs[id]?.fullName||id).concat(r.otherTargets?[r.otherTargets]:[]).join(', ')||r.citizenName||r.citizenId||'Draft warrant';return(c&&c.fields.length&&r[c.fields[0].k])||'(untitled)';};
     const shown=(it,f)=>{const v=it[f.k];if(typeof v==='boolean')return v?'Yes':'No';
       if(f.t==='c'){const arr=Array.isArray(v)?v:[];return arr.map(id=>recs[id]?recs[id].fullName:id).join(', ')||'-';}
       return v||'-';};
@@ -686,7 +702,7 @@ const app=createApp({
     const tplCols=computed(()=>Object.entries(cfg.collections).filter(([k,c])=>c.fields.some(f=>f.t==='a')));
     const tplFor=k=>cfg.templates[k]||[];
     const fmt=t=>t?(typeof t.toDate==='function'?t.toDate():new Date(t)).toLocaleString('en-GB',{timeZone:'Europe/Athens'}):'';
-    const agentNav=computed(()=>{const ord=['warrants','citizens','weapons','vehicles','matcher','cases','organizations','interrogations','evidence','reports'];
+    const agentNav=computed(()=>{const ord=['citizens','vehicles','weapons','cases','organizations','interrogations','warrants','evidence','reports','matcher'];
       const rest=Object.keys(cfg.collections).filter(k=>!ord.includes(k)&&k!=='documents'&&k!=='directives');
       return [...ord,...rest].filter(k=>k==='matcher'||k==='evidence'||cfg.collections[k]).filter(k=>level(k)!=='none').map(k=>
         k==='matcher'?{id:k,label:'Universal Matcher',icon:'fa-solid fa-wand-magic-sparkles text-purple-400'}:
@@ -719,9 +735,10 @@ const app=createApp({
     const listenRecords=()=>{
       unsubs.forEach(f=>f());unsubs=[];Object.keys(recs).forEach(k=>delete recs[k]);
       const base=fdb.collection('records');
-      const queries=user.value ? Object.keys(cfg.collections).filter(k=>level(k)!=='none').map(k=>base.where('col','==',k))
-        : [base.where('col','==','directives'),base.where('col','==','documents').where('isPublic','==',true)];
-      queries.forEach(qy=>unsubs.push(qy.onSnapshot(snap=>{snap.docChanges().forEach(ch=>{
+      Object.keys(recordLoads).forEach(k=>delete recordLoads[k]);if(user.value&&level('citizens')!=='none')recordLoads.citizens='loading';
+      const queries=user.value ? Object.keys(cfg.collections).filter(k=>level(k)!=='none').map(k=>({key:k,query:base.where('col','==',k)}))
+        : [{key:'directives',query:base.where('col','==','directives')},{key:'documents',query:base.where('col','==','documents').where('isPublic','==',true)}];
+      queries.forEach(({key,query})=>unsubs.push(query.onSnapshot(snap=>{recordLoads[key]='ready';snap.docChanges().forEach(ch=>{
         const id=ch.doc.id;
         if(ch.type==='removed'){delete recs[id];if(rec.value?.obj.id===id&&!rec.value.isNew)rec.value=null;return;}
         const incoming={...ch.doc.data(),id};
@@ -730,20 +747,14 @@ const app=createApp({
           rec.value.obj=incoming;
         }
         recs[id]=incoming;
-      });},fail)));
+      });},e=>{recordLoads[key]='error';fail(e);})));
     };
     watch(()=>JSON.stringify([user.value?.rank,Object.keys(cfg.collections),cfg.perms]),()=>{if(rec.value&&level(rec.value.obj.col)==='none'){clearTimeout(watch.r);rec.value=null;}if(cfg.collections[tab.value]&&level(tab.value)==='none')go('dashboard');if(!isAdmin.value&&adminAccountsUnsub){adminAccountsUnsub();adminAccountsUnsub=null;}mResults.value=[];comparison.value=null;if(historyUnsub){historyUnsub();historyUnsub=null;}historyOpen.value=false;historyRows.value=[];trashUnsubs.forEach(f=>f());trashUnsubs=[];trashRows.value=[];if(configured)listenRecords();if(tab.value==='trash')loadTrash();});
 
     const startPublic=()=>{
       fdb.collection('config').doc('main').onSnapshot(s=>{
-        if(s.exists){const d=s.data(),b=defCfg();remote=true;
-          Object.keys(cfg).forEach(k=>delete cfg[k]);
-          Object.assign(cfg,{perms:d.perms||{},templates:d.templates||b.templates,collections:{...b.collections,...(d.collections||{})}});
-          cfg.collections.warrants.label='Requests';
-          if(!cfg.collections.warrants.fields.some(f=>f.k==='otherTargets'))cfg.collections.warrants.fields.push(F('otherTargets','Other targets / unidentified persons','a'));
-          for(const key of ['cases','organizations','interrogations'])if(!cfg.collections[key].fields.some(f=>f.k==='fileNo'))cfg.collections[key].fields.unshift(F('fileNo','File Number'));
-          if(!cfg.collections.cases.fields.some(f=>f.k==='status'))cfg.collections.cases.fields.push(F('status','Status'));
-          if(!cfg.collections.documents.fields.some(f=>f.k==='isPublic'))cfg.collections.documents.fields.push(F('isPublic','Visible to Public','b'));
+        if(s.exists){const d=s.data();remote=true;
+          Object.keys(cfg).forEach(k=>delete cfg[k]);Object.assign(cfg,normalizeConfig(d));
           lastCfg=JSON.stringify(cfg);nextTick(()=>remote=false);
         }else if(isAdmin.value)fdb.collection('config').doc('main').set(clean(cfg)).catch(fail);
       }, e => console.warn('Config stream:', e.message));
@@ -764,9 +775,14 @@ const app=createApp({
       },fail);
     };
 
+    const citizenSearch=ref(''),recordLoads=reactive({});
+    const citizenPhoto=r=>{const url=String(r.profilePhoto||r.photo||r.gallery?.[0]?.url||'').trim();return /^(https?:\/\/|images\/)/i.test(url)?url:DEFAULT_AVATAR;};
+    const imageFallback=e=>{e.target.onerror=null;e.target.src=DEFAULT_AVATAR;};
+    const pickerCitizens=computed(()=>itemsOf('citizens').filter(c=>!citizenSearch.value||norm([c.fullName,c.citizenId].join(' ')).includes(norm(citizenSearch.value))));
+    const toggleCitizen=(o,key,id,selected)=>{const current=Array.isArray(o[key])?o[key]:[];o[key]=selected?[...new Set([...current,id])]:current.filter(x=>x!==id);};
     const canEditRec=computed(()=>!!rec.value&&level(rec.value.obj.col)==='edit'&&(rec.value.obj.col!=='warrants'||['Draft','Rejected'].includes(requestState(rec.value.obj))));
-    const openRec=r=>{if(!r||level(r.col)==='none')return;if(historyUnsub){historyUnsub();historyUnsub=null;}historyOpen.value=false;historyRows.value=[];historyError.value='';reviewDraft.value='';recErr.value='';lkCol.value=lkId.value='';rec.value={obj:r,isNew:false};recMode.value='preview';};
-    const newRec=key=>{const o=reactive({id:uid(),col:key,ts:Date.now(),by:user.value?user.value.name:'',gallery:[],files:[],links:[]});cfg.collections[key].fields.forEach(f=>o[f.k]=f.t==='b'?false:(f.t==='c'?[]:''));if(key==='cases')o.status='Open';if(key==='warrants')o.workflow={status:'Draft'};historyOpen.value=false;historyRows.value=[];reviewDraft.value='';recErr.value='';rec.value={obj:o,isNew:true};recMode.value='edit';};
+    const openRec=r=>{if(!r||level(r.col)==='none')return;if(historyUnsub){historyUnsub();historyUnsub=null;}historyOpen.value=false;historyRows.value=[];historyError.value='';reviewDraft.value='';recErr.value='';lkCol.value=lkId.value='';rec.value={obj:r,isNew:false};recMode.value='preview';citizenSearch.value='';if(r.col==='warrants'){if(!Array.isArray(r.targets))r.targets=r.targets?[String(r.targets)]:[];if(!r.targets.length&&!r.otherTargets&&(r.citizenName||r.citizenId))r.otherTargets=[r.citizenName,r.citizenId].filter(Boolean).join(' · ');}};
+    const newRec=key=>{citizenSearch.value='';if(key==='warrants')Object.assign(cfg,normalizeConfig(clean(cfg)));const o=reactive({id:uid(),col:key,ts:Date.now(),by:user.value?user.value.name:'',gallery:[],files:[],links:[]});cfg.collections[key].fields.forEach(f=>o[f.k]=f.t==='b'?false:(f.t==='c'?[]:''));if(key==='cases')o.status='Open';if(key==='warrants'){o.workflow={status:'Draft'};o.targets=[];}historyOpen.value=false;historyRows.value=[];reviewDraft.value='';recErr.value='';rec.value={obj:o,isNew:true};recMode.value='edit';};
     const closeRec=async()=>{const current=rec.value;if(!current)return;clearTimeout(watch.r);if(!current.isNew&&recMode.value==='edit'&&canEditRec.value){try{await saveRaw(current.obj);}catch(e){recErr.value=e.message;fail(e);if(!confirm('Save failed. Close without saving these changes?'))return;}}if(rec.value===current){rec.value=null;if(historyUnsub){historyUnsub();historyUnsub=null;}historyOpen.value=false;historyRows.value=[];}};
     const auditValue=v=>{if(v===undefined)return '(empty)';const text=typeof v==='string'?v:JSON.stringify(v);return text.length>1800?text.slice(0,1800)+'…':text;};
     const recordChanges=(before,after)=>{const out={};for(const key of new Set([...Object.keys(before),...Object.keys(after)])){if(['version','updatedAt','auditId'].includes(key))continue;if(JSON.stringify(before[key])!==JSON.stringify(after[key]))out[key]={before:auditValue(before[key]),after:auditValue(after[key])};}return out;};
@@ -807,7 +823,7 @@ const app=createApp({
     };
     const restoreTrash=async row=>{if(level(row.col)!=='edit'||busy.value)return;busy.value=true;try{
       const ref=fdb.collection('records').doc(row.id),tr=fdb.collection('trash').doc(row.id),auditId=uid();
-      await fdb.runTransaction(async tx=>{const [existing,trash]=await Promise.all([tx.get(ref),tx.get(tr)]);if(existing.exists)throw Error('An active record already uses this ID.');if(!trash.exists)throw Error('Record was already restored or purged.');if(trash.data().purging)throw Error('Daily cleanup is processing this record. Restore is no longer available.');const data=trash.data().record,v=(data.version||0)+1;tx.set(ref,{...data,version:v,auditId,updatedAt:Date.now()});tx.delete(tr);tx.set(ref.collection('history').doc(auditId),{actorUid:user.value.id,actorName:user.value.name,at:firebase.firestore.FieldValue.serverTimestamp(),version:v,action:'restored',changes:{lifecycle:{before:'Trash',after:'Restored'}}});});
+      await fdb.runTransaction(async tx=>{const [existing,trash]=await Promise.all([tx.get(ref),tx.get(tr)]);if(existing.exists)throw Error('An active record already uses this ID.');if(!trash.exists)throw Error('Record was already restored or purged.');if(trash.data().purging)throw Error('An administrator is permanently removing this record. Restore is no longer available.');const data=trash.data().record,v=(data.version||0)+1;tx.set(ref,{...data,version:v,auditId,updatedAt:Date.now()});tx.delete(tr);tx.set(ref.collection('history').doc(auditId),{actorUid:user.value.id,actorName:user.value.name,at:firebase.firestore.FieldValue.serverTimestamp(),version:v,action:'restored',changes:{lifecycle:{before:'Trash',after:'Restored'}}});});
     }catch(e){fail(e);}finally{busy.value=false;}};
     const saveQueues=new Map();
     const saveRaw=o=>{const prior=saveQueues.get(o.id)||Promise.resolve();const task=prior.catch(()=>{}).then(()=>writeRecord(o));saveQueues.set(o.id,task);task.finally(()=>{if(saveQueues.get(o.id)===task)saveQueues.delete(o.id);}).catch(()=>{});return task;};
@@ -832,11 +848,11 @@ const app=createApp({
       const o=rec.value.obj,c=cfg.collections[o.col];
       if(o.col==='warrants' ? (!(o.targets||[]).length&&!String(o.otherTargets||'').trim()) : !String(o[c.fields[0].k]||'').trim()){recErr.value=o.col==='warrants'?'Select at least one citizen or enter other targets.':'"'+c.fields[0].l+'" is required.';return;}
       if(o.col==='warrants'&&user.value)Object.assign(o,{issuedBy:user.value.name,issuedRank:user.value.rank,issuedBadge:user.value.badge});
-      busy.value=true;try{await saveRaw(o);recs[o.id]=o;if(rec.value?.obj===o){rec.value={obj:recs[o.id],isNew:false};recMode.value='preview';}}catch(e){recErr.value=e.message;fail(e);}finally{busy.value=false;}
+      busy.value=true;try{await saveRaw(o);recs[o.id]=o;if(rec.value?.obj===o){rec.value={obj:recs[o.id],isNew:false};recMode.value='preview';}}catch(e){recErr.value=e.code==='permission-denied'?'Saving was denied. Publish the current firestore.rules and check your rank permissions. Your draft is still here.':e.message;fail(e);}finally{busy.value=false;}
     };
     const editableJSON=o=>JSON.stringify(Object.fromEntries(Object.entries(o).filter(([k])=>!['version','updatedAt','auditId'].includes(k))));
     watch(()=>rec.value&&!rec.value.isNew?editableJSON(rec.value.obj):null,(s,old)=>{if(s===null||old===null||!canEditRec.value||recMode.value!=='edit')return;clearTimeout(watch.r);const o=rec.value.obj;saveStates[o.id]={phase:'pending'};watch.r=setTimeout(()=>saveRaw(o).catch(e=>{recErr.value=e.message;fail(e);}),800);});
-    const delRec=async r=>{if(level(r.col)!=='edit'||!confirm('Move this record to Trash? Trash is emptied daily.'))return;clearTimeout(watch.r);try{
+    const delRec=async r=>{if(level(r.col)!=='edit'||!confirm('Move this record to Trash? It will remain available for restoration.'))return;clearTimeout(watch.r);try{
       if(saveQueues.has(r.id))await saveQueues.get(r.id);
       const ref=fdb.collection('records').doc(r.id),tr=fdb.collection('trash').doc(r.id),auditId=uid();
       await fdb.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)throw Error('Record no longer exists.');const data=snap.data();tx.set(tr,{col:data.col,record:data,deletedAt:firebase.firestore.FieldValue.serverTimestamp(),deletedBy:user.value.name,deletedUid:user.value.id,auditId});tx.set(ref.collection('history').doc(auditId),{actorUid:user.value.id,actorName:user.value.name,at:firebase.firestore.FieldValue.serverTimestamp(),version:data.version||0,action:'trashed',changes:{lifecycle:{before:'Active',after:'Trash'}}});tx.delete(ref);});
@@ -864,7 +880,7 @@ const app=createApp({
     const printRecord=o=>{
       const c=cfg.collections[o.col];
       const rows=c.fields.map(f=>[f.l, f.t==='b'?(o[f.k]?'Yes':'No') : (f.t==='c'?(Array.isArray(o[f.k])?o[f.k].map(id=>recs[id]?recs[id].fullName:id).join(', '):'-') : (o[f.k]||'-')), f.t==='a']);
-      if(o.col==='warrants'){rows.push(['Request status',requestState(o),false]);if(o.workflow?.submittedBy)rows.push(['Submitted by',o.workflow.submittedBy+' · '+fmt(o.workflow.submittedAt),false]);if(o.workflow?.reviewedBy)rows.push(['Reviewed by',o.workflow.reviewedBy+' · '+fmt(o.workflow.reviewedAt),false]);if(o.workflow?.note)rows.push(['Review comment',o.workflow.note,true]);}
+      if(o.col==='warrants'){if(!(o.targets||[]).length&&(o.citizenName||o.citizenId))rows.push(['Legacy target',[o.citizenName,o.citizenId].filter(Boolean).join(' · '),false]);rows.push(['Request status',requestState(o),false]);if(o.workflow?.submittedBy)rows.push(['Submitted by',o.workflow.submittedBy+' · '+fmt(o.workflow.submittedAt),false]);if(o.workflow?.reviewedBy)rows.push(['Reviewed by',o.workflow.reviewedBy+' · '+fmt(o.workflow.reviewedAt),false]);if(o.workflow?.note)rows.push(['Review comment',o.workflow.note,true]);}
       const now=new Date();const ts=now.getDate().toString().padStart(2,'0')+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear()+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
       let sigs=[];
       if(o.issuedBy){
@@ -874,11 +890,8 @@ const app=createApp({
          sigs=[{name:user.value.name,title:user.value.rank}];
          if(!isTop(user.value.rank))sigs.push({name:'',title:'Director / Assistant Director'});
       }else{sigs=[{name:'',title:'Authorized U.P.D. Agent'}];}
-      pdoc.value={title:o.col==='warrants'?'REQUEST':c.label+': '+recTitle(o),kind:o.col==='warrants'?'Official Request':'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sigs};
+      pdoc.value={title:o.col==='warrants'?'DRAFT WARRANT':c.label+': '+recTitle(o),kind:o.col==='warrants'?'Draft Warrant / Approval Request':'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sigs};
     };
-    const printList=()=>{const c=col.value,f=c.fields.filter(f=>f.t!=='a'&&f.t!=='c').slice(0,5);pdoc.value={title:c.label+' — list',head:f.map(x=>x.l),table:listItems.value.map(r=>f.map(x=>shown(r,x)))};};
-    const printPenal=()=>{pdoc.value={title:'San Andreas Penal Code Schedule',head:['Category','Charge','Fine','Jail (months)'],table:penalList.value.map(p=>[p.category,p.title,'$'+Number(p.fine||0).toLocaleString(),p.jail||0])};};
-    const printEvidence=()=>{pdoc.value={title:'Photographic Evidence Log',photos:evidenceList.value.slice(0,60).map(e=>({...e.p,title:(e.p.title||'Untitled')+' ['+e.name+']'}))};};
 
     const savePenal=p=>fdb.collection('penal').doc(p.id).set(clean({category:p.category||'General',title:p.title||'',fine:Number(p.fine)||0,jail:Number(p.jail)||0})).catch(fail);
     const addPenal=()=>fdb.collection('penal').add({category:'General',title:'New charge',fine:0,jail:0}).catch(fail);
@@ -936,10 +949,10 @@ const app=createApp({
     watch(tab,t=>{if(cfg.collections[t]&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
-    return{CASE_STATUSES,REQUEST_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,reviewDraft,requestState,transitionRequest,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+    return{DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,REQUEST_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,reviewDraft,requestState,transitionRequest,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
-      zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,printList,printPenal,printEvidence,savePenal,addPenal,delPenal,importPenal,
+      zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,
       addTpl,delTpl,addRegistry,delRegistry,addField,delField,moveField,saveLoc,addLoc,delLoc,fixMap,flyTo,mFile,mLink,runMatch,indexAll};
   }
 });
