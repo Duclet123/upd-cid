@@ -141,3 +141,13 @@ New and existing charges stay in a separate draft until Save charge is pressed.
 Switching/closing prompts before discarding edits; Escape also closes the editor.
 Save failures preserve the draft. Concurrent changes/deletions are detected before
 saving or deleting. Existing provenance fields are retained when saving edits.
+
+CITIZEN PROFILE LAYOUT
+Citizen profiles use full-width identity and timeline sections, with contact
+details/notes on the left and attachments/files/gallery on the right. Related
+registries appear in a separate grid below. Phone and affiliation are shown
+once in the details form, rather than repeated in the profile banner.
+The expandable timeline uses horizontal event cards, scroll buttons and keyboard
+scrolling. Events remain newest-first and can load 30 more at a time.
+Legacy duplicate field keys are rendered and printed once; schema definitions,
+custom fields and citizen data are retained.
