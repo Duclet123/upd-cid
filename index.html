@@ -40,7 +40,9 @@ select[multiple].inp:disabled{height:auto;overflow:hidden;}
 .sw{position:relative;display:inline-block;width:34px;height:18px;margin-right:6px}.sw input{opacity:0;width:0;height:0}
 .sl{position:absolute;cursor:pointer;inset:0;background:#333;transition:.3s;border-radius:20px}.sl:before{position:absolute;content:"";height:12px;width:12px;left:3px;bottom:3px;background:#fff;transition:.3s;border-radius:50%}
 input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translateX(16px)}
+.rich-text{overflow-wrap:anywhere;line-height:1.7}.rich-text p{margin:.35rem 0;white-space:pre-wrap}.rich-text strong{font-weight:700}.rich-text em{font-style:italic}.rich-text u{text-decoration:underline}.rich-text h3{font-size:1.15em;font-weight:700;margin:.8rem 0 .35rem}.rich-text ul{list-style:disc;padding-left:1.5rem;margin:.5rem 0}.rich-text ol{list-style:decimal;padding-left:1.5rem;margin:.5rem 0}.rich-text blockquote{border-left:3px solid currentColor;padding-left:1rem;margin:.7rem 0;opacity:.85}.rich-text a{text-decoration:underline}.format-btn{padding:.3rem .6rem;border:1px solid #3b2459;border-radius:.4rem;color:#e9d5ff;min-width:2rem}.format-btn:hover{background:#3b2459}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#2b1a40;border-radius:9px}
+@page{size:A4;margin:12mm 12mm 16mm;@top-left{content:none}@top-center{content:none}@top-right{content:none}@bottom-left{content:none}@bottom-center{content:counter(page) " / " counter(pages);font-family:Arial,sans-serif;font-size:9pt;color:#555}@bottom-right{content:none}}
 @media print{#app,.noprint{display:none!important}body{background:#fff!important;font-size:12px!important;}#pdoc{position:static!important;background:#fff!important;padding:0!important;overflow:visible!important}.sheet{max-width:none!important;padding:0!important}}
 </style>
 </head>
@@ -143,12 +145,12 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                 <div class="flex justify-between items-start gap-4">
                     <h4 class="text-lg font-bold text-white font-title">{{ d.title }}</h4>
                     <div class="flex gap-2 shrink-0">
-                        <button @click="printRecord(d)" class="btn !py-1.5 !px-3 !bg-slate-700"><i class="fa-solid fa-print"></i></button>
+
                         <button v-if="level('directives')==='edit'" @click="openRec(d)" class="btn !py-1.5 !px-3">View/Edit</button>
                         <button v-if="level('directives')==='edit'" @click="delRec(d)" class="del !py-1.5 !px-3">Delete</button>
                     </div>
                 </div>
-                <p class="text-sm font-mono text-purple-200 whitespace-pre-line leading-relaxed">{{ d.body }}</p>
+                <div class="rich-text text-sm text-purple-200" v-html="renderText(d.body)"></div>
                 <p class="text-[11px] font-mono text-purple-400">{{ d.by }} · {{ fmt(d.ts) }}</p>
                 </div>
                 <p v-if="!itemsOf('directives').length" class="text-center text-slate-500 font-mono text-sm py-6">No directives posted.</p>
@@ -218,7 +220,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                 </div>
               </div>
               <div class="flex justify-between pt-3 border-t border-purple-950 mt-2">
-                <button @click="printRecord(it)" class="btn !py-1.5 !bg-slate-800">Print PDF</button>
+                <button v-if="it.col!=='directives'" @click="printRecord(it)" class="btn !py-1.5 !bg-slate-800">Print PDF</button>
                 <button v-if="level(tab)==='edit'" @click="delRec(it)" class="del !py-1.5">Delete</button>
               </div>
             </div>
@@ -366,10 +368,10 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           <div v-if="atab==='templates'" class="hud p-6 space-y-4 font-mono text-sm">
             <div class="grid md:grid-cols-3 gap-4"><select v-model="nt.key" class="inp"><option v-for="c in tplCols" :key="c[0]" :value="c[0]">{{ c[1].label }}</option></select>
               <input v-model="nt.name" placeholder="Template name" class="inp"><button @click="addTpl" class="btn !bg-emerald-600">Save New Template</button></div>
-            <textarea v-model="nt.body" rows="6" placeholder="Template body..." class="inp"></textarea>
+            <text-editor v-model="nt.body" :rows="6" placeholder="Template body..."></text-editor>
             <div v-for="c in tplCols" :key="c[0]" class="pt-6 border-t border-purple-950 space-y-3"><h4 class="text-tc font-bold uppercase text-base">{{ c[1].label }}</h4>
               <div v-for="(t,i) in (cfg.templates[c[0]]||[])" :key="i" class="p-4 bg-bg border border-purple-950 rounded-xl space-y-3">
-                <div class="flex gap-3"><input v-model="t.name" class="inp"><button @click="delTpl(c[0],i)" class="del">Delete</button></div><textarea v-model="t.body" :rows="rowsFor(t.body)" class="inp"></textarea></div></div>
+                <div class="flex gap-3"><input v-model="t.name" class="inp"><button @click="delTpl(c[0],i)" class="del">Delete</button></div><text-editor v-model="t.body" :rows="rowsFor(t.body)"></text-editor></div></div>
           </div>
 
           <!-- Registries -->
@@ -478,14 +480,14 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
         <span v-if="user&&!rec.isNew" class="text-xs self-center" role="status" :class="saveStates[rec.obj.id]?.phase==='error'?'text-red-400':'text-emerald-300'">{{ saveLabel(rec.obj) }}</span>
         <button v-if="!rec.isNew&&user" @click="toggleHistory" class="btn !bg-slate-700" title="Change history"><i class="fa-solid fa-clock-rotate-left"></i></button>
         <button v-if="!rec.isNew&&canEditRec" @click="saveTarget(rec.obj)" class="btn !bg-emerald-700" :disabled="saveStates[rec.obj.id]?.phase==='saving'">Save</button>
-        <button v-if="!rec.isNew" @click="printRecord(rec.obj)" class="btn !bg-slate-700"><i class="fa-solid fa-print"></i></button>
+        <button v-if="!rec.isNew&&rec.obj.col!=='directives'" @click="printRecord(rec.obj)" class="btn !bg-slate-700"><i class="fa-solid fa-print"></i></button>
         <button @click="closeRec" class="btn !bg-red-900 !text-white text-lg">✕</button>
       </div>
     </div>
     
     <div class="flex-1 overflow-y-auto p-6 md:p-8 grid lg:grid-cols-2 gap-10 content-start bg-bg">
       <section v-if="rec.obj.col==='citizens'" class="lg:col-span-2 rounded-2xl border border-purple-800/60 bg-gradient-to-r from-purple-950/60 to-panel p-5 md:p-7 flex flex-col sm:flex-row gap-6 items-start"><img :src="citizenPhoto(rec.obj)" @error="imageFallback" :alt="rec.obj.fullName||'Citizen profile'" class="w-28 h-36 object-cover rounded-xl border-2 border-purple-500 shadow-lg shrink-0"><div class="flex-1 space-y-3"><p class="text-xs font-mono text-tc uppercase tracking-widest">Citizen Registry · Individual profile</p><h3 class="text-2xl md:text-3xl font-title text-white font-bold">{{ rec.obj.fullName||'New citizen' }}</h3><div class="flex flex-wrap gap-3 text-sm"><span class="bg-bg border border-purple-800 rounded-lg px-3 py-2 font-mono text-tc">ID: {{ rec.obj.citizenId||'Not set' }}</span><span class="bg-bg border border-purple-950 rounded-lg px-3 py-2 text-slate-300"><i class="fa-solid fa-phone mr-2"></i>{{ rec.obj.phone||'No phone recorded' }}</span><span class="bg-bg border border-purple-950 rounded-lg px-3 py-2 text-slate-300">{{ rec.obj.gang||'No affiliation recorded' }}</span></div><p class="text-xs text-slate-500">{{ citizenSections.reduce((n,section)=>n+section.items.length,0) }} associated records across accessible registries</p></div></section>
-      <section v-if="rec.obj.col==='warrants'" class="lg:col-span-2 hud p-5 space-y-3"><div class="flex flex-wrap gap-3 justify-between items-center"><h4 class="text-white font-bold">DRAFT WARRANT · {{ requestState(rec.obj) }}</h4><button v-if="!rec.isNew&&canEditRec" @click="transitionRequest('Submitted')" :disabled="busy" class="btn !bg-amber-700">Submit for approval</button></div><p class="text-xs text-slate-400">{{ (rec.obj.targets||[]).length }} registered target(s). One request can cover multiple citizens.</p><p v-if="rec.obj.workflow?.submittedBy" class="text-xs">Submitted by {{ rec.obj.workflow.submittedBy }} · {{ fmt(rec.obj.workflow.submittedAt) }}</p><p v-if="rec.obj.workflow?.reviewedBy" class="text-xs">{{ requestState(rec.obj) }} by {{ rec.obj.workflow.reviewedBy }} · {{ fmt(rec.obj.workflow.reviewedAt) }}</p><p v-if="rec.obj.workflow?.note" class="whitespace-pre-wrap text-amber-200">{{ rec.obj.workflow.note }}</p><div v-if="!rec.isNew&&isAdmin&&level('warrants')==='edit'&&requestState(rec.obj)==='Submitted'" class="space-y-3"><textarea v-model="reviewDraft" placeholder="Review comment (required for rejection)" rows="3" class="inp"></textarea><div class="flex gap-3"><button @click="transitionRequest('Approved')" :disabled="busy" class="btn !bg-emerald-700">Approve</button><button @click="transitionRequest('Rejected')" :disabled="busy" class="btn !bg-red-800">Reject</button></div></div><p v-if="['Submitted','Approved'].includes(requestState(rec.obj))" class="text-xs text-slate-400">This request is locked for editing.</p></section>
+      <section v-if="rec.obj.col==='warrants'" class="lg:col-span-2 hud p-5 space-y-3"><div class="flex flex-wrap gap-3 justify-between items-center"><h4 class="text-white font-bold">DRAFT WARRANT · {{ requestState(rec.obj) }}</h4><button v-if="!rec.isNew&&canEditRec" @click="transitionRequest('Submitted')" :disabled="busy" class="btn !bg-amber-700">Submit for approval</button></div><p class="text-xs text-slate-400">{{ (rec.obj.targets||[]).length }} registered target(s). One request can cover multiple citizens.</p><p v-if="rec.obj.workflow?.submittedBy" class="text-xs">Submitted by {{ rec.obj.workflow.submittedBy }} · {{ fmt(rec.obj.workflow.submittedAt) }}</p><p v-if="rec.obj.workflow?.reviewedBy" class="text-xs">{{ requestState(rec.obj) }} by {{ rec.obj.workflow.reviewedBy }} · {{ fmt(rec.obj.workflow.reviewedAt) }}</p><div v-if="rec.obj.workflow?.note" class="rich-text text-amber-200" v-html="renderText(rec.obj.workflow.note)"></div><div v-if="!rec.isNew&&isAdmin&&level('warrants')==='edit'&&requestState(rec.obj)==='Submitted'" class="space-y-3"><text-editor v-model="reviewDraft" placeholder="Review comment (required for rejection)" :rows="3"></text-editor><div class="flex gap-3"><button @click="transitionRequest('Approved')" :disabled="busy" class="btn !bg-emerald-700">Approve</button><button @click="transitionRequest('Rejected')" :disabled="busy" class="btn !bg-red-800">Reject</button></div></div><p v-if="['Submitted','Approved'].includes(requestState(rec.obj))" class="text-xs text-slate-400">This request is locked for editing.</p></section>
       <section v-if="historyOpen&&user" class="lg:col-span-2 hud p-5 space-y-3"><h4 class="text-white font-bold">Change history · latest 50 entries</h4><p v-if="historyBusy">Loading…</p><p v-if="historyError" class="text-red-400">{{ historyError }}</p><p v-if="!historyBusy&&!historyError&&!historyRows.length" class="text-slate-400">No history yet. Earlier changes cannot be reconstructed.</p><details v-for="entry in historyRows" :key="entry.id" class="bg-bg rounded-lg p-3 border border-purple-950"><summary class="cursor-pointer text-tc">{{ fmt(entry.at) }} · {{ entry.actorName }} · {{ entry.action }} · v{{ entry.version }}</summary><div v-for="(change,key) in entry.changes" :key="key" class="mt-3 border-t border-purple-950 pt-2"><p class="font-bold text-white">{{ historyField(key) }}</p><div class="grid md:grid-cols-2 gap-3 mt-2"><div><p class="text-xs text-slate-500">Before</p><p class="text-xs whitespace-pre-wrap break-words">{{ change.before }}</p></div><div><p class="text-xs text-slate-500">After</p><p class="text-xs whitespace-pre-wrap break-words">{{ change.after }}</p></div></div></div></details></section>
       <div class="space-y-6">
         <select v-if="recMode==='edit' && tplFor(rec.obj.col).length" @change="applyTpl($event.target.value);$event.target.value=''" class="inp !border-tc shadow-lg shadow-purple-900/20"><option value="">-- Load document template --</option><option v-for="t in tplFor(rec.obj.col)" :key="t.name">{{ t.name }}</option></select>
@@ -497,7 +499,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
         <div v-for="f in formFields" :key="f.k" class="space-y-1.5" :class="[recMode==='preview' && (f.t==='a' || f.t==='c') ? 'bg-panel p-4 rounded-xl border border-purple-950/50' : '',rec.obj.col==='citizens'&&['notes','profilePhoto'].includes(f.k)?'sm:col-span-2':'']">
           <label class="text-slate-500 text-[11px] uppercase tracking-wider font-bold">{{ f.l }}</label>
           
-          <textarea v-if="f.t==='a'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" :rows="rowsFor(rec.obj[f.k])" class="inp" :class="recMode==='preview' ? '!p-0' : ''"></textarea>
+          <text-editor v-if="f.t==='a'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" :rows="rowsFor(rec.obj[f.k])"></text-editor>
           
           <label v-else-if="f.t==='b'" class="flex items-center gap-3 mt-1 cursor-pointer w-max" :class="recMode==='edit'?'p-3 border border-purple-950 rounded-xl bg-panel':''"><input type="checkbox" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="w-5 h-5 accent-tc"><span :class="recMode==='edit'?'text-white':'text-tc font-bold'">{{ rec.obj[f.k]?'Yes':'No' }}</span></label>
           
@@ -545,29 +547,32 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
 </div>
 
 <!-- ZOOM VIEWER -->
-<div v-if="zoom&&zp" class="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-4" @click="zoom=null"><div class="flex flex-col lg:flex-row w-full max-w-7xl gap-6 max-h-[94vh]" @click.stop><div class="flex-1 overflow-auto flex items-center justify-center relative min-h-[40vh]"><img :src="zp.url" :style="{transform:'scale('+zs+')'}" @click="zs=zs>1?1:2.5" :class="zs>1?'cursor-zoom-out':'cursor-zoom-in'" class="max-h-[85vh] max-w-full object-contain transition-transform"><button v-if="zoom.i>0" @click="zoom.i--;zs=1" class="absolute left-4 top-1/2 text-white text-5xl hover:text-tc drop-shadow-lg">‹</button><button v-if="zoom.i<zoom.obj.gallery.length-1" @click="zoom.i++;zs=1" class="absolute right-4 top-1/2 text-white text-5xl hover:text-tc drop-shadow-lg">›</button></div><div class="w-full lg:w-96 hud p-6 space-y-4 font-mono text-sm overflow-y-auto"><div class="flex justify-between items-center"><h4 class="text-tc font-bold uppercase text-lg">Photo Details</h4><button @click="zoom=null" class="text-slate-400 text-xl hover:text-white">✕</button></div><label class="text-slate-500 text-xs uppercase font-bold">Title</label><input v-model="zp.title" @change="persistZoom" :disabled="!zoom.edit" class="inp"><label class="text-slate-500 text-xs uppercase font-bold">Notes</label><textarea v-model="zp.desc" @change="persistZoom" :disabled="!zoom.edit" rows="6" class="inp"></textarea><label class="text-slate-500 text-xs uppercase font-bold">Date taken</label><input v-model="zp.taken" @change="persistZoom" :disabled="!zoom.edit" placeholder="YYYY-MM-DD" class="inp"><label class="text-slate-500 text-xs uppercase font-bold">Location</label><input v-model="zp.place" @change="persistZoom" :disabled="!zoom.edit" class="inp"><p class="text-slate-500 text-xs pt-4 border-t border-purple-950">Uploaded {{ zp.date }} by {{ zp.by||'unknown' }}</p><button v-if="zoom.edit" @click="delPhoto" class="del w-full py-3 mt-4 text-sm font-bold">Delete photo</button></div></div></div>
+<div v-if="zoom&&zp" class="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-4" @click="closeZoom"><div class="flex flex-col lg:flex-row w-full max-w-7xl gap-6 max-h-[94vh]" @click.stop><div class="flex-1 overflow-auto flex items-center justify-center relative min-h-[40vh]"><img :src="zp.url" :style="{transform:'scale('+zs+')'}" @click="zs=zs>1?1:2.5" :class="zs>1?'cursor-zoom-out':'cursor-zoom-in'" class="max-h-[85vh] max-w-full object-contain transition-transform"><button v-if="zoom.i>0" @click="zoom.i--;zs=1" class="absolute left-4 top-1/2 text-white text-5xl hover:text-tc drop-shadow-lg">‹</button><button v-if="zoom.i<zoom.obj.gallery.length-1" @click="zoom.i++;zs=1" class="absolute right-4 top-1/2 text-white text-5xl hover:text-tc drop-shadow-lg">›</button></div><div class="w-full lg:w-96 hud p-6 space-y-4 font-mono text-sm overflow-y-auto"><div class="flex justify-between items-center"><h4 class="text-tc font-bold uppercase text-lg">Photo Details</h4><button @click="closeZoom" class="text-slate-400 text-xl hover:text-white">✕</button></div><label class="text-slate-500 text-xs uppercase font-bold">Title</label><input v-model="zp.title" @change="persistZoom" :disabled="!zoom.edit" class="inp"><label class="text-slate-500 text-xs uppercase font-bold">Notes</label><text-editor v-model="zp.desc" @change="persistZoom" :disabled="!zoom.edit" :rows="6"></text-editor><label class="text-slate-500 text-xs uppercase font-bold">Date taken</label><input v-model="zp.taken" @change="persistZoom" :disabled="!zoom.edit" placeholder="YYYY-MM-DD" class="inp"><label class="text-slate-500 text-xs uppercase font-bold">Location</label><input v-model="zp.place" @change="persistZoom" :disabled="!zoom.edit" class="inp"><p class="text-slate-500 text-xs pt-4 border-t border-purple-950">Uploaded {{ zp.date }} by {{ zp.by||'unknown' }}</p><button v-if="zoom.edit" @click="delPhoto" class="del w-full py-3 mt-4 text-sm font-bold">Delete photo</button></div></div></div>
 <div v-if="lightboxSrc" @click="lightboxSrc=null" class="fixed inset-0 z-[310] bg-black/95 flex items-center justify-center cursor-pointer"><img :src="lightboxSrc" class="max-w-[90%] max-h-[90%] border-4 border-pu rounded-xl shadow-[0_0_30px_rgba(168,85,247,0.5)]"></div>
 
 <!-- PRINT SHEET -->
 <teleport to="body">
 <div v-if="pdoc" id="pdoc" class="fixed inset-0 z-[400] bg-black/95 overflow-y-auto p-4 md:p-8">
+  <p class="noprint max-w-4xl mx-auto text-xs text-slate-300 mb-3">Clean PDF: in the browser print dialog, disable “Headers and footers”. Page numbers are supplied by the document.</p>
   <div class="noprint max-w-4xl mx-auto flex gap-4 mb-6 justify-end"><button @click="printNow" :disabled="printBusy" class="btn text-base py-3 px-6"><i class="fa-solid fa-print mr-2"></i> Print / Save as PDF</button><button @click="pdoc=null" class="btn !bg-red-900 !text-white text-base py-3 px-6">✕ Close</button></div>
   <div class="sheet bg-white text-slate-900 max-w-4xl mx-auto p-12 text-[13px] leading-relaxed shadow-2xl" style="font-family:'Ubuntu',sans-serif">
-    <div class="flex items-center gap-6 border-b-4 border-slate-900 pb-6 mb-8">
-      <img :src="LOGO" class="h-24 w-24 object-contain" onerror="this.style.display='none'">
-      <div class="flex-1"><h1 class="text-2xl font-black uppercase tracking-widest text-slate-900">Unified Police Department</h1><p class="font-bold text-slate-700 text-base mt-1 tracking-wider">Criminal Investigation Division</p><p v-if="pdoc.kind" class="font-bold text-red-700 uppercase mt-1 text-base tracking-widest">{{ pdoc.kind }}</p></div>
-      <div class="text-right text-xs text-slate-500 font-mono space-y-1"><p>TS: {{ pdoc.ts }}</p></div></div>
-    <h2 class="text-xl font-bold uppercase mb-6 text-slate-900">{{ pdoc.title }}</h2>
+    <header class="text-center flex flex-col items-center border-b-4 border-slate-900 pb-6 mb-8" style="break-inside:avoid">
+      <img :src="LOGO" class="h-24 w-24 object-contain mb-4" onerror="this.style.display='none'">
+      <h1 class="text-2xl md:text-3xl font-black uppercase tracking-widest text-slate-900">Criminal Investigation Division</h1>
+      <p class="font-bold text-slate-700 text-base mt-2 uppercase tracking-wider">Unified Police Department</p>
+      <p v-if="pdoc.kind" class="font-bold text-red-700 uppercase mt-3 text-base tracking-widest">{{ pdoc.kind }}</p>
+    </header>
+    <h2 class="text-xl font-bold uppercase mb-6 text-slate-900 text-center">{{ pdoc.title }}</h2>
     <div v-if="pdoc.profile" class="flex gap-6 items-center mb-8 p-5 border-2 border-slate-300 rounded-lg" style="break-inside:avoid"><img :src="pdoc.profile.url" @error="imageFallback" :alt="pdoc.profile.name" class="w-28 h-36 object-contain bg-white border border-slate-400 rounded"><div><p class="text-xs text-slate-500 uppercase tracking-wider">Citizen identification</p><p class="text-xl font-bold text-slate-900 mt-2">{{ pdoc.profile.name }}</p><p class="font-mono text-sm text-slate-700 mt-2">Citizen ID: {{ pdoc.profile.citizenId }}</p></div></div>
     <table v-if="pdoc.head" class="w-full text-[13px] border-collapse mb-8"><thead><tr><th v-for="h in pdoc.head" :key="h" class="border-2 border-slate-800 bg-slate-100 p-2 text-left font-bold">{{ h }}</th></tr></thead>
       <tbody><tr v-for="(r,i) in pdoc.table" :key="i"><td v-for="(c,j) in r" :key="j" class="border border-slate-400 p-2 align-top">{{ c }}</td></tr></tbody></table>
-    <div v-for="r in (pdoc.rows||[])" :key="r[0]" class="mb-5"><p class="text-xs font-bold uppercase text-slate-500 tracking-wider mb-1">{{ r[0] }}</p><p class="whitespace-pre-line text-sm" :class="r[2]?'border-l-4 border-slate-300 pl-4 py-1 ml-1 text-slate-800':'text-slate-900 font-medium'">{{ r[1] }}</p></div>
+    <div v-for="r in (pdoc.rows||[])" :key="r[0]" class="mb-5"><p class="text-xs font-bold uppercase text-slate-500 tracking-wider mb-1">{{ r[0] }}</p><div v-if="r[2]" class="rich-text text-sm border-l-4 border-slate-300 pl-4 py-1 ml-1 text-slate-800" v-html="renderText(r[1])"></div><p v-else class="whitespace-pre-line text-sm text-slate-900 font-medium">{{ r[1] }}</p></div>
     <div v-if="(pdoc.links||[]).length" class="mb-6 mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-3 pb-1 text-slate-900">Attached records</p><p v-for="l in pdoc.links" :key="l" class="mb-1 text-sm">• {{ l }}</p></div>
     <div v-if="(pdoc.files||[]).length" class="mb-6 mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-3 pb-1 text-slate-900">Files on record</p><p v-for="l in pdoc.files" :key="l" class="mb-1 text-sm text-blue-700 underline">• {{ l }}</p></div>
     <div v-if="(pdoc.photos||[]).length" class="mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-4 pb-1 text-slate-900">Photographic evidence</p>
-      <div class="grid grid-cols-2 gap-6"><div v-for="p in pdoc.photos" :key="p.id" style="break-inside:avoid" class="border border-slate-300 p-2 bg-slate-50"><img :src="p.url" class="w-full h-64 object-contain bg-white mb-2" style="object-fit:contain;object-position:center"><p class="text-xs font-bold text-slate-900">{{ p.title||'Untitled' }}</p><p class="text-[10px] text-slate-600 mt-1">{{ [p.taken,p.place,p.desc].filter(x=>x).join(' · ') }}</p></div></div></div>
+      <div class="grid grid-cols-2 gap-6"><div v-for="p in pdoc.photos" :key="p.id" style="break-inside:avoid" class="border border-slate-300 p-2 bg-slate-50"><img :src="p.url" class="w-full h-64 object-contain bg-white mb-2" style="object-fit:contain;object-position:center"><p class="text-xs font-bold text-slate-900">{{ p.title||'Untitled' }}</p><p class="text-[10px] text-slate-600 mt-1">{{ [p.taken,p.place].filter(x=>x).join(' · ') }}</p><div v-if="p.desc" class="rich-text text-xs text-slate-600 mt-2" v-html="renderText(p.desc)"></div></div></div></div>
     
-    <section v-if="pdoc.transcript" class="mt-8 pt-5 border-t-2 border-slate-800"><h3 class="font-bold uppercase text-slate-900 mb-4">{{ pdoc.transcript.label }}</h3><p class="text-sm text-slate-900 whitespace-pre-wrap leading-relaxed" style="overflow-wrap:anywhere">{{ pdoc.transcript.text }}</p></section>
+    <section v-if="pdoc.transcript" class="mt-8 pt-5 border-t-2 border-slate-800"><h3 class="font-bold uppercase text-slate-900 mb-4">{{ pdoc.transcript.label }}</h3><div class="rich-text text-sm text-slate-900" v-html="renderText(pdoc.transcript.text)"></div></section>
     <!-- Real Signatures Design -->
     <div class="mt-20 pt-6 border-t-2 border-slate-900 flex justify-between items-end text-sm text-slate-900 font-bold">
         <div class="flex gap-16">
@@ -578,6 +583,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
         </div>
         <span class="text-slate-400 text-[10px] font-mono tracking-widest">CONFIDENTIAL — U.P.D. C.I.D.</span>
     </div>
+    <footer class="mt-8 pt-3 border-t border-slate-200 text-center text-xs text-slate-500 font-mono">{{ pdoc.ts }}</footer>
   </div>
 </div>
 </teleport>
@@ -632,6 +638,33 @@ const defCfg=()=>({
   }
 });
 
+const inlineText=(text,depth=0)=>{
+  const value=String(text??'');if(depth>4)return esc(value);
+  const token=/\*\*([^\n]+?)\*\*|__([^\n]+?)__|\*([^*\n]+)\*|\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  let out='',start=0,match;
+  while((match=token.exec(value))){out+=esc(value.slice(start,match.index));
+    if(match[1]!==undefined)out+='<strong>'+inlineText(match[1],depth+1)+'</strong>';
+    else if(match[2]!==undefined)out+='<u>'+inlineText(match[2],depth+1)+'</u>';
+    else if(match[3]!==undefined)out+='<em>'+inlineText(match[3],depth+1)+'</em>';
+    else out+='<a href="'+esc(match[5])+'" target="_blank" rel="noopener noreferrer">'+inlineText(match[4],depth+1)+'</a>';
+    start=token.lastIndex;
+  }
+  return out+esc(value.slice(start));
+};
+const renderText=value=>{
+  const lines=String(value??'').replace(/\r\n?/g,'\n').split('\n');let html='',paragraph=[],list='',quote=[];
+  const flushParagraph=()=>{if(paragraph.length){html+='<p>'+paragraph.map(line=>inlineText(line)).join('<br>')+'</p>';paragraph=[];}};
+  const flushList=()=>{if(list){html+='</'+list+'>';list='';}};
+  const flushQuote=()=>{if(quote.length){html+='<blockquote>'+quote.map(line=>inlineText(line)).join('<br>')+'</blockquote>';quote=[];}};
+  for(const line of lines){const heading=line.match(/^\s*##\s+(.+)$/),bullet=line.match(/^\s*[-*]\s+(.+)$/),number=line.match(/^\s*\d+[.)]\s+(.+)$/),quoted=line.match(/^\s*>\s?(.*)$/);
+    if(!line.trim()){flushParagraph();flushList();flushQuote();continue;}
+    if(heading){flushParagraph();flushList();flushQuote();html+='<h3>'+inlineText(heading[1])+'</h3>';continue;}
+    if(bullet||number){flushParagraph();flushQuote();const type=bullet?'ul':'ol';if(list!==type){flushList();html+='<'+type+'>';list=type;}html+='<li>'+inlineText((bullet||number)[1])+'</li>';continue;}
+    if(quoted){flushParagraph();flushList();quote.push(quoted[1]);continue;}
+    flushList();flushQuote();paragraph.push(line);
+  }
+  flushParagraph();flushList();flushQuote();return html||'<p>—</p>';
+};
 const DEFAULT_AVATAR='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="200" viewBox="0 0 160 200"><rect width="160" height="200" fill="#140c1f"/><circle cx="80" cy="70" r="30" fill="#a855f7"/><path d="M25 185v-25a55 55 0 01110 0v25" fill="#a855f7"/></svg>');
 const normalizeConfig=data=>{
   const defaults=defCfg(),out={perms:data.perms||{},templates:data.templates||defaults.templates,collections:{...defaults.collections,...(data.collections||{})}};
@@ -910,14 +943,29 @@ const app=createApp({
     const openOwner=e=>{if(e.src==='_map'){go('map');nextTick(()=>flyTo(e.obj));return;}openRec(e.obj);};
 
     const printBusy=ref(false);
-    const printNow=async()=>{if(printBusy.value)return;printBusy.value=true;try{await nextTick();await Promise.all([...document.querySelectorAll('#pdoc img')].map(img=>img.decode?Promise.race([img.decode().catch(()=>{}),new Promise(resolve=>setTimeout(resolve,5000))]):Promise.resolve()));window.print();}finally{printBusy.value=false;}};
+    const printNow=async()=>{if(printBusy.value||!pdoc.value)return;const preview=pdoc.value;printBusy.value=true;try{await nextTick();await Promise.all([...document.querySelectorAll('#pdoc img')].map(img=>img.decode?Promise.race([img.decode().catch(()=>{}),new Promise(resolve=>setTimeout(resolve,5000))]):Promise.resolve()));if(pdoc.value===preview)window.print();}finally{printBusy.value=false;}};
+    let directorRotation=[],directorRosterKey='',lastDirector='';
+    try{lastDirector=localStorage.getItem('cid-last-print-director')||'';}catch(e){}
     const directorSignature=exclude=>{
       const candidates=accounts.value.filter(a=>isTop(a.rank)&&String(a.name||'').trim()&&norm(a.name)!==norm(exclude));
-      const person=candidates.length?candidates[Math.floor(Math.random()*candidates.length)]:null;
-      return person?{name:person.name,title:person.rank,badge:person.badge||''}:{name:'',title:'Director / Assistant Director',badge:''};
+      if(!candidates.length)return {name:'',title:'Director / Assistant Director',badge:''};
+      const identity=person=>person.id||norm(person.name)+'|'+person.rank;
+      const rosterKey=candidates.map(identity).sort().join('::');
+      if(rosterKey!==directorRosterKey){directorRotation=[];directorRosterKey=rosterKey;}
+      if(!directorRotation.length){
+        directorRotation=candidates.map(identity);
+        for(let i=directorRotation.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[directorRotation[i],directorRotation[j]]=[directorRotation[j],directorRotation[i]];}
+        if(directorRotation.length>1&&directorRotation[0]===lastDirector)[directorRotation[0],directorRotation[1]]=[directorRotation[1],directorRotation[0]];
+      }
+      const selected=directorRotation.shift(),person=candidates.find(a=>identity(a)===selected);lastDirector=selected;
+      try{localStorage.setItem('cid-last-print-director',selected);}catch(e){}
+      return {name:person.name,title:person.rank,badge:person.badge||''};
     };
     const makeSignatures=o=>{
       const primary=o.issuedBy?{name:o.issuedBy,title:o.issuedRank||'U.P.D. Agent',badge:o.issuedBadge||''}:user.value?{name:user.value.name,title:user.value.rank,badge:user.value.badge||''}:{name:'',title:'Authorized U.P.D. Agent',badge:''};
+      if(!o.issuedBy&&o.col==='warrants'&&o.workflow?.status==='Approved'&&o.workflow.reviewedBy){const reviewer=accounts.value.find(a=>a.id===o.workflow.reviewedUid);return [{name:o.workflow.reviewedBy,title:reviewer?.rank||'Director / Assistant Director',badge:reviewer?.badge||''}];}
+      // A director slot inferred from the printer is automatic, so it rotates too.
+      if(!o.issuedBy&&isTop(primary.title))return [directorSignature('')];
       const out=[primary];
       if(primary.name&&!isTop(primary.title)){
         if(o.col==='warrants'&&o.workflow?.status==='Approved'&&o.workflow.reviewedBy){const reviewer=accounts.value.find(a=>a.id===o.workflow.reviewedUid);out.push({name:o.workflow.reviewedBy,title:reviewer?.rank||'Director / Assistant Director',badge:reviewer?.badge||''});}
@@ -926,8 +974,10 @@ const app=createApp({
       return out;
     };
     const printRecord=o=>{
+      if(o.col==='directives')return;
       const c=cfg.collections[o.col];
-      const rows=c.fields.filter(f=>!(o.col==='citizens'&&f.k==='profilePhoto')&&!(o.col==='interrogations'&&o.subjectCitizen&&f.k==='suspect')&&!(o.col==='interrogations'&&f.k==='transcript')).map(f=>[f.l,shown(o,f),f.t==='a']);
+      const printPriority=f=>f.k==='lead'?0:['c','s'].includes(f.t)?1:2;
+      const rows=[...c.fields].sort((a,b)=>printPriority(a)-printPriority(b)).filter(f=>!(o.col==='citizens'&&f.k==='profilePhoto')&&!(o.col==='interrogations'&&o.subjectCitizen&&f.k==='suspect')&&!(o.col==='interrogations'&&f.k==='transcript')).map(f=>[f.l,shown(o,f),f.t==='a']);
       if(o.col==='warrants'){if(!(o.targets||[]).length&&(o.citizenName||o.citizenId))rows.push(['Legacy target',[o.citizenName,o.citizenId].filter(Boolean).join(' · '),false]);rows.push(['Request status',requestState(o),false]);if(o.workflow?.submittedBy)rows.push(['Submitted by',o.workflow.submittedBy+' · '+fmt(o.workflow.submittedAt),false]);if(o.workflow?.reviewedBy)rows.push(['Reviewed by',o.workflow.reviewedBy+' · '+fmt(o.workflow.reviewedAt),false]);if(o.workflow?.note)rows.push(['Review comment',o.workflow.note,true]);}
       const now=new Date();const ts=now.getDate().toString().padStart(2,'0')+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear()+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
       const sigs=makeSignatures(o);
@@ -984,18 +1034,63 @@ const app=createApp({
     };
     const indexAll=async()=>{if(mBusy.value)return;mBusy.value=true;let n=0,failed=0;try{for(const e of allPhotos.value){try{await indexPhoto(e.p);n++;}catch(e){failed++;}}mStatus.value=`Cached ${n} photos for this browser session; ${failed} unavailable.`;}catch(e){fail(e);}finally{mBusy.value=false;}};
 
-    window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();globalOpen.value=true;nextTick(()=>document.getElementById('universal-search')?.focus());}if(e.key==='Escape'){globalOpen.value=false;comparison.value=null;}});
+    const closeZoom=async()=>{document.activeElement?.blur?.();await nextTick();zoom.value=null;};
+    const dismissTop=async()=>{
+      document.activeElement?.blur?.();await nextTick();
+      if(comparison.value){comparison.value=null;return 'comparison';}
+      if(globalOpen.value){globalOpen.value=false;return 'search';}
+      if(showLogin.value){showLogin.value=false;return 'login';}
+      if(pdoc.value){pdoc.value=null;return 'print';}
+      if(lightboxSrc.value){lightboxSrc.value=null;return 'image';}
+      if(zoom.value){await closeZoom();return 'photo';}
+      if(rec.value){await closeRec();return 'record';}
+      if(mobileNavOpen.value){mobileNavOpen.value=false;return 'navigation';}
+      if(tab.value==='map'&&map){map.closePopup();return 'map';}
+      return null;
+    };
+    window.addEventListener('keydown',async e=>{
+      if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();globalOpen.value=true;nextTick(()=>document.getElementById('universal-search')?.focus());}
+      if(e.key==='Escape'){e.preventDefault();await dismissTop();}
+    });
     window.addEventListener('resize',()=>{isMobile.value=window.innerWidth<768;if(!isMobile.value)mobileNavOpen.value=false;});
 
     watch(tab,t=>{if(cfg.collections[t]&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
-    return{officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,REQUEST_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,reviewDraft,requestState,transitionRequest,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+    return{renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,REQUEST_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,reviewDraft,requestState,transitionRequest,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
       zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,
       addTpl,delTpl,addRegistry,delRegistry,addField,delField,moveField,saveLoc,addLoc,delLoc,fixMap,flyTo,mFile,mLink,runMatch,indexAll};
   }
+});
+
+app.component('text-editor',{
+  props:{modelValue:{default:''},disabled:Boolean,rows:{default:6},placeholder:String},emits:['update:modelValue','change'],
+  data(){return {preview:false};},methods:{renderText,
+    input(value){this.$emit('update:modelValue',value);},
+    shortcut(e){const kind={b:'bold',i:'italic',u:'underline'}[e.key.toLowerCase()];if(kind&&(e.ctrlKey||e.metaKey)){e.preventDefault();this.format(kind);}},
+    format(kind){
+      if(this.disabled)return;if(this.preview){this.preview=false;this.$nextTick(()=>this.format(kind));return;}const area=this.$refs.input;if(!area)return;
+      const value=String(this.modelValue||''),start=area.selectionStart??0,end=area.selectionEnd??start,selected=value.slice(start,end);let from=start,to=end,replacement='',selectionOffset=0;
+      const markers={bold:'**',italic:'*',underline:'__'};
+      if(markers[kind]){const marker=markers[kind];replacement=marker+(selected||'text')+marker;selectionOffset=marker.length;}
+      else if(kind==='link'){const url=prompt('Link URL (https://…)');if(!url||!/^https?:\/\//i.test(url.trim()))return;replacement='['+(selected||'link text')+']('+url.trim()+')';selectionOffset=1;}
+      else if(kind==='clear'){if(from===to){from=0;to=value.length;}replacement=value.slice(from,to).replace(/\*\*(.*?)\*\*/g,'$1').replace(/__(.*?)__/g,'$1').replace(/\*([^*]+)\*/g,'$1').replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/^\s*(?:##\s+|>\s?|[-*]\s+|\d+[.)]\s+)/gm,'');}
+      else {from=start===0?0:value.lastIndexOf('\n',start-1)+1;const next=value.indexOf('\n',end);to=next<0?value.length:next;const lines=value.slice(from,to).split('\n');replacement=lines.map((line,i)=>(kind==='bullet'?'- ':kind==='number'?(i+1)+'. ':kind==='heading'?'## ':kind==='quote'?'> ':'')+line).join('\n');}
+      const next=value.slice(0,from)+replacement+value.slice(to);this.$emit('update:modelValue',next);this.$emit('change',next);
+      this.$nextTick(()=>{area.focus();const cursor=from+selectionOffset;area.setSelectionRange(cursor,from+replacement.length-selectionOffset);});
+    }
+  },
+  template:`<div class="space-y-2">
+    <div v-if="!disabled" class="flex flex-wrap items-center gap-1 rounded-lg bg-panel border border-purple-950 p-2" role="toolbar" aria-label="Text formatting">
+      <button type="button" @mousedown.prevent @click="format('bold')" class="format-btn font-bold" title="Bold">B</button><button type="button" @mousedown.prevent @click="format('italic')" class="format-btn italic" title="Italic">I</button><button type="button" @mousedown.prevent @click="format('underline')" class="format-btn underline" title="Underline">U</button>
+      <button type="button" @mousedown.prevent @click="format('heading')" class="format-btn" title="Heading">H</button><button type="button" @mousedown.prevent @click="format('bullet')" class="format-btn" title="Bullet list">• List</button><button type="button" @mousedown.prevent @click="format('number')" class="format-btn" title="Numbered list">1. List</button><button type="button" @mousedown.prevent @click="format('quote')" class="format-btn" title="Quote">❞</button><button type="button" @mousedown.prevent @click="format('link')" class="format-btn" title="Link"><i class="fa-solid fa-link"></i></button><button type="button" @mousedown.prevent @click="format('clear')" class="format-btn" title="Clear formatting">Clear</button>
+      <button type="button" @click="preview=!preview" class="format-btn ml-auto">{{ preview?'Edit':'Preview' }}</button>
+    </div>
+    <textarea v-if="!disabled&&!preview" ref="input" :value="modelValue" @keydown="shortcut" @input="input($event.target.value)" @blur="$emit('change',modelValue)" :rows="rows" :placeholder="placeholder" class="inp"></textarea>
+    <div v-else class="rich-text min-h-[2rem]" :class="disabled?'':'inp'" v-html="renderText(modelValue)"></div>
+  </div>`
 });
 
 app.component('citizen-picker',{
@@ -1009,11 +1104,12 @@ app.component('citizen-picker',{
   },
   watch:{disabled(value){if(value)this.open=false;}},
   methods:{
+    escape(event){if(this.open){event.stopPropagation();this.open=false;}},
     choose(id){if(this.disabled||this.error)return;const ids=this.selectedIds;this.$emit('update:modelValue',this.multiple?(ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]):id);if(!this.multiple){this.open=false;this.search='';}},
     remove(id){if(this.disabled)return;this.$emit('update:modelValue',this.multiple?this.selectedIds.filter(x=>x!==id):'');},
     toggle(){if(this.disabled)return;this.open=!this.open;if(this.open)this.$nextTick(()=>this.$refs.search?.focus());}
   },
-  template:`<div class="relative space-y-2" @keydown.esc.stop="open=false" @focusout="!$el.contains($event.relatedTarget)&&(open=false)">
+  template:`<div class="relative space-y-2" @keydown.esc="escape($event)" @focusout="!$el.contains($event.relatedTarget)&&(open=false)">
     <button v-if="!disabled" type="button" @click="toggle" :aria-expanded="open" aria-haspopup="listbox" class="inp flex items-center justify-between gap-3 text-left"><span>{{ selected.length?(multiple?selected.length+' citizen(s) selected':selected[0].fullName):'Select citizen'+(multiple?'s':'')+'…' }}</span><i class="fa-solid fa-chevron-down text-tc"></i></button>
     <div v-if="selected.length" class="flex flex-wrap gap-2"><span v-for="person in selected" :key="person.id" class="inline-flex gap-2 items-center bg-purple-900/20 border border-purple-800 rounded-lg px-3 py-2 text-xs"><span>{{ person.fullName }} <span class="text-tc">· {{ person.citizenId||'No Citizen ID' }}</span></span><button v-if="!disabled" type="button" @click="remove(person.id)" :aria-label="'Remove '+person.fullName" class="text-red-300">✕</button></span></div>
     <p v-else-if="disabled" class="text-slate-400 text-sm">No citizens selected.</p>
