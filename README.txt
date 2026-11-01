@@ -1,3 +1,12 @@
+ORGANISATIONS — STATUS ΚΑΙ ΤΑΞΙΝΟΜΗΣΗ
+Προστέθηκε status όπως στα Case Files: Open, Under Investigation, Pending Review,
+Closed. Οι νέες εγγραφές ξεκινούν Open. Τα παλιά schemas αναβαθμίζονται κατά τη
+φόρτωση, χωρίς αφαίρεση δεδομένων. Το status εμφανίζεται στις κάρτες και στο print.
+Στη λίστα υπάρχει φίλτρο status, φίλτρο Lead Detective / Assigned to me και sort:
+Newest first, Oldest first, Detective A–Z, Detective Z–A. Οι εγγραφές χωρίς detective
+μπαίνουν στο τέλος της ταξινόμησης ανά detective. Οι ίδιοι έλεγχοι υπάρχουν και
+στα Case Files. Η ενημέρωση δεν τροποποιεί τα Firestore Rules.
+
 UPD CID TERMINAL — ΤΡΕΧΟΥΣΑ ΕΚΔΟΣΗ
 
 ΕΓΚΑΤΑΣΤΑΣΗ / ΑΠΑΡΑΙΤΗΤΑ RULES

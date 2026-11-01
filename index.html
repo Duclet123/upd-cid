@@ -207,7 +207,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
               <input v-model="q" placeholder="Search..." class="inp !w-full md:!w-72">
               <button v-if="level(tab)==='edit'" @click="newRec(tab)" class="btn text-base">+ New {{ tab === 'warrants' ? 'Draft Warrant' : 'Record' }}</button></div>
           </div>
-          <div v-if="tab==='cases'" class="hud p-4 flex flex-wrap gap-3"><select v-model="statusFilter" class="inp !w-auto"><option value="">All statuses</option><option v-for="st in CASE_STATUSES" :key="st">{{ st }}</option></select><select v-if="tab==='cases'" v-model="leadFilter" class="inp !w-auto"><option value="">All lead detectives</option><option v-if="user" value="__mine__">Assigned to me</option><option v-for="name in [...new Set(itemsOf('cases').map(r=>r.lead).filter(Boolean))]" :key="name">{{ name }}</option></select><span class="text-xs text-slate-400 self-center">{{ listItems.length }} results</span></div>
+          <div v-if="tab==='cases'||tab==='organizations'" class="hud p-4 flex flex-wrap gap-3"><select v-model="statusFilter" class="inp !w-auto"><option value="">All statuses</option><option v-for="st in CASE_STATUSES" :key="st">{{ st }}</option></select><select v-model="leadFilter" class="inp !w-auto"><option value="">All lead detectives</option><option v-if="user" value="__mine__">Assigned to me</option><option v-for="name in [...new Set(itemsOf(tab).map(r=>r.lead).filter(Boolean))].sort((a,b)=>a.localeCompare(b))" :key="name">{{ name }}</option></select><select v-model="sortOrder" class="inp !w-auto" aria-label="Sort records"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="detective-asc">Detective A–Z</option><option value="detective-desc">Detective Z–A</option></select><span class="text-xs text-slate-400 self-center">{{ listItems.length }} results</span></div>
           <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
             <div v-for="it in listItems" :key="it.id" class="hud p-5 space-y-3 font-mono text-sm hover:border-tc transition">
               <div class="flex items-center gap-4 cursor-pointer" @click="openRec(it)">
@@ -216,7 +216,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                 <div class="flex-1 min-w-0">
                   <h3 class="text-base font-bold text-white font-title truncate mb-1">{{ recTitle(it) }}</h3>
                   <p v-for="f in subFields(col)" :key="f.k" class="text-slate-400 truncate text-xs mb-0.5">{{ f.l }}: <span class="text-slate-200">{{ shown(it,f) }}</span></p>
-                  <p v-if="tab==='cases'||tab==='warrants'" class="text-xs font-bold text-amber-300">{{ tab==='warrants'?requestState(it):(it.status||'Open') }}</p>
+                  <p v-if="tab==='cases'||tab==='organizations'||tab==='warrants'" class="text-xs font-bold text-amber-300">{{ tab==='warrants'?requestState(it):(it.status||'Open') }}</p>
                   <p class="text-tc text-xs mt-1"><span v-if="it.template">Template: {{ it.template }} · </span>{{ linkedFor(it).length }} linked · {{ (it.files||[]).length }} files</p>
                 </div>
               </div>
@@ -524,7 +524,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <p v-if="recMode==='edit'" class="text-xs text-slate-500">Select a roster officer or enter an external officer manually.</p>
           </div>
 
-          <select v-else-if="rec.obj.col==='cases'&&f.k==='status'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="inp"><option v-if="rec.obj[f.k]&&!CASE_STATUSES.includes(rec.obj[f.k])" :value="rec.obj[f.k]">{{ rec.obj[f.k] }} (legacy)</option><option value="">-- Select status --</option><option v-for="status in CASE_STATUSES" :key="status">{{ status }}</option></select>
+          <select v-else-if="['cases','organizations'].includes(rec.obj.col)&&f.k==='status'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="inp"><option v-if="rec.obj[f.k]&&!CASE_STATUSES.includes(rec.obj[f.k])" :value="rec.obj[f.k]">{{ rec.obj[f.k] }} (legacy)</option><option value="">-- Select status --</option><option v-for="status in CASE_STATUSES" :key="status">{{ status }}</option></select>
           <input v-else v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="inp" :placeholder="f.k==='profilePhoto'?'https://… direct profile image link':''">
         </div>
         </div>
@@ -685,7 +685,7 @@ const normalizeConfig=data=>{
   if(!out.collections.citizens.fields.some(f=>f.k==='profilePhoto'))out.collections.citizens.fields.push(F('profilePhoto','Profile photo URL'));
   const upsert=(key,field)=>{const fields=out.collections[key].fields,old=fields.find(f=>f.k===field.k);if(old)Object.assign(old,field);else fields.push(field);};
   upsert('cases',F('lead','Lead Detective','u'));
-  upsert('organizations',F('lead','Lead Detective','u'));upsert('organizations',F('members','Associated citizens','c'));
+  upsert('organizations',F('status','Status'));upsert('organizations',F('lead','Lead Detective','u'));upsert('organizations',F('members','Associated citizens','c'));
   upsert('interrogations',F('caseId','Related Case File','k'));
   for(const key of ['cases','organizations','interrogations','reports']){upsert(key,F('infoReliability','Information reliability','r'));upsert(key,F('infoSource','Source / reference'));upsert(key,F('infoDate','Information date','d'));}
   upsert('interrogations',F('officer','Interviewing officer','o'));upsert('interrogations',F('subjectCitizen','Citizen','s'));
@@ -728,7 +728,7 @@ const app=createApp({
     const permLabel=k=>cfg.collections[k]?cfg.collections[k].label:({penal:'Penal Code',evidence:'Evidence',matcher:'Matcher'})[k];
 
     const CASE_STATUSES=['Open','Under Investigation','Pending Review','Closed'];
-    const saveStates=reactive({}),statusFilter=ref(''),leadFilter=ref(''),globalOpen=ref(false),globalQuery=ref(''),comparison=ref(null);
+    const saveStates=reactive({}),statusFilter=ref(''),leadFilter=ref(''),sortOrder=ref('newest'),globalOpen=ref(false),globalQuery=ref(''),comparison=ref(null);
     const historyOpen=ref(false),historyRows=ref([]),historyError=ref(''),historyBusy=ref(false),trashRows=ref([]),trashError=ref('');
     let historyUnsub=null,trashUnsubs=[];
     const requestState=o=>'Draft';
@@ -736,7 +736,7 @@ const app=createApp({
     const assignedToMe=record=>!!user.value&&(record.leadUid?record.leadUid===user.value.id:norm(record.lead)===norm(user.value.name));
     const saveLabel=o=>({pending:'Unsaved changes',saving:'Saving…',saved:'Saved',error:'Save failed — retry'}[saveStates[o.id]?.phase]||'No pending changes');
     const col=computed(()=>cfg.collections[tab.value]);
-    const go=t=>{tab.value=t;q.value='';statusFilter.value=leadFilter.value='';if(t==='trash')loadTrash();mobileNavOpen.value=false;if(t==='map')nextTick(fixMap);};
+    const go=t=>{tab.value=t;q.value='';statusFilter.value=leadFilter.value='';sortOrder.value='newest';if(t==='trash')loadTrash();mobileNavOpen.value=false;if(t==='map')nextTick(fixMap);};
     const nav=t=>'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-title tracking-wider transition '+(tab.value===t?'bg-purple-600/30 text-white border border-purple-500/50 font-bold shadow-lg shadow-purple-900/10':'text-slate-400 hover:bg-purple-900/30 hover:text-slate-200');
     const subFields=c=>c.fields.slice(1).filter(f=>f.t!=='a'&&f.t!=='c').slice(0,2);
     const rowsFor=v=>Math.min(40,Math.max(8,String(v||'').split('\n').length+2));
@@ -749,7 +749,7 @@ const app=createApp({
     const officerBadge=(o,key)=>o[key+'Badge']||officerMatch(o[key],o[key+'Uid'])?.badge||'';
     const updateOfficer=(o,key,value)=>{const person=officerMatch(value);o[key]=person?person.name:value;o[key+'Uid']=person?.id||'';o[key+'Badge']=person?.badge||'';};
     const citizenLabel=id=>{const c=recs[id];return c?`${c.fullName||'(unnamed)'} · Citizen ID: ${c.citizenId||'—'}`:`Unavailable citizen (${id})`;};
-    const shown=(it,f)=>{const v=it[f.k];if(typeof v==='boolean')return v?'Yes':'No';
+    const shown=(it,f)=>{const v=it[f.k];if(typeof v==='boolean')return v?'Yes':'No';if(f.k==='status'&&['cases','organizations'].includes(it.col))return v||'Open';
       if(f.t==='c'){const arr=Array.isArray(v)?v:[];return arr.map(citizenLabel).join('; ')||'-';}
       if(f.t==='s')return v?citizenLabel(v):'-';
       if(f.t==='k'){const linked=recs[v];return linked?`${linked.fileNo||'—'} · ${linked.title||recTitle(linked)}`:(v?'Unavailable case ('+v+')':'-');}
@@ -760,7 +760,11 @@ const app=createApp({
     const listItems=computed(()=>{const c=col.value;if(!c)return[];const s=norm(q.value);
       let all=itemsOf(tab.value).filter(r=>(!statusFilter.value||(r.col==='warrants'?requestState(r):(r.status||'Open'))===statusFilter.value)&&(!leadFilter.value||(leadFilter.value==='__mine__'?assignedToMe(r):r.lead===leadFilter.value)));
       if(!user.value && tab.value==='documents') all=all.filter(d=>d.isPublic);
-      return s?all.filter(it=>c.fields.some(f=>f.t!=='c'&&norm(it[f.k]).includes(s))):all;});
+      if(s)all=all.filter(it=>c.fields.some(f=>f.t!=='c'&&norm(it[f.k]).includes(s)));
+      return all.sort((a,b)=>{
+        if(sortOrder.value.startsWith('detective-')){const first=String(a.lead||'').trim(),second=String(b.lead||'').trim();if(!first&&second)return 1;if(first&&!second)return -1;const comparison=first.localeCompare(second,undefined,{sensitivity:'base',numeric:true});if(comparison)return sortOrder.value==='detective-desc'?-comparison:comparison;}
+        const time=(b.ts||0)-(a.ts||0);return (sortOrder.value==='oldest'?-time:time)||String(a.id).localeCompare(String(b.id));
+      });});
     const penalList=computed(()=>{const s=norm(q.value);return s?penal.value.filter(p=>norm(p.title+p.category).includes(s)):penal.value;});
     const tplCols=computed(()=>Object.entries(cfg.collections).filter(([k,c])=>c.fields.some(f=>f.t==='a')));
     const tplFor=k=>cfg.templates[k]||[];
@@ -843,10 +847,10 @@ const app=createApp({
     const imageFallback=e=>{e.target.onerror=null;e.target.src=DEFAULT_AVATAR;};
     const pickerCitizens=computed(()=>itemsOf('citizens').filter(c=>!citizenSearch.value||norm([c.fullName,c.citizenId].join(' ')).includes(norm(citizenSearch.value))));
     const toggleCitizen=(o,key,id,selected)=>{const current=Array.isArray(o[key])?o[key]:[];o[key]=selected?[...new Set([...current,id])]:current.filter(x=>x!==id);};
-    const formFields=computed(()=>{if(!rec.value)return [];const o=rec.value.obj,fields=cfg.collections[o.col].fields,order=({citizens:['fullName','citizenId','phone','gang','notes','profilePhoto'],cases:['fileNo','title','status','lead','summary'],organizations:['fileNo','name','lead','members','notes'],interrogations:['fileNo','caseId','subjectCitizen','officer','date','infoReliability','infoSource','infoDate','transcript','suspect']})[o.col];return (order?[...fields].sort((a,b)=>(order.includes(a.k)?order.indexOf(a.k):99)-(order.includes(b.k)?order.indexOf(b.k):99)):fields).filter(f=>!(o.col==='citizens'&&recMode.value!=='edit'&&['fullName','citizenId','profilePhoto'].includes(f.k))&&!(o.col==='interrogations'&&o.subjectCitizen&&f.k==='suspect'));});
+    const formFields=computed(()=>{if(!rec.value)return [];const o=rec.value.obj,fields=cfg.collections[o.col].fields,order=({citizens:['fullName','citizenId','phone','gang','notes','profilePhoto'],cases:['fileNo','title','status','lead','summary'],organizations:['fileNo','name','status','lead','members','notes'],interrogations:['fileNo','caseId','subjectCitizen','officer','date','infoReliability','infoSource','infoDate','transcript','suspect']})[o.col];return (order?[...fields].sort((a,b)=>(order.includes(a.k)?order.indexOf(a.k):99)-(order.includes(b.k)?order.indexOf(b.k):99)):fields).filter(f=>!(o.col==='citizens'&&recMode.value!=='edit'&&['fullName','citizenId','profilePhoto'].includes(f.k))&&!(o.col==='interrogations'&&o.subjectCitizen&&f.k==='suspect'));});
     const canEditRec=computed(()=>!!rec.value&&level(rec.value.obj.col)==='edit');
-    const openRec=r=>{if(!r||level(r.col)==='none')return;timelineLimit.value=30;if(historyUnsub){historyUnsub();historyUnsub=null;}historyOpen.value=false;historyRows.value=[];historyError.value='';recErr.value='';lkCol.value=lkId.value='';rec.value={obj:r,isNew:false};recMode.value='preview';citizenSearch.value='';if(r.col==='warrants'){if(!Array.isArray(r.targets))r.targets=r.targets?[String(r.targets)]:[];if(!r.targets.length&&!r.otherTargets&&(r.citizenName||r.citizenId))r.otherTargets=[r.citizenName,r.citizenId].filter(Boolean).join(' · ');}};
-    const newRec=key=>{citizenSearch.value='';Object.assign(cfg,normalizeConfig(clean(cfg)));const o=reactive({id:uid(),col:key,ts:Date.now(),by:user.value?user.value.name:'',gallery:[],files:[],links:[]});cfg.collections[key].fields.forEach(f=>o[f.k]=f.t==='b'?false:(f.t==='c'?[]:''));if(key==='cases')o.status='Open';if(key==='warrants'){o.workflow={status:'Draft'};o.targets=[];}historyOpen.value=false;historyRows.value=[];recErr.value='';rec.value={obj:o,isNew:true};recMode.value='edit';};
+    const openRec=r=>{if(!r||level(r.col)==='none')return;timelineLimit.value=30;if(historyUnsub){historyUnsub();historyUnsub=null;}historyOpen.value=false;historyRows.value=[];historyError.value='';recErr.value='';lkCol.value=lkId.value='';rec.value={obj:r,isNew:false};recMode.value='preview';citizenSearch.value='';if(['cases','organizations'].includes(r.col)&&!r.status)r.status='Open';if(r.col==='warrants'){if(!Array.isArray(r.targets))r.targets=r.targets?[String(r.targets)]:[];if(!r.targets.length&&!r.otherTargets&&(r.citizenName||r.citizenId))r.otherTargets=[r.citizenName,r.citizenId].filter(Boolean).join(' · ');}};
+    const newRec=key=>{citizenSearch.value='';Object.assign(cfg,normalizeConfig(clean(cfg)));const o=reactive({id:uid(),col:key,ts:Date.now(),by:user.value?user.value.name:'',gallery:[],files:[],links:[]});cfg.collections[key].fields.forEach(f=>o[f.k]=f.t==='b'?false:(f.t==='c'?[]:''));if(key==='cases'||key==='organizations')o.status='Open';if(key==='warrants'){o.workflow={status:'Draft'};o.targets=[];}historyOpen.value=false;historyRows.value=[];recErr.value='';rec.value={obj:o,isNew:true};recMode.value='edit';};
     const closeRec=async()=>{const current=rec.value;if(!current)return;clearTimeout(watch.r);if(!current.isNew&&recMode.value==='edit'&&canEditRec.value){try{await saveRaw(current.obj);}catch(e){recErr.value=e.message;fail(e);if(!confirm('Save failed. Close without saving these changes?'))return;}}if(rec.value===current){rec.value=null;if(historyUnsub){historyUnsub();historyUnsub=null;}historyOpen.value=false;historyRows.value=[];}};
     const auditValue=v=>{if(v===undefined)return '(empty)';const text=typeof v==='string'?v:JSON.stringify(v);return text.length>1800?text.slice(0,1800)+'…':text;};
     const recordChanges=(before,after)=>{const out={};for(const key of new Set([...Object.keys(before),...Object.keys(after)])){if(['version','updatedAt','auditId','uniqueKey'].includes(key))continue;if(JSON.stringify(before[key])!==JSON.stringify(after[key]))out[key]={before:auditValue(before[key]),after:auditValue(after[key])};}return out;};
@@ -1065,7 +1069,7 @@ const app=createApp({
     watch(tab,t=>{if(cfg.collections[t]&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
-    return{RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+    return{RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
       zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,
