@@ -34,6 +34,16 @@ export async function emptyTrash({serviceAccount, dryRun=true, fetchImpl=fetch, 
     if([404,409,412].includes(lock.status)){skipped++;continue;}
     if(!lock.ok)throw Error('Unable to lock trash item: HTTP '+lock.status);
     const locked=await lock.json();
+    // Investigation entries are independent records with the same Case Files permissions.
+    if(doc.fields?.col?.stringValue==='cases'&&!doc.fields?.record?.mapValue?.fields?.workspaceParentId?.stringValue){
+      const activeChildren=(await list('records')).filter(child=>child.fields?.workspaceParentId?.stringValue===id);
+      const trashedChildren=(await list('trash')).filter(child=>child.fields?.record?.mapValue?.fields?.workspaceParentId?.stringValue===id);
+      const childIds=new Set([...activeChildren,...trashedChildren].map(child=>child.name.split('/').at(-1)));
+      for(const childId of childIds){
+        for(const entry of await list('records/'+encodeURIComponent(childId)+'/history')){const response=await request('https://firestore.googleapis.com/v1/'+entry.name,{method:'DELETE'});if(!response.ok&&response.status!==404)throw Error('Investigation history cleanup failed: HTTP '+response.status);}
+        for(const collection of ['records','trash']){const response=await request(root+'/'+collection+'/'+encodeURIComponent(childId),{method:'DELETE'});if(!response.ok&&response.status!==404)throw Error('Investigation entry cleanup failed: HTTP '+response.status);}
+      }
+    }
     // Firestore does not automatically delete a document's history subcollection.
     for(const entry of await list('records/'+encodeURIComponent(id)+'/history')){
       const response=await request('https://firestore.googleapis.com/v1/'+entry.name,{method:'DELETE'});

@@ -167,3 +167,26 @@ All printable registries omit undefined/null values, whitespace-only text and
 empty selections. Numeric zero and boolean No remain meaningful printed values.
 Blank transcripts, empty media sections, absent profile photos and unfilled
 signature slots are omitted. Photo captions and metadata print only when present.
+
+LONG-TERM INVESTIGATION WORKSPACES
+In a Case File choose Edit Record > Case type > Long-term Investigation, then
+save. The manual file number and existing summary, links, photos and documents
+remain in place. Standard cases retain the ordinary layout.
+The workspace provides Overview/team, All entries, Investigation Log, Persons &
+Organisations, Evidence, linked Interrogations & Reports, Tasks and Threads.
+Entries support event dates separate from recording dates, source/reliability,
+citizen references with name/ID snapshots, organisations, links and assignments.
+Search all entries or one section; filter by person, date, author, thread,
+status/reliability. Lists initially show 30 entries and can show more.
+Each entry is an independent records document with col=cases and a
+workspaceParentId marker. It inherits the existing Case Files permissions and
+versioned transaction/audit contract. Internal entries are excluded from normal
+registry lists and global search. The existing case listener receives permitted
+case entries; no new Firestore rules or composite indexes are required.
+Entry audits preserve complete before/after values, with a 40,000-character note
+limit per entry. Concurrent versions are rejected and failed saves retain drafts.
+Archive is reversible; case Trash/restore retains all investigation entries.
+Permanent case deletion includes its entry documents and their histories, with
+retry-safe cleanup. Manual service-account cleanup follows the same cascade.
+Print entry prints one selected entry; printing the case prints its overview.
+New external script case-workspace.js must be served beside index.html.

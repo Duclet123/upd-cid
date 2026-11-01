@@ -7,4 +7,5 @@ const options={decodeEntities:s=>s,onError:e=>{throw e;}};
 context.Vue.compile(html.slice(html.indexOf('<div id="app"'),html.lastIndexOf('\n<script>')),options);
 for(const m of html.matchAll(/template:`([\s\S]*?)`/g))context.Vue.compile(m[1],options);
 assert(!html.includes('firebase-storage-compat'));
+const workspace=fs.readFileSync(path.join(__dirname,'..','case-workspace.js'),'utf8');new vm.Script(workspace);for(const m of workspace.matchAll(/template:`([\s\S]*?)`/g))context.Vue.compile(m[1],options);
 console.log('PASS: inline JavaScript syntax and all Vue templates.');
