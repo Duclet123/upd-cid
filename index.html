@@ -13,11 +13,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <style>
 body{font-family:'Ubuntu',sans-serif;background:#08050c;color:#e9d5ff;font-size:15px;}
 .hud{background:#140c1f;border:1px solid #2b1a40;border-radius:1rem;box-shadow:0 10px 30px -10px rgba(147,51,234,.2)}
@@ -56,14 +56,14 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
   </div>
   
   <nav class="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
-    <div class="text-[11px] font-mono text-slate-500 uppercase px-3 pb-1 tracking-wider">System</div>
+    <div class="text-[11px] font-mono text-slate-500 uppercase px-3 pb-1 tracking-wider">Public</div>
     <button @click="go('dashboard')" :class="nav('dashboard')"><i class="fa-solid fa-house w-6 text-tc text-center"></i>Homepage / Roster</button>
     <button @click="go('map')" :class="nav('map')"><i class="fa-solid fa-map-location-dot w-6 text-tc text-center"></i>Tactical Map</button>
     <button @click="go('penal')" :class="nav('penal')"><i class="fa-solid fa-gavel w-6 text-amber-400 text-center"></i>Penal Code</button>
     <button @click="go('documents')" :class="nav('documents')"><i class="fa-solid fa-file-lines w-6 text-sky-300 text-center"></i>Public Documents</button>
     
     <template v-if="user">
-      <div class="text-[11px] font-mono text-tc uppercase px-3 pt-5 pb-1 mt-2 border-t border-purple-950 tracking-wider"><i class="fa-solid fa-lock mr-1"></i>Agent Operations</div>
+      <div class="text-[11px] font-mono text-tc uppercase px-3 pt-5 pb-1 mt-2 border-t border-purple-950 tracking-wider"><i class="fa-solid fa-lock mr-1"></i>Detective Section</div>
       <button v-for="n in agentNav" :key="n.id" @click="go(n.id)" :class="nav(n.id)"><i :class="n.icon" class="w-6 text-center"></i>{{ n.label }}</button>
       <button v-if="isAdmin" @click="go('admin')" :class="nav('admin')" class="text-purple-300 mt-2"><i class="fa-solid fa-user-gear w-6 text-center"></i>Admin Panel</button>
     </template>
@@ -73,6 +73,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
   <div class="p-4 border-t border-purple-950 bg-bg space-y-4 shrink-0 flex flex-col justify-end">
     <div class="text-center font-mono text-tc text-sm flex items-center justify-center gap-2">
       <i class="fa-regular fa-clock"></i> {{ time }}
+      <button @click="isMobile=!isMobile;mobileNavOpen=false;fixMap()" title="Toggle mobile view" aria-label="Toggle mobile view" :aria-pressed="isMobile" class="ml-2 hover:text-white"><i class="fa-solid fa-mobile-screen"></i></button>
     </div>
     
     <button v-if="!user" @click="showLogin=true; mobileNavOpen=false" class="btn w-full py-3 uppercase text-sm shadow-lg shadow-purple-900/20">Detective Sign In</button>
@@ -88,7 +89,6 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
       <button @click="logout" class="text-red-400 hover:text-red-300 px-2 shrink-0 transition" title="Sign Out"><i class="fa-solid fa-power-off text-lg"></i></button>
     </div>
     
-    <button @click="isMobile = !isMobile" class="text-[10px] text-slate-500 hover:text-white w-full text-center mt-1 font-mono transition"><i class="fa-solid fa-mobile-screen mr-1"></i>Toggle Device View</button>
   </div>
 </aside>
 
@@ -122,26 +122,12 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
 
           <!-- QUICK STATS -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Active Warrants</p><p class="text-3xl font-mono font-bold text-red-400 mt-2">{{ itemsOf('warrants').length }}</p></div>
+            <div v-if="user && level('warrants')!=='none'" class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Requests</p><p class="text-3xl font-mono font-bold text-red-400 mt-2">{{ itemsOf('warrants').length }}</p></div>
             <template v-if="user">
               <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Registered Citizens</p><p class="text-3xl font-mono font-bold text-tc mt-2">{{ itemsOf('citizens').length }}</p></div>
               <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Registered Firearms</p><p class="text-3xl font-mono font-bold text-amber-400 mt-2">{{ itemsOf('weapons').length }}</p></div>
               <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Active Case Files</p><p class="text-3xl font-mono font-bold text-emerald-400 mt-2">{{ itemsOf('cases').length }}</p></div>
             </template>
-          </div>
-
-          <!-- ROSTER -->
-          <div class="hud p-6 md:p-8">
-              <h3 class="text-xl font-title font-bold text-white mb-6 uppercase border-b border-purple-950 pb-3 flex items-center gap-3"><i class="fa-solid fa-users text-tc"></i>U.P.D. Official Roster</h3>
-              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                  <div v-for="a in accounts" :key="a.id" class="bg-bg border border-purple-950 rounded-2xl p-4 flex flex-col items-center text-center transition hover:border-tc">
-                      <img :src="a.photo || 'https://placehold.co/150x150/140c1f/a855f7?text=UPD'" class="w-24 h-24 rounded-full object-cover mb-4 border-2 border-tc bg-black">
-                      <p class="text-white font-bold text-sm">{{ a.name }}</p>
-                      <p class="text-tc font-mono text-[11px] mt-1">{{ a.rank }}</p>
-                      <p class="text-slate-400 font-mono text-[11px] mt-0.5">{{ a.badge }}</p>
-                  </div>
-                  <p v-if="!accounts.length" class="text-slate-500 font-mono text-sm col-span-full text-center">No active roster visible.</p>
-              </div>
           </div>
 
           <!-- DIRECTIVES -->
@@ -166,6 +152,20 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                 <p v-if="!itemsOf('directives').length" class="text-center text-slate-500 font-mono text-sm py-6">No directives posted.</p>
             </div>
           </div>
+          <!-- ROSTER -->
+          <div class="hud p-6 md:p-8">
+              <h3 class="text-xl font-title font-bold text-white mb-6 uppercase border-b border-purple-950 pb-3 flex items-center gap-3"><i class="fa-solid fa-users text-tc"></i>U.P.D. Official Roster</h3>
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  <div v-for="a in accounts.filter(a=>a.rank!=='High Command')" :key="a.id" class="bg-bg border border-purple-950 rounded-2xl p-4 flex flex-col items-center text-center transition hover:border-tc">
+                      <img :src="a.photo || 'https://placehold.co/150x150/140c1f/a855f7?text=UPD'" class="w-24 h-24 rounded-full object-cover mb-4 border-2 border-tc bg-black">
+                      <p class="text-white font-bold text-sm">{{ a.name }}</p>
+                      <p class="text-tc font-mono text-[11px] mt-1">{{ a.rank }}</p>
+                      <p class="text-slate-400 font-mono text-[11px] mt-0.5">{{ a.badge }}</p>
+                  </div>
+                  <p v-if="!accounts.some(a=>a.rank!=='High Command')" class="text-slate-500 font-mono text-sm col-span-full text-center">No active roster visible.</p>
+              </div>
+          </div>
+
         </div>
 
         <!-- PENAL CODE -->
@@ -247,11 +247,11 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
         <!-- UNIVERSAL MATCHER -->
         <div v-if="tab==='matcher'" class="space-y-6 max-w-7xl mx-auto">
           <div class="hud p-6 md:p-8"><h2 class="text-xl font-title font-bold text-purple-400 uppercase">Universal Recognition Matcher</h2>
-            <p class="text-sm text-slate-400 font-mono mt-2 leading-relaxed">Advanced analysis algorithm. Finds similar facial structures across all logged evidence and registries, not just identical photos. Results are investigative leads.</p></div>
+            <p class="text-sm text-slate-400 font-mono mt-2 leading-relaxed">Universal visual search compares image content, shapes and overall appearance across accessible photos. It ranks similar images, including non-identical photos. Scores are resemblance indicators, not identity probabilities. GTA characters and different angles can produce inaccurate results.</p></div>
           
           <div class="hud p-6 md:p-8 space-y-5 font-mono text-sm">
             <div class="flex flex-wrap gap-4 items-center">
-              <label class="btn !bg-purple-600 cursor-pointer text-base py-3 shadow-[0_0_15px_rgba(168,85,247,0.4)]">Upload Photo<input type="file" accept="image/*" class="hidden" @change="mFile"></label>
+              <label class="btn !bg-purple-600 cursor-pointer text-base py-3 shadow-[0_0_15px_rgba(168,85,247,0.4)]">Select local photo<input type="file" accept="image/*" class="hidden" @change="mFile"></label>
               <span class="text-slate-500">OR</span>
               <input v-model="mUrlInput" placeholder="Paste Image Link (https://...)" class="inp !w-full md:!w-72" @keyup.enter="mLink">
               <button @click="mLink" class="btn !bg-slate-700">Add Link</button>
@@ -262,7 +262,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                <div class="space-y-4">
                   <button @click="runMatch" :disabled="mBusy" class="btn !bg-emerald-600 text-base py-3 px-8">{{ mBusy?'Analysing Subject...':'Initiate Database Search' }}</button>
                   <p class="text-tc font-bold text-base">{{ mStatus }}</p>
-                  <p class="text-slate-500 text-xs">Indexed photos: {{ allPhotos.filter(x=>x.p.ix===1).length }} / {{ allPhotos.length }}</p>
+                  <p class="text-slate-500 text-xs">Database photos: {{ allPhotos.length }} · Local query photos are not uploaded.</p>
                </div>
             </div>
           </div>
@@ -272,7 +272,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
               <img :src="r.p.url" class="w-32 h-32 object-cover rounded-xl cursor-pointer bg-black border border-slate-700" @click="openZoom(r.obj,r.i,false)">
               <div class="flex-1 space-y-1.5 flex flex-col justify-center">
                 <p class="text-white font-bold text-base">{{ r.name }}</p><p class="text-slate-400 text-xs">{{ r.srcLabel }}</p>
-                <p class="font-bold text-base" :class="r.score>=70?'text-emerald-400':r.score>=40?'text-amber-400':'text-slate-300'">Similarity: {{ r.score }}%</p>
+                <p class="font-bold text-base" :class="r.score>=70?'text-emerald-400':r.score>=40?'text-amber-400':'text-slate-300'">Visual score: {{ r.score }} / 100</p>
                 <p class="text-slate-500 text-[11px]">{{ r.detail }}</p>
                 <button @click="openOwner(r)" class="btn !py-1.5 mt-2 w-max text-xs">Open Record</button>
               </div>
@@ -328,7 +328,10 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                 <select v-model="nl.cat" class="inp md:col-span-1"><option v-for="c in CATS" :value="c.id">{{c.title}}</option></select>
                 <div class="flex gap-2 md:col-span-1"><input v-model="nl.x" type="number" placeholder="X" class="inp"><input v-model="nl.y" type="number" placeholder="Y" class="inp"></div>
                 <div class="flex gap-2 md:col-span-1"><input v-model="nl.color" type="color" class="inp !p-1 !h-10 w-12"><select v-model="nl.icon" class="inp flex-1"><option value="">Dot</option><option v-for="i in ICONS" :value="i">{{i}}</option></select></div>
-                <button @click="addLoc" class="btn !bg-emerald-600 md:col-span-1">Add to Map</button>
+                <input v-model="nl.type" placeholder="Type" class="inp"><input v-model="nl.address" placeholder="Address / details" class="inp md:col-span-2">
+                <input v-model.number="nl.radius" type="number" min="1" placeholder="Territory radius" class="inp">
+                <button @click="addLoc" :disabled="busy" class="btn !bg-emerald-600 md:col-span-1">Add to Map</button>
+                <div class="md:col-span-5"><photo-gallery :target="nl" :edit="true" :by="user&&user.name" @zoom="(o,i)=>openZoom(o,i,true)"></photo-gallery></div>
             </div>
             
             <div class="space-y-3 mt-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -339,7 +342,11 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                     <input v-model="l.y" @change="saveLoc(l)" type="number" class="inp !w-24" placeholder="Y">
                     <input v-model="l.color" @change="saveLoc(l)" type="color" class="inp !w-12 !p-1 !h-10 shrink-0">
                     <select v-model="l.icon" @change="saveLoc(l)" class="inp !w-32"><option value="">Dot</option><option v-for="i in ICONS" :value="i">{{i}}</option></select>
+                    <input v-model="l.type" @change="saveLoc(l)" placeholder="Type" class="inp !w-48">
+                    <input v-model="l.address" @change="saveLoc(l)" placeholder="Address / details" class="inp !w-64">
+                    <input v-model.number="l.radius" @change="saveLoc(l)" type="number" min="1" placeholder="Radius" class="inp !w-32">
                     <button @click="delLoc(l)" class="del !py-2.5">✕</button>
+                    <div class="w-full pt-3"><photo-gallery :target="l" :edit="true" :by="user&&user.name" @changed="saveLoc" @zoom="(o,i)=>openZoom(o,i,true)"></photo-gallery></div>
                 </div>
                 <p v-if="!mapLocs.length" class="text-slate-500 py-4">No locations added to map.</p>
             </div>
@@ -379,7 +386,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
 
           <!-- Tools -->
           <div v-if="atab==='tools'" class="hud p-6 space-y-4 font-mono text-sm">
-            <button @click="indexAll" :disabled="mBusy" class="btn !bg-purple-600 text-base py-3 px-6">Index un-indexed photos ({{ allPhotos.filter(x=>x.p.ix!==1).length }})</button><p class="text-tc font-bold">{{ mStatus }}</p>
+            <button @click="indexAll" :disabled="mBusy" class="btn !bg-purple-600 text-base py-3 px-6">Prepare visual search cache ({{ allPhotos.length }} photos)</button><p class="text-tc font-bold">{{ mStatus }}</p>
           </div>
         </div>
 
@@ -469,23 +476,29 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
       <div class="space-y-6">
         <select v-if="recMode==='edit' && tplFor(rec.obj.col).length" @change="applyTpl($event.target.value);$event.target.value=''" class="inp !border-tc shadow-lg shadow-purple-900/20"><option value="">-- Load document template --</option><option v-for="t in tplFor(rec.obj.col)" :key="t.name">{{ t.name }}</option></select>
         
+        <p v-if="rec.obj.col==='documents'" class="text-sm text-amber-300">Visible to Public: Yes publishes this document and its attachments to visitors. No limits it to authorized detectives.</p>
         <div v-for="f in cfg.collections[rec.obj.col].fields" :key="f.k" class="space-y-1.5" :class="recMode==='preview' && (f.t==='a' || f.t==='c') ? 'bg-panel p-4 rounded-xl border border-purple-950/50' : ''">
           <label class="text-slate-500 text-[11px] uppercase tracking-wider font-bold">{{ f.l }}</label>
           
-          <textarea v-if="f.t==='a'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'" :rows="rowsFor(rec.obj[f.k])" class="inp" :class="recMode==='preview' ? '!p-0' : ''"></textarea>
+          <textarea v-if="f.t==='a'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" :rows="rowsFor(rec.obj[f.k])" class="inp" :class="recMode==='preview' ? '!p-0' : ''"></textarea>
           
-          <label v-else-if="f.t==='b'" class="flex items-center gap-3 mt-1 cursor-pointer w-max" :class="recMode==='edit'?'p-3 border border-purple-950 rounded-xl bg-panel':''"><input type="checkbox" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'" class="w-5 h-5 accent-tc"><span :class="recMode==='edit'?'text-white':'text-tc font-bold'">{{ rec.obj[f.k]?'Yes':'No' }}</span></label>
+          <label v-else-if="f.t==='b'" class="flex items-center gap-3 mt-1 cursor-pointer w-max" :class="recMode==='edit'?'p-3 border border-purple-950 rounded-xl bg-panel':''"><input type="checkbox" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="w-5 h-5 accent-tc"><span :class="recMode==='edit'?'text-white':'text-tc font-bold'">{{ rec.obj[f.k]?'Yes':'No' }}</span></label>
           
-          <select v-else-if="f.t==='u'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'" class="inp">
+          <select v-else-if="f.t==='u'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="inp">
              <option value="">-- Select Agent --</option>
              <option v-for="a in accounts" :key="a.id" :value="a.name">{{ a.name }}</option>
           </select>
           
-          <select v-else-if="f.t==='c'" v-model="rec.obj[f.k]" multiple :disabled="recMode!=='edit'" class="inp h-32 custom-multi">
-             <option v-for="cz in itemsOf('citizens')" :key="cz.id" :value="cz.id" class="p-1">{{ cz.fullName }} ({{ cz.citizenId }})</option>
-          </select>
+          <div v-else-if="f.t==='c'" class="space-y-2 max-h-64 overflow-y-auto p-3 border border-purple-950 rounded-xl">
+            <p class="text-xs text-slate-400">Select one or more citizens.</p>
+            <label v-for="cz in itemsOf('citizens')" :key="cz.id" class="flex gap-3 items-center py-1">
+              <input type="checkbox" v-model="rec.obj[f.k]" :value="cz.id" :disabled="recMode!=='edit'||!canEditRec" class="accent-purple-500">
+              <span>{{ cz.fullName }} ({{ cz.citizenId }})</span>
+            </label>
+            <p v-if="!itemsOf('citizens').length" class="text-slate-500">No accessible citizens. Use Other targets for unregistered persons.</p>
+          </div>
 
-          <input v-else v-model="rec.obj[f.k]" :disabled="recMode!=='edit'" class="inp">
+          <input v-else v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="inp">
         </div>
       </div>
       
@@ -505,8 +518,8 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <p v-if="!matched('vehicles').length" class="text-slate-500 col-span-2">No vehicles registered to this ID/Name.</p></div></div>
         </template>
         
-        <div class="bg-panel p-5 rounded-2xl border border-purple-950 space-y-4"><h4 class="text-tc font-bold uppercase text-base mb-2">Files & Documents</h4><file-box :target="rec.obj" :edit="recMode==='edit'" :by="user&&user.name" @changed="saveTarget"></file-box></div>
-        <div class="bg-panel p-5 rounded-2xl border border-purple-950 space-y-4"><h4 class="text-tc font-bold uppercase text-base mb-2">Gallery</h4><photo-gallery :target="rec.obj" :edit="recMode==='edit'" :by="user&&user.name" @zoom="(o,i)=>openZoom(o,i,canEditRec)" @changed="saveTarget"></photo-gallery></div>
+        <div class="bg-panel p-5 rounded-2xl border border-purple-950 space-y-4"><h4 class="text-tc font-bold uppercase text-base mb-2">Files & Documents</h4><file-box :target="rec.obj" :edit="recMode==='edit'&&canEditRec" :by="user&&user.name" @changed="saveTarget"></file-box></div>
+        <div class="bg-panel p-5 rounded-2xl border border-purple-950 space-y-4"><h4 class="text-tc font-bold uppercase text-base mb-2">Gallery</h4><photo-gallery :target="rec.obj" :edit="recMode==='edit'&&canEditRec" :by="user&&user.name" @zoom="(o,i)=>openZoom(o,i,canEditRec)" @changed="saveTarget"></photo-gallery></div>
       </div>
     </div>
     
@@ -535,7 +548,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
     <div v-if="(pdoc.links||[]).length" class="mb-6 mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-3 pb-1 text-slate-900">Attached records</p><p v-for="l in pdoc.links" :key="l" class="mb-1 text-sm">• {{ l }}</p></div>
     <div v-if="(pdoc.files||[]).length" class="mb-6 mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-3 pb-1 text-slate-900">Files on record</p><p v-for="l in pdoc.files" :key="l" class="mb-1 text-sm text-blue-700 underline">• {{ l }}</p></div>
     <div v-if="(pdoc.photos||[]).length" class="mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-4 pb-1 text-slate-900">Photographic evidence</p>
-      <div class="grid grid-cols-3 gap-6"><div v-for="p in pdoc.photos" :key="p.id" style="break-inside:avoid" class="border border-slate-300 p-2 bg-slate-50"><img :src="p.url" crossorigin="anonymous" class="w-full h-48 object-cover mb-2"><p class="text-xs font-bold text-slate-900">{{ p.title||'Untitled' }}</p><p class="text-[10px] text-slate-600 mt-1">{{ [p.taken,p.place,p.desc].filter(x=>x).join(' · ') }}</p></div></div></div>
+      <div class="grid grid-cols-3 gap-6"><div v-for="p in pdoc.photos" :key="p.id" style="break-inside:avoid" class="border border-slate-300 p-2 bg-slate-50"><img :src="p.url" class="w-full h-48 object-cover mb-2"><p class="text-xs font-bold text-slate-900">{{ p.title||'Untitled' }}</p><p class="text-[10px] text-slate-600 mt-1">{{ [p.taken,p.place,p.desc].filter(x=>x).join(' · ') }}</p></div></div></div>
     
     <!-- Real Signatures Design -->
     <div class="mt-20 pt-6 border-t-2 border-slate-900 flex justify-between items-end text-sm text-slate-900 font-bold">
@@ -566,8 +579,8 @@ const LOGO = 'images/logo.png';
 /* ========================================================= */
 const { createApp, reactive, ref, computed, watch, onMounted, nextTick } = Vue;
 const configured = !String(FIREBASE_CONFIG.apiKey).startsWith('PASTE');
-let fdb, fauth, fstore;
-if (configured) { firebase.initializeApp(FIREBASE_CONFIG); fdb = firebase.firestore(); fauth = firebase.auth(); fstore = firebase.storage(); }
+let fdb, fauth;
+if (configured) { firebase.initializeApp(FIREBASE_CONFIG); fdb = firebase.firestore(); fauth = firebase.auth(); }
 
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -591,7 +604,7 @@ const defCfg=()=>({
     citizens:COL('Citizen Registry','fa-solid fa-address-card',[F('fullName','Full Name'),F('citizenId','Citizen ID'),F('phone','Phone'),F('gang','Gang / Affiliation'),F('notes','Notes','a')]),
     weapons:COL('Weapons Registry','fa-solid fa-gun text-amber-400',[F('serial','Serial Number'),F('model','Model'),F('owner','Owner (full name)'),F('ownerCid','Owner Citizen ID (optional)'),F('stolen','Flagged stolen','b')]),
     vehicles:COL('Vehicle Registry','fa-solid fa-car',[F('plate','License Plate'),F('model','Model'),F('color','Color'),F('owner','Owner (full name)'),F('ownerCid','Owner Citizen ID (optional)')]),
-    warrants:COL('Warrant Requests','fa-solid fa-triangle-exclamation text-red-400',[F('targets','Select Target Citizens','c'),F('reason','Probable cause & details','a')]),
+    warrants:COL('Requests','fa-solid fa-triangle-exclamation text-red-400',[F('targets','Citizen Registry — select one or more','c'),F('otherTargets','Other targets / unidentified persons','a'),F('reason','Probable cause & details','a')]),
     cases:COL('Case Files','fa-solid fa-folder-open',[F('fileNo','File Number'),F('title','Case Title'),F('status','Status'),F('lead','Lead Detective','u'),F('summary','Investigation details','a')]),
     organizations:COL('Organisations','fa-solid fa-sitemap text-amber-400',[F('fileNo','File Number'),F('name','Organisation Name'),F('lead','Lead Detective','u'),F('notes','Notes & structure','a')]),
     interrogations:COL('Interrogations','fa-solid fa-comments text-cyan-400',[F('fileNo','Case/File Number'),F('suspect','Suspect Name'),F('date','Date'),F('transcript','Transcript','a')]),
@@ -604,13 +617,18 @@ const defCfg=()=>({
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=()=>rej(new Error('load'));i.src=src;});
 const toEmail=u=>u.trim().toLowerCase()+'@upd.internal';
 const toBlob=f=>new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);c.toBlob(b=>res(b),'image/jpeg',.82);};im.onerror=()=>res(null);im.src=fr.result;};fr.onerror=()=>res(null);fr.readAsDataURL(f);});
-async function upload(file,folder){const name=(file.name||'photo.jpg').replace(/[^\w.\-]/g,'_'),ref=fstore.ref(`${folder}/${uid()}-${name}`);const snap=await ref.put(file);return await snap.ref.getDownloadURL();}
-const delStored=url=>{try{if(/firebasestorage|appspot/.test(url))fstore.refFromURL(url).delete().catch(()=>{});}catch(e){}};
+const delStored=()=>{}; // External files are never deleted by this terminal.
 
 let modelsReady=null;
-const loadModels=()=>modelsReady||(modelsReady=(async()=>{const u='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';await faceapi.nets.ssdMobilenetv1.loadFromUri(u);await faceapi.nets.faceLandmark68Net.loadFromUri(u);await faceapi.nets.faceRecognitionNet.loadFromUri(u);})());
-async function indexPhoto(p){ p.ix=1; /* Simplified index */ }
-const faceDescs=p=>{return [];};
+const embeddings=new Map();
+const loadModels=()=>modelsReady||(modelsReady=(async()=>{await tf.ready();return mobilenet.load({version:2,alpha:1.0});})().catch(e=>{modelsReady=null;throw e;}));
+const cosine=(a,b)=>{let dot=0,aa=0,bb=0;for(let i=0;i<a.length;i++){dot+=a[i]*b[i];aa+=a[i]*a[i];bb+=b[i]*b[i];}return aa&&bb?Math.max(0,Math.min(1,dot/Math.sqrt(aa*bb))):0;};
+async function imageEmbedding(url){
+  if(embeddings.has(url))return embeddings.get(url);
+  const model=await loadModels(),image=await loadImg(url),tensor=model.infer(image,true);
+  try{const vector=Array.from(await tensor.data());if(embeddings.size>=500)embeddings.delete(embeddings.keys().next().value);embeddings.set(url,vector);return vector;}finally{tensor.dispose();}
+}
+async function indexPhoto(p){await imageEmbedding(p.url);}
 
 const app=createApp({
   setup(){
@@ -619,14 +637,14 @@ const app=createApp({
     const time=ref(''),date=ref(''),isMobile=ref(window.innerWidth<768),mobileNavOpen=ref(false);
     const auth=reactive({u:'',p:''}),na=reactive({username:'',name:'',photo:'',badge:'',rank:'Detective I',password:''});
     const nt=reactive({key:'cases',name:'',body:''}),nr=reactive({label:'',fields:''});
-    const nl=reactive({name:'',cat:'gang',type:'Gang',address:'',x:0,y:0,icon:'',color:'#B00707',radius:100,img:'x.jpg'});
+    const nl=reactive({name:'',cat:'gang',type:'Gang',address:'',x:0,y:0,icon:'',color:'#B00707',radius:100,img:'',gallery:[]});
     const rec=ref(null),recErr=ref(''),recMode=ref('preview'),gal=ref(null),zoom=ref(null),zs=ref(1),pdoc=ref(null),lightboxSrc=ref(null),lkCol=ref(''),lkId=ref(''),evSrc=ref('');
     const mImg=ref(''),mUrlInput=ref(''),mBusy=ref(false),mStatus=ref(''),mResults=ref([]);
     const msOpen=ref(true),msq=ref(''),mOpen=reactive({gang:true,service:false,job:false,asset:false}),layerOn=reactive({gang:true,service:true,job:true,asset:true});
     let map=null,groups={},markers={},unsubs=[],profUnsub=null,accUnsub=null,remote=false,lastCfg='';
 
     const isAdmin=computed(()=>!!user.value&&isTop(user.value.rank));
-    const rankLevel=(r,k)=>isTop(r)?'edit':((cfg.perms[r]||{})[k]||(r==='Probationary Detective'?'view':'edit'));
+    const rankLevel=(r,k)=>isTop(r)?'edit':((cfg.perms[r]||{})[k]||(RANKS.includes(r)?(r==='Probationary Detective'?'view':'edit'):'none'));
     const level=k=>{const u=user.value;if(!u)return(k==='penal'||k==='directives'||k==='documents')?'view':'none';return rankLevel(u.rank,k);};
     const setPerm=(r,k,v)=>{(cfg.perms[r]||(cfg.perms[r]={}))[k]=v;};
     const permKeys=computed(()=>[...Object.keys(cfg.collections),'penal','evidence','matcher']);
@@ -637,7 +655,7 @@ const app=createApp({
     const nav=t=>'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-title tracking-wider transition '+(tab.value===t?'bg-purple-600/30 text-white border border-purple-500/50 font-bold shadow-lg shadow-purple-900/10':'text-slate-400 hover:bg-purple-900/30 hover:text-slate-200');
     const subFields=c=>c.fields.slice(1).filter(f=>f.t!=='a'&&f.t!=='c').slice(0,2);
     const rowsFor=v=>Math.min(40,Math.max(8,String(v||'').split('\n').length+2));
-    const recTitle=r=>{const c=cfg.collections[r.col];return(c&&r[c.fields[0].k])||'(untitled)';};
+    const recTitle=r=>{const c=cfg.collections[r.col];if(r.col==='warrants')return (r.targets||[]).map(id=>recs[id]?.fullName||id).concat(r.otherTargets?[r.otherTargets]:[]).join(', ')||'Request';return(c&&c.fields.length&&r[c.fields[0].k])||'(untitled)';};
     const shown=(it,f)=>{const v=it[f.k];if(typeof v==='boolean')return v?'Yes':'No';
       if(f.t==='c'){const arr=Array.isArray(v)?v:[];return arr.map(id=>recs[id]?recs[id].fullName:id).join(', ')||'-';}
       return v||'-';};
@@ -667,73 +685,95 @@ const app=createApp({
       busy.value=true;let sec;
       try{sec=firebase.initializeApp(FIREBASE_CONFIG,'sec'+Date.now());const cr=await sec.auth().createUserWithEmailAndPassword(toEmail(un),na.password);
         await fdb.collection('users').doc(cr.user.uid).set({username:un,name:na.name.trim(),badge:na.badge.trim(),photo:na.photo.trim(),rank:na.rank,createdAt:new Date().toISOString()});
-        await sec.auth().signOut();na.username=na.name=na.photo=na.badge=na.password='';alert('Credentials issued.');
+        await fdb.collection('roster').doc(cr.user.uid).set(rosterData(na));await sec.auth().signOut();na.username=na.name=na.photo=na.badge=na.password='';alert('Credentials issued.');
       }catch(e){fail(e);}finally{if(sec)sec.delete();busy.value=false;}
     };
-    const saveAcc=a=>fdb.collection('users').doc(a.id).update({name:a.name,badge:a.badge,rank:a.rank,photo:a.photo}).catch(fail);
+    let adminAccountsUnsub=null;
+    const loadAdminAccounts=()=>{if(adminAccountsUnsub)adminAccountsUnsub();adminAccountsUnsub=fdb.collection('users').onSnapshot(x=>accounts.value=x.docs.map(d=>({...d.data(),id:d.id})),fail);};
+    const rosterData=a=>({name:a.name||'',badge:a.badge||'',rank:a.rank||'',photo:a.photo||''});
+    const syncRoster=async()=>{try{const snap=await fdb.collection('users').get();const batches=[];let batch=fdb.batch(),n=0;for(const d of snap.docs){batch.set(fdb.collection('roster').doc(d.id),rosterData(d.data()));if(++n===400){batches.push(batch.commit());batch=fdb.batch();n=0;}}if(n)batches.push(batch.commit());await Promise.all(batches);}catch(e){fail(e);}};
+    const saveAcc=async a=>{if(!isAdmin.value)return;try{const b=fdb.batch();b.update(fdb.collection('users').doc(a.id),rosterData(a));b.set(fdb.collection('roster').doc(a.id),rosterData(a));await b.commit();}catch(e){fail(e);}};
     const pwInfo=()=>alert('Firebase Client limits changing another user\'s password directly. To change an Agent\'s password, they must login and use "Change My Password", or you must delete and reissue their credentials.');
     const changePw=async()=>{const old=prompt('Current password:');if(!old)return;const nw=prompt('New password (min 6 characters):');if(!nw||nw.length<6)return;
       try{const u=fauth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,old));await u.updatePassword(nw);alert('Password changed successfully.');}catch(e){fail(e);}};
-    const delAcc=a=>{if(a.id===user.value.id)return alert('You cannot remove yourself.');if(confirm('Remove this agent\'s access?'))fdb.collection('users').doc(a.id).delete().catch(fail);};
+    const delAcc=a=>{if(a.id===user.value.id)return alert('You cannot remove yourself.');if(confirm('Remove this agent\'s access?')){const b=fdb.batch();b.delete(fdb.collection('users').doc(a.id));b.delete(fdb.collection('roster').doc(a.id));b.commit().catch(fail);}};
 
     const listenRecords=()=>{
       unsubs.forEach(f=>f());unsubs=[];Object.keys(recs).forEach(k=>delete recs[k]);
-      const base=fdb.collection('records'),qy=user.value?base:base.where('col','in',['documents','directives']);
-      unsubs.push(qy.onSnapshot(s=>{s.docChanges().forEach(ch=>{
+      const base=fdb.collection('records');
+      const queries=user.value ? Object.keys(cfg.collections).filter(k=>level(k)!=='none').map(k=>base.where('col','==',k))
+        : [base.where('col','==','directives'),base.where('col','==','documents').where('isPublic','==',true)];
+      queries.forEach(qy=>unsubs.push(qy.onSnapshot(snap=>{snap.docChanges().forEach(ch=>{
         const id=ch.doc.id;
-        if(ch.type==='removed'){delete recs[id];if(rec.value&&rec.value.obj.id===id&&!rec.value.isNew)rec.value=null;return;}
-        if(rec.value&&!rec.value.isNew&&rec.value.obj.id===id)return;
-        recs[id]={...ch.doc.data(),id};
-        if(rec.value&&rec.value.obj.id===id)rec.value.obj=recs[id];
-      });}, e => console.warn('Records stream:', e.message)));
+        if(ch.type==='removed'){delete recs[id];if(rec.value?.obj.id===id&&!rec.value.isNew)rec.value=null;return;}
+        const incoming={...ch.doc.data(),id};
+        if(rec.value&&!rec.value.isNew&&rec.value.obj.id===id){
+          if(recMode.value==='edit'){recs[id]=incoming;return;}
+          rec.value.obj=incoming;
+        }
+        recs[id]=incoming;
+      });},fail)));
     };
-    
+    watch(()=>JSON.stringify([user.value?.rank,Object.keys(cfg.collections),cfg.perms]),()=>{if(rec.value&&level(rec.value.obj.col)==='none'){clearTimeout(watch.r);rec.value=null;}if(cfg.collections[tab.value]&&level(tab.value)==='none')go('dashboard');if(!isAdmin.value&&adminAccountsUnsub){adminAccountsUnsub();adminAccountsUnsub=null;}mResults.value=[];if(configured)listenRecords();});
+
     const startPublic=()=>{
       fdb.collection('config').doc('main').onSnapshot(s=>{
         if(s.exists){const d=s.data(),b=defCfg();remote=true;
           Object.keys(cfg).forEach(k=>delete cfg[k]);
           Object.assign(cfg,{perms:d.perms||{},templates:d.templates||b.templates,collections:{...b.collections,...(d.collections||{})}});
+          cfg.collections.warrants.label='Requests';
+          if(!cfg.collections.warrants.fields.some(f=>f.k==='otherTargets'))cfg.collections.warrants.fields.push(F('otherTargets','Other targets / unidentified persons','a'));
+          for(const key of ['cases','organizations','interrogations'])if(!cfg.collections[key].fields.some(f=>f.k==='fileNo'))cfg.collections[key].fields.unshift(F('fileNo','File Number'));
+          if(!cfg.collections.documents.fields.some(f=>f.k==='isPublic'))cfg.collections.documents.fields.push(F('isPublic','Visible to Public','b'));
           lastCfg=JSON.stringify(cfg);nextTick(()=>remote=false);
         }else if(isAdmin.value)fdb.collection('config').doc('main').set(clean(cfg)).catch(fail);
       }, e => console.warn('Config stream:', e.message));
       fdb.collection('penal').onSnapshot(s=>{penal.value=s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(a.category||'').localeCompare(b.category||''));}, e => console.warn('Penal stream:', e.message));
       fdb.collection('map').onSnapshot(s=>{mapLocs.value=s.docs.map(d=>({...d.data(),id:d.id}));}, e => console.warn('Map stream:', e.message));
       
-      accUnsub=fdb.collection('users').onSnapshot(x=>{accounts.value=x.docs.map(d=>({id:d.id,username:d.data().username,name:d.data().name||d.data().username,photo:d.data().photo||'',badge:d.data().badge,rank:d.data().rank}));}, e => console.warn('Users stream:', e.message));
+      accUnsub=fdb.collection('roster').onSnapshot(x=>{if(!isAdmin.value)accounts.value=x.docs.map(d=>({...d.data(),id:d.id}));}, e => console.warn('Users stream:', e.message));
     };
     
     watch(()=>JSON.stringify(cfg),s=>{if(remote||!isAdmin.value||s===lastCfg)return;lastCfg=s;clearTimeout(watch.t);watch.t=setTimeout(()=>fdb.collection('config').doc('main').set(clean(cfg)).catch(fail),700);});
     const setUser=u=>{
       if(profUnsub){profUnsub();profUnsub=null;}
-      if(!u){user.value=null;listenRecords();return;}
+      if(!u){clearTimeout(watch.r);clearTimeout(watch.t);if(adminAccountsUnsub){adminAccountsUnsub();adminAccountsUnsub=null;}user.value=null;rec.value=zoom.value=pdoc.value=null;mResults.value=[];mImg.value='';mStatus.value='';accounts.value=[];tab.value='dashboard';listenRecords();fdb.collection('roster').get().then(x=>{if(!user.value)accounts.value=x.docs.map(d=>({...d.data(),id:d.id}));}).catch(fail);return;}
       profUnsub=fdb.collection('users').doc(u.uid).onSnapshot(async s=>{
         if(!s.exists){loginError.value='This login has no agent profile.';showLogin.value=true;await fauth.signOut();return;}
         const was=!!user.value,d=s.data();user.value={id:u.uid,username:d.username,name:d.name||d.username,badge:d.badge,rank:d.rank,photo:d.photo||''};
-        if(!was){listenRecords();}
+        if(!was){listenRecords();} if(isAdmin.value){loadAdminAccounts();syncRoster();}
       },fail);
     };
 
     const canEditRec=computed(()=>!!rec.value&&level(rec.value.obj.col)==='edit');
     const openRec=r=>{if(!r)return;recErr.value='';lkCol.value=lkId.value='';rec.value={obj:r,isNew:false};recMode.value='preview';};
     const newRec=key=>{const o=reactive({id:uid(),col:key,ts:Date.now(),by:user.value?user.value.name:'',gallery:[],files:[],links:[]});cfg.collections[key].fields.forEach(f=>o[f.k]=f.t==='b'?false:(f.t==='c'?[]:''));recErr.value='';rec.value={obj:o,isNew:true};recMode.value='edit';};
-    const closeRec=()=>{rec.value=null;};
-    const saveRaw=o=>fdb.collection('records').doc(o.id).set(clean(o)).catch(fail);
+    const closeRec=async()=>{const current=rec.value;if(!current)return;clearTimeout(watch.r);if(!current.isNew&&recMode.value==='edit'&&canEditRec.value){try{await saveRaw(current.obj);}catch(e){recErr.value=e.message;fail(e);if(!confirm('Save failed. Close without saving these changes?'))return;}}if(rec.value===current)rec.value=null;};
+    const saveQueues=new Map();
+    const saveRaw=o=>{const prior=saveQueues.get(o.id)||Promise.resolve();const task=prior.catch(()=>{}).then(()=>writeRecord(o));saveQueues.set(o.id,task);task.finally(()=>{if(saveQueues.get(o.id)===task)saveQueues.delete(o.id);}).catch(()=>{});return task;};
+    const writeRecord=async o=>{
+      if(level(o.col)!=='edit')throw new Error('No edit permission.');
+      const data=clean(o),expected=data.version||0,ref=fdb.collection('records').doc(o.id);
+      const version=await fdb.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists&&expected>0)throw new Error('Record was deleted. Close this form.');if(snap.exists&&(snap.data().version||0)!==expected)throw new Error('Record changed elsewhere. Close and reopen to load current data.');const v=expected+1;tx.set(ref,{...data,version:v,updatedAt:Date.now()});return v;});
+      o.version=version;
+    };
     const saveNew=async()=>{
       const o=rec.value.obj,c=cfg.collections[o.col];
-      if(!String(o[c.fields[0].k]).trim()){recErr.value='"'+c.fields[0].l+'" is required.';return;}
+      if(o.col==='warrants' ? (!(o.targets||[]).length&&!String(o.otherTargets||'').trim()) : !String(o[c.fields[0].k]||'').trim()){recErr.value=o.col==='warrants'?'Select at least one citizen or enter other targets.':'"'+c.fields[0].l+'" is required.';return;}
       if(o.col==='warrants'&&user.value)Object.assign(o,{issuedBy:user.value.name,issuedRank:user.value.rank,issuedBadge:user.value.badge});
-      busy.value=true;await saveRaw(o);busy.value=false;recs[o.id]=o;rec.value={obj:recs[o.id],isNew:false};recMode.value='preview';
+      busy.value=true;try{await saveRaw(o);recs[o.id]=o;if(rec.value?.obj===o){rec.value={obj:recs[o.id],isNew:false};recMode.value='preview';}}catch(e){recErr.value=e.message;fail(e);}finally{busy.value=false;}
     };
-    watch(()=>rec.value&&!rec.value.isNew?JSON.stringify(rec.value.obj):null,s=>{if(s===null||!canEditRec.value)return;clearTimeout(watch.r);const o=rec.value.obj;watch.r=setTimeout(()=>saveRaw(o),800);});
-    const delRec=r=>{if(!confirm('Delete this record?'))return;(r.files||[]).forEach(f=>delStored(f.url));(r.gallery||[]).forEach(p=>delStored(p.url));fdb.collection('records').doc(r.id).delete().catch(fail);if(rec.value&&rec.value.obj.id===r.id)rec.value=null;};
+    const editableJSON=o=>JSON.stringify(Object.fromEntries(Object.entries(o).filter(([k])=>!['version','updatedAt'].includes(k))));
+    watch(()=>rec.value&&!rec.value.isNew?editableJSON(rec.value.obj):null,(s,old)=>{if(s===null||old===null||!canEditRec.value||recMode.value!=='edit')return;clearTimeout(watch.r);const o=rec.value.obj;watch.r=setTimeout(()=>saveRaw(o).catch(e=>{recErr.value=e.message;fail(e);}),800);});
+    const delRec=r=>{if(level(r.col)!=='edit'||!confirm('Delete this record?'))return;clearTimeout(watch.r);(r.files||[]).forEach(f=>delStored(f.url));(r.gallery||[]).forEach(p=>delStored(p.url));fdb.collection('records').doc(r.id).delete().catch(fail);if(rec.value&&rec.value.obj.id===r.id)rec.value=null;};
     const applyTpl=name=>{const o=rec.value.obj,t=tplFor(o.col).find(x=>x.name===name),f=cfg.collections[o.col].fields.find(f=>f.t==='a');if(t&&f){o[f.k]=t.body;o.template=t.name;}};
-    const saveTarget=o=>{if(rec.value&&rec.value.obj===o&&rec.value.isNew)return;if(o.col)saveRaw(o);else saveLoc(o);};
+    const saveTarget=o=>{if(rec.value&&rec.value.obj===o&&rec.value.isNew)return;clearTimeout(watch.r);if(o.col)return saveRaw(o).catch(fail);else return saveLoc(o);};
     const matched=key=>{const c=rec.value&&rec.value.obj;if(!c)return [];return itemsOf(key).filter(i=>(c.citizenId&&norm(i.ownerCid)===norm(c.citizenId))||(c.fullName&&norm(i.owner)===norm(c.fullName)));};
 
-    const linkedFor=o=>{const out=[],seen=new Set();(o.links||[]).forEach(l=>{const r=recs[l.id];if(r&&!seen.has(r.id)){seen.add(r.id);out.push({rec:r,mine:true});}});Object.values(recs).forEach(r=>{if(!seen.has(r.id)&&(r.links||[]).some(l=>l.id===o.id)){seen.add(r.id);out.push({rec:r,mine:false});}});return out.filter(l=>user.value||['documents','directives'].includes(l.rec.col));};
+    const linkedFor=o=>{const out=[],seen=new Set();(o.links||[]).forEach(l=>{const r=recs[l.id];if(r&&!seen.has(r.id)){seen.add(r.id);out.push({rec:r,mine:true});}});Object.values(recs).forEach(r=>{if(!seen.has(r.id)&&(r.links||[]).some(l=>l.id===o.id)){seen.add(r.id);out.push({rec:r,mine:false});}});return out.filter(l=>level(l.rec.col)!=='none'&&(user.value||l.rec.col==='directives'||l.rec.col==='documents'&&l.rec.isPublic));};
     const lkChoices=computed(()=>lkCol.value?itemsOf(lkCol.value).filter(r=>rec.value&&r.id!==rec.value.obj.id&&!linkedFor(rec.value.obj).some(l=>l.rec.id===r.id)):[]);
     const attach=()=>{if(!lkId.value)return;const o=rec.value.obj;(o.links||(o.links=[])).push({c:lkCol.value,id:lkId.value});lkId.value='';};
-    const detach=l=>{const o=l.mine?rec.value.obj:l.rec;o.links=(o.links||[]).filter(x=>x.id!==(l.mine?l.rec.id:rec.value.obj.id));if(!l.mine)saveRaw(o);};
+    const detach=l=>{const o=l.mine?rec.value.obj:l.rec;if(level(o.col)!=='edit')return alert('No edit permission on the linked record.');o.links=(o.links||[]).filter(x=>x.id!==(l.mine?l.rec.id:rec.value.obj.id));if(!l.mine&&level(o.col)==='edit')saveRaw(o).catch(fail);};
 
     const zp=computed(()=>zoom.value?zoom.value.obj.gallery[zoom.value.i]:null);
     const openZoom=(obj,i,edit)=>{zs.value=1;zoom.value={obj,i,edit};};
@@ -757,7 +797,7 @@ const app=createApp({
          sigs=[{name:user.value.name,title:user.value.rank}];
          if(!isTop(user.value.rank))sigs.push({name:'',title:'Director / Assistant Director'});
       }else{sigs=[{name:'',title:'Authorized U.P.D. Agent'}];}
-      pdoc.value={title:o.col==='warrants'?'WARRANT REQUEST':c.label+': '+recTitle(o),kind:o.col==='warrants'?'Official Warrant Request':'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sigs};
+      pdoc.value={title:o.col==='warrants'?'REQUEST':c.label+': '+recTitle(o),kind:o.col==='warrants'?'Official Request':'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sigs};
     };
     const printList=()=>{const c=col.value,f=c.fields.filter(f=>f.t!=='a'&&f.t!=='c').slice(0,5);pdoc.value={title:c.label+' — list',head:f.map(x=>x.l),table:listItems.value.map(r=>f.map(x=>shown(r,x)))};};
     const printPenal=()=>{pdoc.value={title:'San Andreas Penal Code Schedule',head:['Category','Charge','Fine','Jail (months)'],table:penalList.value.map(p=>[p.category,p.title,'$'+Number(p.fine||0).toLocaleString(),p.jail||0])};};
@@ -771,13 +811,13 @@ const app=createApp({
 
     const addTpl=()=>{if(!nt.name.trim()||!nt.body.trim())return;(cfg.templates[nt.key]||(cfg.templates[nt.key]=[])).push({name:nt.name.trim(),body:nt.body});nt.name=nt.body='';};
     const delTpl=(k,i)=>{if(confirm('Delete template?'))cfg.templates[k].splice(i,1);};
-    const addRegistry=()=>{const label=nr.label.trim();if(!label||!nr.fields.trim())return alert('Name and fields are required.');let key=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||uid();if(cfg.collections[key])key+='_'+uid().slice(-3);const fields=nr.fields.split(',').map(s=>{const [n,t]=s.trim().split(':');return F('f_'+uid(),n.trim(),['a','b','u','c'].includes(t)?t:'t');}).filter(f=>f.l);cfg.collections[key]={label,icon:'fa-solid fa-folder',fields,builtin:false};nr.label=nr.fields='';};
+    const addRegistry=()=>{const label=nr.label.trim();if(!label||!nr.fields.trim()||!nr.fields.split(',').some(x=>x.split(':')[0].trim()))return alert('Name and at least one field are required.');let key=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||uid();if(cfg.collections[key])key+='_'+uid().slice(-3);const fields=nr.fields.split(',').map(s=>{const [n,t]=s.trim().split(':');return F('f_'+uid(),n.trim(),['a','b','u','c'].includes(t)?t:'t');}).filter(f=>f.l);cfg.collections[key]={label,icon:'fa-solid fa-folder',fields,builtin:false};nr.label=nr.fields='';};
     const delRegistry=k=>{if(confirm('Delete this registry? Its records stay in the database.')){delete cfg.collections[k];delete cfg.templates[k];}};
     const addField=c=>c.fields.push(F('f_'+uid(),'New field','t'));
     const delField=(c,i)=>{if(c.fields.length<2)return alert('A registry needs at least one field.');if(confirm('Remove this field from the form?'))c.fields.splice(i,1);};
     const moveField=(c,i,d)=>{const j=i+d;if(j<0||j>=c.fields.length)return;const [f]=c.fields.splice(i,1);c.fields.splice(j,0,f);};
-    const saveLoc=l=>fdb.collection('map').doc(l.id).set(clean(l)).catch(fail);
-    const addLoc=()=>{if(!nl.name.trim())return;fdb.collection('map').add({...clean(nl),gallery:[]}).catch(fail);nl.name=nl.address='';};
+    const saveLoc=l=>{if(!isAdmin.value)return;if(!l.id)return;return fdb.collection('map').doc(l.id).set(clean(l)).catch(fail);};
+    const addLoc=async()=>{if(!isAdmin.value||!nl.name.trim())return;busy.value=true;try{await fdb.collection('map').add(clean(nl));nl.name=nl.address='';nl.gallery=[];}catch(e){fail(e);}finally{busy.value=false;}};
     const delLoc=l=>{if(confirm('Delete location?')){(l.gallery||[]).forEach(p=>delStored(p.url));fdb.collection('map').doc(l.id).delete().catch(fail);}};
 
     const BOUNDS=[[-3500,-3000],[5000,4500]];
@@ -795,46 +835,27 @@ const app=createApp({
     const mFile=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const b=await toBlob(f);if(!b)return;const fr=new FileReader();fr.onload=()=>mImg.value=fr.result;fr.readAsDataURL(b);mResults.value=[];mStatus.value='';};
     const mLink=()=>{const u=mUrlInput.value.trim();if(!/^https?:\/\//i.test(u))return;mImg.value=u;mUrlInput.value='';mResults.value=[];mStatus.value='';};
     const runMatch=async()=>{
-        mBusy.value=true;mResults.value=[];
-        try{
-            mStatus.value='Analysing subject structure...';
-            await loadModels();
-            const qi=await loadImg(mImg.value);
-            const det=await faceapi.detectAllFaces(qi,new faceapi.SsdMobilenetv1Options({minConfidence:.2})).withFaceLandmarks().withFaceDescriptors();
-            const qd=det.map(d=>d.descriptor);
-            
-            const best=new Map();
-            let unindexed=0;
-            for(const e of allPhotos.value){
-                if(e.p.ix!==1){unindexed++;continue;}
-                let fs=0;
-                
-                if(qd.length > 0) {
-                    const ds=faceDescs(e.p);
-                    let dmin=9;
-                    ds.forEach(d=>qd.forEach(x=>{
-                        const dist=faceapi.euclideanDistance(x,d);
-                        if(dist<dmin)dmin=dist;
-                    }));
-                    if(dmin < 1.0) { fs = Math.max(0, (1 - dmin) * 100); }
-                }
-                
-                if(fs < 25) continue;
-                
-                const key=e.obj.id;
-                const prev=best.get(key);
-                if(!prev || fs>prev.score) best.set(key, {...e, score:Math.round(fs), detail: 'Similarity Match: '+fs.toFixed(1)+'%'});
-            }
-            mResults.value=[...best.values()].sort((a,b)=>b.score-a.score).slice(0,40);
-            mStatus.value=`${mResults.value.length} similar match(es) found. `+(unindexed?`${unindexed} unindexed. `:'');
-        }catch(e){mStatus.value='Matcher error: '+e.message;}
-        mBusy.value=false;
+      if(mBusy.value||!mImg.value||level('matcher')==='none')return;
+      mBusy.value=true;mResults.value=[];const session=user.value?.id;
+      try{
+        mStatus.value='Loading visual similarity model...';const query=await imageEmbedding(mImg.value);
+        const photos=[...allPhotos.value];let skipped=0,n=0;const results=[];
+        for(const e of photos){
+          if(user.value?.id!==session)return;
+          mStatus.value=`Comparing ${++n}/${photos.length}...`;
+          try{const vector=await imageEmbedding(e.p.url),score=Math.round(cosine(query,vector)*100);results.push({...e,score,detail:'Universal visual similarity score / 100'});}catch(err){skipped++;}
+          await new Promise(resolve=>setTimeout(resolve,0));
+        }
+        if(user.value?.id!==session)return;
+        mResults.value=results.sort((a,b)=>b.score-a.score).slice(0,40);
+        mStatus.value=`${results.length} photos compared. ${skipped} unavailable (broken link / CORS). Results rank visual resemblance, not identity probability.`;
+      }catch(e){mStatus.value='Cannot analyse image: '+e.message+'. Use a direct image URL that permits CORS.';}finally{mBusy.value=false;}
     };
-    const indexAll=async()=>{mBusy.value=true;const todo=allPhotos.value.filter(x=>x.p.ix!==1);let n=0;const touched=new Set();for(const e of todo){mStatus.value=`Indexing ${++n}/${todo.length}...`;await indexPhoto(e.p);touched.add(e.obj);}for(const o of touched)saveTarget(o);mStatus.value='Indexing finished.';mBusy.value=false;};
+    const indexAll=async()=>{if(mBusy.value)return;mBusy.value=true;let n=0,failed=0;try{for(const e of allPhotos.value){try{await indexPhoto(e.p);n++;}catch(e){failed++;}}mStatus.value=`Cached ${n} photos for this browser session; ${failed} unavailable.`;}catch(e){fail(e);}finally{mBusy.value=false;}};
 
     window.addEventListener('resize',()=>{isMobile.value=window.innerWidth<768;if(!isMobile.value)mobileNavOpen.value=false;});
 
-    watch(tab,t=>{if(cfg.collections[t]&&t!=='documents'&&level(t)==='none')go('map');});
+    watch(tab,t=>{if(cfg.collections[t]&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
     return{LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
@@ -850,17 +871,12 @@ app.component('photo-gallery',{
   data(){return{url:'',busy:false,err:''};},
   methods:{
     async add(url){const g=this.target.gallery||(this.target.gallery=[]);g.push({id:uid(),url,title:'',desc:'',taken:'',place:'',date:new Date().toISOString().slice(0,10),by:this.by||'',ix:0});
-      const p=g[g.length-1];this.$emit('changed',this.target);await indexPhoto(p);this.$emit('changed',this.target);},
-    async addUrl(){const u=this.url.trim();if(!/^https?:\/\//i.test(u))return;this.url='';await this.add(u);},
-    async upload(e){this.busy=true;this.err='';
-      try{for(const f of e.target.files){const b=await toBlob(f);if(!b)continue;b.name=f.name;const url=await upload(b,'photos');await this.add(url);}}
-      catch(x){this.err='Upload failed: '+x.message;}
-      e.target.value='';this.busy=false;}
+      this.$emit('changed',this.target);},
+    async addUrl(){const u=this.url.trim();if(!/^https?:\/\//i.test(u)){this.err='Use a direct http(s) image link.';return;}this.err='';this.url='';await this.add(u);},
   },
   template:`<div class="space-y-3">
     <div v-if="edit" class="flex flex-wrap gap-2">
-      <input v-model="url" placeholder="Photo link (https://...)" class="inp !w-auto flex-1" @keyup.enter="addUrl"><button @click="addUrl" class="btn !bg-slate-700">Add link</button>
-      <label class="btn !bg-emerald-600 cursor-pointer shadow-lg shadow-emerald-900/20">{{ busy?'Uploading...':'Upload photos' }}<input type="file" accept="image/*" multiple class="hidden" @change="upload"></label></div>
+      <input v-model="url" placeholder="Photo link (https://...)" class="inp !w-auto flex-1" @keyup.enter="addUrl"><button @click="addUrl" class="btn !bg-slate-700">Add link</button></div>
     <p v-if="err" class="text-red-400 text-sm">{{ err }}</p>
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
       <div v-for="(p,i) in (target.gallery||[])" :key="p.id" class="cursor-pointer bg-panel p-2 rounded-xl border border-purple-950 hover:border-tc transition" @click="$emit('zoom',target,i)">
@@ -873,10 +889,6 @@ app.component('file-box',{
   props:['target','edit','by'],emits:['changed'],
   data(){return{url:'',busy:false,err:''};},
   methods:{
-    async upload(e){this.busy=true;this.err='';
-      try{for(const f of e.target.files){const url=await upload(f,'files');(this.target.files||(this.target.files=[])).push({id:uid(),url,name:f.name,type:f.type||'',size:f.size,date:new Date().toISOString().slice(0,10),by:this.by||''});}this.$emit('changed',this.target);}
-      catch(x){this.err='Upload failed: '+x.message;}
-      e.target.value='';this.busy=false;},
     addUrl(){const u=this.url.trim();if(!/^https?:\/\//i.test(u))return;this.url='';
       (this.target.files||(this.target.files=[])).push({id:uid(),url:u,name:'Linked External File',type:'link',size:0,date:new Date().toISOString().slice(0,10),by:this.by||''});this.$emit('changed',this.target);},
     remove(i){if(!confirm('Remove this file?'))return;delStored(this.target.files[i].url);this.target.files.splice(i,1);this.$emit('changed',this.target);},
@@ -885,7 +897,7 @@ app.component('file-box',{
   template:`<div class="space-y-4">
     <div v-if="edit" class="flex flex-wrap gap-2">
       <input v-model="url" placeholder="File Link (e.g. YouTube, Google Docs)" class="inp !w-auto flex-1" @keyup.enter="addUrl"><button @click="addUrl" class="btn !bg-slate-700">Add link</button>
-      <label class="btn !bg-emerald-600 cursor-pointer shadow-lg shadow-emerald-900/20">{{ busy?'Uploading...':'Upload files' }}<input type="file" multiple class="hidden" @change="upload"></label>
+
     </div>
     <p v-if="err" class="text-red-400 text-sm">{{ err }}</p>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">

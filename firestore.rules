@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function agent() {
+      return request.auth != null && exists(/databases/$(db)/documents/users/$(request.auth.uid));
+    }
+    function rank() { return get(/databases/$(db)/documents/users/$(request.auth.uid)).data.rank; }
+    function top() { return agent() && rank() in ['Director', 'Assistant Director']; }
+    function knownRank() {
+      return agent() && rank() in ['Director','Assistant Director','High Command','Detective III','Detective II','Detective I','Probationary Detective'];
+    }
+    function permission(key) {
+      return !exists(/databases/$(db)/documents/config/main)
+        ? (rank() == 'Probationary Detective' ? (key == 'interrogations' ? 'none' : 'view') : 'edit')
+        : get(/databases/$(db)/documents/config/main).data.get('perms', {}).get(rank(), {}).get(key, rank() == 'Probationary Detective' ? 'view' : 'edit');
+    }
+    function view(key) { return top() || (knownRank() && permission(key) in ['view','edit']); }
+    function edit(key) { return top() || (knownRank() && permission(key) == 'edit'); }
+    function publicRecord(data) {
+      return data.col == 'directives' || (data.col == 'documents' && data.get('isPublic', false) == true);
+    }
+    function publicProfile() {
+      return request.resource.data.keys().hasOnly(['name','badge','rank','photo'])
+        && request.resource.data.name is string && request.resource.data.badge is string
+        && request.resource.data.rank is string && request.resource.data.photo is string;
+    }
+    match /config/{id} { allow read: if true; allow write: if top(); }
+    match /mapLocations/{id} { allow read: if true; allow write: if false; }
+    // Locations, including their linked photos, are public as in the original terminal.
+    match /map/{id} { allow read: if true; allow write: if top(); }
+    match /penal/{id} { allow read: if true; allow write: if edit('penal'); }
+    match /roster/{id} {
+      allow read: if true;
+      allow create, update: if top() && publicProfile();
+      allow delete: if top();
+    }
+    match /users/{id} {
+      allow get: if request.auth != null && (request.auth.uid == id || top());
+      allow list: if top();
+      allow create, update, delete: if top();
+    }
+    match /records/{id} {
+      allow read: if publicRecord(resource.data) || view(resource.data.col);
+      allow create: if edit(request.resource.data.col);
+      allow update: if request.resource.data.col == resource.data.col && edit(resource.data.col);
+      allow delete: if edit(resource.data.col);
+    }
+  }
+}
