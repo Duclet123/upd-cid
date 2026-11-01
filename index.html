@@ -511,8 +511,9 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <citizen-picker :model-value="rec.obj[f.k]" :multiple="f.t!=='s'" :citizens="itemsOf('citizens')" :disabled="recMode!=='edit'||!canEditRec" :loading="recordLoads.citizens==='loading'" :error="level('citizens')==='none'?'Citizen Registry view permission is required.':recordLoads.citizens==='error'?'Citizen Registry failed to load.':''" :photo="citizenPhoto" @update:model-value="rec.obj[f.k]=$event"></citizen-picker>
           </div>
           <div v-else-if="f.t==='o'" class="space-y-2">
-            <input v-model="rec.obj[f.k]" :list="'officer-roster-'+f.k" :disabled="recMode!=='edit'||!canEditRec" placeholder="Choose from roster or type officer name…" class="inp">
-            <datalist :id="'officer-roster-'+f.k"><option v-for="a in accounts" :key="a.id" :value="a.name">{{ a.badge }} · {{ a.rank }}</option></datalist>
+            <input :value="rec.obj[f.k]" @input="updateOfficer(rec.obj,f.k,$event.target.value)" :list="'officer-roster-'+f.k" :disabled="recMode!=='edit'||!canEditRec" placeholder="Choose from roster or type officer name…" class="inp">
+            <datalist :id="'officer-roster-'+f.k"><option v-for="a in accounts" :key="a.id" :value="a.name+' · '+a.badge">{{ a.rank }}</option></datalist>
+            <div class="flex items-center gap-3"><label class="text-xs text-slate-400 shrink-0">Officer badge</label><input :value="officerBadge(rec.obj,f.k)" @input="rec.obj[f.k+'Badge']=$event.target.value" :disabled="recMode!=='edit'||!canEditRec" placeholder="Badge (auto-filled from roster)" class="inp"></div>
             <p v-if="recMode==='edit'" class="text-xs text-slate-500">Select a roster officer or enter an external officer manually.</p>
           </div>
 
@@ -557,21 +558,22 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
       <div class="flex-1"><h1 class="text-2xl font-black uppercase tracking-widest text-slate-900">Unified Police Department</h1><p class="font-bold text-slate-700 text-base mt-1 tracking-wider">Criminal Investigation Division</p><p v-if="pdoc.kind" class="font-bold text-red-700 uppercase mt-1 text-base tracking-widest">{{ pdoc.kind }}</p></div>
       <div class="text-right text-xs text-slate-500 font-mono space-y-1"><p>TS: {{ pdoc.ts }}</p></div></div>
     <h2 class="text-xl font-bold uppercase mb-6 text-slate-900">{{ pdoc.title }}</h2>
-    <div v-if="pdoc.profile" class="flex gap-6 items-center mb-8 p-5 border-2 border-slate-300 rounded-lg" style="break-inside:avoid"><img :src="pdoc.profile.url" @error="imageFallback" :alt="pdoc.profile.name" class="w-28 h-36 object-cover border border-slate-400 rounded"><div><p class="text-xs text-slate-500 uppercase tracking-wider">Citizen identification</p><p class="text-xl font-bold text-slate-900 mt-2">{{ pdoc.profile.name }}</p><p class="font-mono text-sm text-slate-700 mt-2">Citizen ID: {{ pdoc.profile.citizenId }}</p></div></div>
+    <div v-if="pdoc.profile" class="flex gap-6 items-center mb-8 p-5 border-2 border-slate-300 rounded-lg" style="break-inside:avoid"><img :src="pdoc.profile.url" @error="imageFallback" :alt="pdoc.profile.name" class="w-28 h-36 object-contain bg-white border border-slate-400 rounded"><div><p class="text-xs text-slate-500 uppercase tracking-wider">Citizen identification</p><p class="text-xl font-bold text-slate-900 mt-2">{{ pdoc.profile.name }}</p><p class="font-mono text-sm text-slate-700 mt-2">Citizen ID: {{ pdoc.profile.citizenId }}</p></div></div>
     <table v-if="pdoc.head" class="w-full text-[13px] border-collapse mb-8"><thead><tr><th v-for="h in pdoc.head" :key="h" class="border-2 border-slate-800 bg-slate-100 p-2 text-left font-bold">{{ h }}</th></tr></thead>
       <tbody><tr v-for="(r,i) in pdoc.table" :key="i"><td v-for="(c,j) in r" :key="j" class="border border-slate-400 p-2 align-top">{{ c }}</td></tr></tbody></table>
     <div v-for="r in (pdoc.rows||[])" :key="r[0]" class="mb-5"><p class="text-xs font-bold uppercase text-slate-500 tracking-wider mb-1">{{ r[0] }}</p><p class="whitespace-pre-line text-sm" :class="r[2]?'border-l-4 border-slate-300 pl-4 py-1 ml-1 text-slate-800':'text-slate-900 font-medium'">{{ r[1] }}</p></div>
     <div v-if="(pdoc.links||[]).length" class="mb-6 mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-3 pb-1 text-slate-900">Attached records</p><p v-for="l in pdoc.links" :key="l" class="mb-1 text-sm">• {{ l }}</p></div>
     <div v-if="(pdoc.files||[]).length" class="mb-6 mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-3 pb-1 text-slate-900">Files on record</p><p v-for="l in pdoc.files" :key="l" class="mb-1 text-sm text-blue-700 underline">• {{ l }}</p></div>
     <div v-if="(pdoc.photos||[]).length" class="mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-4 pb-1 text-slate-900">Photographic evidence</p>
-      <div class="grid grid-cols-3 gap-6"><div v-for="p in pdoc.photos" :key="p.id" style="break-inside:avoid" class="border border-slate-300 p-2 bg-slate-50"><img :src="p.url" class="w-full h-48 object-cover mb-2"><p class="text-xs font-bold text-slate-900">{{ p.title||'Untitled' }}</p><p class="text-[10px] text-slate-600 mt-1">{{ [p.taken,p.place,p.desc].filter(x=>x).join(' · ') }}</p></div></div></div>
+      <div class="grid grid-cols-2 gap-6"><div v-for="p in pdoc.photos" :key="p.id" style="break-inside:avoid" class="border border-slate-300 p-2 bg-slate-50"><img :src="p.url" class="w-full h-64 object-contain bg-white mb-2" style="object-fit:contain;object-position:center"><p class="text-xs font-bold text-slate-900">{{ p.title||'Untitled' }}</p><p class="text-[10px] text-slate-600 mt-1">{{ [p.taken,p.place,p.desc].filter(x=>x).join(' · ') }}</p></div></div></div>
     
+    <section v-if="pdoc.transcript" class="mt-8 pt-5 border-t-2 border-slate-800"><h3 class="font-bold uppercase text-slate-900 mb-4">{{ pdoc.transcript.label }}</h3><p class="text-sm text-slate-900 whitespace-pre-wrap leading-relaxed" style="overflow-wrap:anywhere">{{ pdoc.transcript.text }}</p></section>
     <!-- Real Signatures Design -->
     <div class="mt-20 pt-6 border-t-2 border-slate-900 flex justify-between items-end text-sm text-slate-900 font-bold">
         <div class="flex gap-16">
             <div v-for="sig in pdoc.sigs" :key="sig.title" class="w-64 text-center">
                 <div class="font-signature text-[2rem] leading-none text-blue-900 mb-2 h-12 flex items-end justify-center">{{ sig.name }}</div>
-                <div class="border-t-2 border-slate-400 pt-1.5 text-xs text-slate-700">{{ sig.title }}</div>
+                <div class="border-t-2 border-slate-400 pt-1.5 text-xs text-slate-700">{{ sig.title }}<span v-if="sig.badge"> · {{ sig.badge }}</span></div>
             </div>
         </div>
         <span class="text-slate-400 text-[10px] font-mono tracking-widest">CONFIDENTIAL — U.P.D. C.I.D.</span>
@@ -695,10 +697,18 @@ const app=createApp({
     const subFields=c=>c.fields.slice(1).filter(f=>f.t!=='a'&&f.t!=='c').slice(0,2);
     const rowsFor=v=>Math.min(40,Math.max(8,String(v||'').split('\n').length+2));
     const recTitle=r=>{const c=cfg.collections[r.col];if(r.col==='warrants')return (r.targets||[]).map(id=>recs[id]?.fullName||id).concat(r.otherTargets?[r.otherTargets]:[]).join(', ')||r.citizenName||r.citizenId||'Draft warrant';return(c&&c.fields.length&&r[c.fields[0].k])||'(untitled)';};
+    const officerMatch=(value,officerUid)=>{
+      if(officerUid){const byId=accounts.value.find(a=>a.id===officerUid);if(byId)return byId;}
+      const labelled=accounts.value.filter(a=>norm(a.name+' · '+a.badge)===norm(value));if(labelled.length===1)return labelled[0];
+      const names=accounts.value.filter(a=>norm(a.name)===norm(value));return names.length===1?names[0]:null;
+    };
+    const officerBadge=(o,key)=>o[key+'Badge']||officerMatch(o[key],o[key+'Uid'])?.badge||'';
+    const updateOfficer=(o,key,value)=>{const person=officerMatch(value);o[key]=person?person.name:value;o[key+'Uid']=person?.id||'';o[key+'Badge']=person?.badge||'';};
     const citizenLabel=id=>{const c=recs[id];return c?`${c.fullName||'(unnamed)'} · Citizen ID: ${c.citizenId||'—'}`:`Unavailable citizen (${id})`;};
     const shown=(it,f)=>{const v=it[f.k];if(typeof v==='boolean')return v?'Yes':'No';
       if(f.t==='c'){const arr=Array.isArray(v)?v:[];return arr.map(citizenLabel).join('; ')||'-';}
       if(f.t==='s')return v?citizenLabel(v):'-';
+      if(f.t==='o')return v?String(v)+(officerBadge(it,f.k)?' · Badge: '+officerBadge(it,f.k):''):'-';
       return v||'-';};
     const itemsOf=k=>Object.values(recs).filter(r=>r.col===k).sort((a,b)=>(b.ts||0)-(a.ts||0));
     const listItems=computed(()=>{const c=col.value;if(!c)return[];const s=norm(q.value);
@@ -901,20 +911,27 @@ const app=createApp({
 
     const printBusy=ref(false);
     const printNow=async()=>{if(printBusy.value)return;printBusy.value=true;try{await nextTick();await Promise.all([...document.querySelectorAll('#pdoc img')].map(img=>img.decode?Promise.race([img.decode().catch(()=>{}),new Promise(resolve=>setTimeout(resolve,5000))]):Promise.resolve()));window.print();}finally{printBusy.value=false;}};
+    const directorSignature=exclude=>{
+      const candidates=accounts.value.filter(a=>isTop(a.rank)&&String(a.name||'').trim()&&norm(a.name)!==norm(exclude));
+      const person=candidates.length?candidates[Math.floor(Math.random()*candidates.length)]:null;
+      return person?{name:person.name,title:person.rank,badge:person.badge||''}:{name:'',title:'Director / Assistant Director',badge:''};
+    };
+    const makeSignatures=o=>{
+      const primary=o.issuedBy?{name:o.issuedBy,title:o.issuedRank||'U.P.D. Agent',badge:o.issuedBadge||''}:user.value?{name:user.value.name,title:user.value.rank,badge:user.value.badge||''}:{name:'',title:'Authorized U.P.D. Agent',badge:''};
+      const out=[primary];
+      if(primary.name&&!isTop(primary.title)){
+        if(o.col==='warrants'&&o.workflow?.status==='Approved'&&o.workflow.reviewedBy){const reviewer=accounts.value.find(a=>a.id===o.workflow.reviewedUid);out.push({name:o.workflow.reviewedBy,title:reviewer?.rank||'Director / Assistant Director',badge:reviewer?.badge||''});}
+        else out.push(directorSignature(primary.name));
+      }
+      return out;
+    };
     const printRecord=o=>{
       const c=cfg.collections[o.col];
-      const rows=c.fields.filter(f=>!(o.col==='citizens'&&f.k==='profilePhoto')&&!(o.col==='interrogations'&&o.subjectCitizen&&f.k==='suspect')).map(f=>[f.l,shown(o,f),f.t==='a']);
+      const rows=c.fields.filter(f=>!(o.col==='citizens'&&f.k==='profilePhoto')&&!(o.col==='interrogations'&&o.subjectCitizen&&f.k==='suspect')&&!(o.col==='interrogations'&&f.k==='transcript')).map(f=>[f.l,shown(o,f),f.t==='a']);
       if(o.col==='warrants'){if(!(o.targets||[]).length&&(o.citizenName||o.citizenId))rows.push(['Legacy target',[o.citizenName,o.citizenId].filter(Boolean).join(' · '),false]);rows.push(['Request status',requestState(o),false]);if(o.workflow?.submittedBy)rows.push(['Submitted by',o.workflow.submittedBy+' · '+fmt(o.workflow.submittedAt),false]);if(o.workflow?.reviewedBy)rows.push(['Reviewed by',o.workflow.reviewedBy+' · '+fmt(o.workflow.reviewedAt),false]);if(o.workflow?.note)rows.push(['Review comment',o.workflow.note,true]);}
       const now=new Date();const ts=now.getDate().toString().padStart(2,'0')+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear()+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-      let sigs=[];
-      if(o.issuedBy){
-         sigs=[{name:o.issuedBy,title:o.issuedRank}];
-         if(!isTop(o.issuedRank))sigs.push({name:'',title:'Director / Assistant Director'});
-      }else if(user.value){
-         sigs=[{name:user.value.name,title:user.value.rank}];
-         if(!isTop(user.value.rank))sigs.push({name:'',title:'Director / Assistant Director'});
-      }else{sigs=[{name:'',title:'Authorized U.P.D. Agent'}];}
-      pdoc.value={profile:o.col==='citizens'?{url:citizenPhoto(o),name:o.fullName||'',citizenId:o.citizenId||''}:null,title:o.col==='warrants'?'DRAFT WARRANT':c.label+': '+recTitle(o),kind:o.col==='warrants'?'Draft Warrant / Approval Request':'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sigs};
+      const sigs=makeSignatures(o);
+      pdoc.value={transcript:o.col==='interrogations'?{label:c.fields.find(f=>f.k==='transcript')?.l||'Transcript',text:o.transcript||'No transcript recorded.'}:null,profile:o.col==='citizens'?{url:citizenPhoto(o),name:o.fullName||'',citizenId:o.citizenId||''}:null,title:o.col==='warrants'?'DRAFT WARRANT':c.label+': '+recTitle(o),kind:o.col==='warrants'?'Draft Warrant / Approval Request':'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sigs};
     };
 
     const savePenal=p=>fdb.collection('penal').doc(p.id).set(clean({category:p.category||'General',title:p.title||'',fine:Number(p.fine)||0,jail:Number(p.jail)||0})).catch(fail);
@@ -973,7 +990,7 @@ const app=createApp({
     watch(tab,t=>{if(cfg.collections[t]&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
-    return{formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,REQUEST_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,reviewDraft,requestState,transitionRequest,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+    return{officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,REQUEST_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,reviewDraft,requestState,transitionRequest,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
       zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,
