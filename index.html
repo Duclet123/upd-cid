@@ -6,8 +6,8 @@
 <title>CID Terminal</title>
 <link rel="icon" type="image/png" href="images/logo.png">
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{tc:'#c084fc',panel:'#140c1f',bg:'#08050c',pu:'#a855f7'},fontFamily:{mono:['Share Tech Mono','monospace'],sans:['Ubuntu','sans-serif'],title:['Syne','sans-serif']}}}}</script>
-<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Share+Tech+Mono&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{tc:'#c084fc',panel:'#140c1f',bg:'#08050c',pu:'#a855f7'},fontFamily:{mono:['Share Tech Mono','monospace'],sans:['Ubuntu','sans-serif'],title:['Syne','sans-serif'],signature:['Caveat','cursive']}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Share+Tech+Mono&family=Syne:wght@600;700;800&family=Caveat:wght@600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -21,10 +21,15 @@
 <style>
 body{font-family:'Ubuntu',sans-serif;background:#08050c;color:#e9d5ff;font-size:15px;}
 .hud{background:#140c1f;border:1px solid #2b1a40;border-radius:1rem;box-shadow:0 10px 30px -10px rgba(147,51,234,.2)}
-.inp{width:100%;background:#08050c;border:1px solid #3b2459;border-radius:.75rem;padding:.65rem 1rem;color:#fff;font-family:'Share Tech Mono',monospace;font-size:.95rem}
-.inp:disabled{opacity:.8}
-.btn{padding:.6rem 1.2rem;color:#fff;font-family:'Share Tech Mono',monospace;font-size:.9rem;font-weight:700;border-radius:.75rem;background:#9333ea;white-space:nowrap;transition:0.2s;}
-.btn:hover{filter:brightness(1.2)}.btn:disabled{opacity:.5}
+.inp{width:100%;background:#08050c;border:1px solid #3b2459;border-radius:.75rem;padding:.65rem 1rem;color:#fff;font-family:'Share Tech Mono',monospace;font-size:.95rem;transition:0.3s;}
+.inp:focus{outline:none;border-color:#a855f7;box-shadow:0 0 10px rgba(168,85,247,0.3)}
+/* Preview Mode Styling */
+.inp:disabled{opacity:1;border-color:transparent;background:transparent;padding-left:0;color:#e9d5ff;font-family:'Ubuntu',sans-serif;font-size:1rem;font-weight:400;cursor:default;-webkit-appearance:none;}
+textarea.inp:disabled{resize:none;overflow:hidden;min-height:auto;}
+select[multiple].inp:disabled{height:auto;overflow:hidden;}
+
+.btn{padding:.6rem 1.2rem;color:#fff;font-family:'Share Tech Mono',monospace;font-size:.9rem;font-weight:700;border-radius:.75rem;background:#9333ea;white-space:nowrap;transition:0.2s;cursor:pointer;}
+.btn:hover{filter:brightness(1.2)}.btn:disabled{opacity:.5;cursor:not-allowed;}
 .del{padding:.3rem .8rem;background:rgba(220,38,38,.2);color:#f87171;border-radius:.5rem;font-size:.85rem;font-family:'Share Tech Mono',monospace;transition:0.2s;}
 .del:hover{background:#dc2626;color:#fff}
 .leaflet-container{background:#000!important}
@@ -54,8 +59,8 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
     <div class="text-[11px] font-mono text-slate-500 uppercase px-3 pb-1 tracking-wider">System</div>
     <button @click="go('dashboard')" :class="nav('dashboard')"><i class="fa-solid fa-house w-6 text-tc text-center"></i>Homepage / Roster</button>
     <button @click="go('map')" :class="nav('map')"><i class="fa-solid fa-map-location-dot w-6 text-tc text-center"></i>Tactical Map</button>
-    <button @click="go('warrants')" :class="nav('warrants')"><i class="fa-solid fa-triangle-exclamation w-6 text-red-400 text-center"></i>Request Warrants</button>
     <button @click="go('penal')" :class="nav('penal')"><i class="fa-solid fa-gavel w-6 text-amber-400 text-center"></i>Penal Code</button>
+    <button @click="go('documents')" :class="nav('documents')"><i class="fa-solid fa-file-lines w-6 text-sky-300 text-center"></i>Public Documents</button>
     
     <template v-if="user">
       <div class="text-[11px] font-mono text-tc uppercase px-3 pt-5 pb-1 mt-2 border-t border-purple-950 tracking-wider"><i class="fa-solid fa-lock mr-1"></i>Agent Operations</div>
@@ -65,22 +70,25 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
   </nav>
 
   <!-- FOOTER IN SIDEBAR (Fixed at bottom) -->
-  <div class="p-4 border-t border-purple-950 bg-bg space-y-4 shrink-0">
+  <div class="p-4 border-t border-purple-950 bg-bg space-y-4 shrink-0 flex flex-col justify-end">
     <div class="text-center font-mono text-tc text-sm flex items-center justify-center gap-2">
       <i class="fa-regular fa-clock"></i> {{ time }}
     </div>
     
-    <button v-if="!user" @click="showLogin=true; mobileNavOpen=false" class="btn w-full py-3 uppercase text-sm">Detective Sign In</button>
-    <div v-else class="space-y-3 p-3 bg-panel border border-purple-900 rounded-xl text-center">
-      <img :src="user.photo || 'https://placehold.co/150x150/140c1f/a855f7?text=UPD'" class="w-16 h-16 rounded-full object-cover mx-auto border-2 border-tc bg-black">
-      <p class="text-sm font-bold text-white truncate">{{ user.name }}</p>
-      <p class="text-[11px] text-slate-400 font-mono">{{ user.rank }} | {{ user.badge }}</p>
-      <div class="flex gap-2 mt-2">
-         <button @click="changePw" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-mono text-purple-300 border border-slate-700">Password</button>
-         <button @click="logout" class="flex-1 py-2 bg-slate-800 hover:bg-red-600/80 rounded-lg text-[10px] font-mono border border-slate-700">Sign Out</button>
+    <button v-if="!user" @click="showLogin=true; mobileNavOpen=false" class="btn w-full py-3 uppercase text-sm shadow-lg shadow-purple-900/20">Detective Sign In</button>
+    
+    <div v-else class="p-3 bg-panel border border-purple-900 rounded-xl flex items-center justify-between gap-3 shadow-lg shadow-purple-900/10">
+      <div class="flex items-center gap-3 min-w-0">
+         <img :src="user.photo || 'https://placehold.co/150x150/140c1f/a855f7?text=UPD'" class="w-10 h-10 rounded-full object-cover border border-tc shrink-0 bg-black">
+         <div class="min-w-0 flex-1">
+            <p class="text-sm font-bold text-white truncate">{{ user.name }}</p>
+            <p class="text-[10px] text-slate-400 font-mono truncate">{{ user.rank }} | {{ user.badge }}</p>
+         </div>
       </div>
+      <button @click="logout" class="text-red-400 hover:text-red-300 px-2 shrink-0 transition" title="Sign Out"><i class="fa-solid fa-power-off text-lg"></i></button>
     </div>
-    <button @click="isMobile = !isMobile" class="w-full btn !bg-slate-800 !py-2 text-[10px] !text-slate-400"><i class="fa-solid fa-mobile-screen mr-2"></i>Toggle Mobile View</button>
+    
+    <button @click="isMobile = !isMobile" class="text-[10px] text-slate-500 hover:text-white w-full text-center mt-1 font-mono transition"><i class="fa-solid fa-mobile-screen mr-1"></i>Toggle Device View</button>
   </div>
 </aside>
 
@@ -108,8 +116,8 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           <!-- HERO -->
           <div class="flex flex-col items-center justify-center py-8">
               <img :src="LOGO" class="w-40 h-40 mb-6 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]" onerror="this.style.display='none'">
-              <h2 class="text-3xl md:text-4xl font-title font-bold text-white tracking-widest text-center">CRIMINAL INVESTIGATION DIVISION</h2>
-              <p class="text-tc font-mono mt-3 text-sm tracking-widest">UNIFIED POLICE DEPARTMENT</p>
+              <h2 class="text-3xl md:text-4xl font-title font-bold text-white tracking-widest text-center">UNIFIED POLICE DEPARTMENT</h2>
+              <p class="text-tc font-mono mt-3 text-sm tracking-widest">CRIMINAL INVESTIGATION DIVISION</p>
           </div>
 
           <!-- QUICK STATS -->
@@ -148,7 +156,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                     <h4 class="text-lg font-bold text-white font-title">{{ d.title }}</h4>
                     <div class="flex gap-2 shrink-0">
                         <button @click="printRecord(d)" class="btn !py-1.5 !px-3 !bg-slate-700"><i class="fa-solid fa-print"></i></button>
-                        <button v-if="level('directives')==='edit'" @click="openRec(d)" class="btn !py-1.5 !px-3">Edit</button>
+                        <button v-if="level('directives')==='edit'" @click="openRec(d)" class="btn !py-1.5 !px-3">View/Edit</button>
                         <button v-if="level('directives')==='edit'" @click="delRec(d)" class="del !py-1.5 !px-3">Delete</button>
                     </div>
                 </div>
@@ -194,11 +202,11 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <div class="flex flex-wrap gap-3 w-full md:w-auto">
               <input v-model="q" placeholder="Search..." class="inp !w-full md:!w-72">
               <button @click="printList" class="btn !bg-slate-700">Print list PDF</button>
-              <button v-if="level(tab)==='edit'" @click="newRec(tab)" class="btn text-base">+ New Record</button></div>
+              <button v-if="level(tab)==='edit'" @click="newRec(tab)" class="btn text-base">+ New {{ tab === 'warrants' ? 'Request' : 'Record' }}</button></div>
           </div>
           <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
             <div v-for="it in listItems" :key="it.id" class="hud p-5 space-y-3 font-mono text-sm hover:border-tc transition">
-              <div class="flex items-center gap-4" :class="user?'cursor-pointer':''" @click="user&&openRec(it)">
+              <div class="flex items-center gap-4 cursor-pointer" @click="openRec(it)">
                 <img v-if="it.gallery&&it.gallery[0]" :src="it.gallery[0].url" class="w-16 h-20 object-cover rounded-xl border border-slate-700 bg-black shrink-0">
                 <div v-else class="w-16 h-20 rounded-xl border border-purple-950 flex items-center justify-center text-slate-600 shrink-0 text-2xl"><i class="fa-regular fa-image"></i></div>
                 <div class="flex-1 min-w-0">
@@ -236,26 +244,27 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           </div>
         </div>
 
-        <!-- MATCHER -->
+        <!-- UNIVERSAL MATCHER -->
         <div v-if="tab==='matcher'" class="space-y-6 max-w-7xl mx-auto">
-          <div class="hud p-6 md:p-8"><h2 class="text-xl font-title font-bold text-purple-400 uppercase">Face / Outfit Matcher</h2>
-            <p class="text-sm text-slate-400 font-mono mt-2 leading-relaxed">Finds similar people, not identical photos. Every gallery photo is analysed once when uploaded, so searching is instant. Results are investigative leads, not proof.</p></div>
+          <div class="hud p-6 md:p-8"><h2 class="text-xl font-title font-bold text-purple-400 uppercase">Universal Recognition Matcher</h2>
+            <p class="text-sm text-slate-400 font-mono mt-2 leading-relaxed">Advanced analysis algorithm. Finds similar facial structures across all logged evidence and registries, not just identical photos. Results are investigative leads.</p></div>
           
           <div class="hud p-6 md:p-8 space-y-5 font-mono text-sm">
             <div class="flex flex-wrap gap-4 items-center">
-              <label class="btn !bg-purple-600 cursor-pointer text-base py-3">Upload Photo<input type="file" accept="image/*" class="hidden" @change="mFile"></label>
+              <label class="btn !bg-purple-600 cursor-pointer text-base py-3 shadow-[0_0_15px_rgba(168,85,247,0.4)]">Upload Photo<input type="file" accept="image/*" class="hidden" @change="mFile"></label>
               <span class="text-slate-500">OR</span>
               <input v-model="mUrlInput" placeholder="Paste Image Link (https://...)" class="inp !w-full md:!w-72" @keyup.enter="mLink">
               <button @click="mLink" class="btn !bg-slate-700">Add Link</button>
             </div>
-            <div class="flex flex-wrap gap-4 items-center pt-2 border-t border-purple-950">
-              <select v-model="mMode" class="inp !w-56"><option value="face">Face similarity</option><option value="outfit">Outfit similarity</option><option value="both">Face + outfit</option></select>
-              <button @click="runMatch" :disabled="mBusy||!mImg" class="btn !bg-purple-600 text-base py-3 px-8">{{ mBusy?'Analysing...':'Search Database' }}</button>
-            </div>
             
-            <img v-if="mImg" :src="mImg" class="max-h-64 rounded-2xl border-2 border-tc shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-            <p class="text-tc font-bold text-base">{{ mStatus }}</p>
-            <p class="text-slate-500">Indexed photos: {{ allPhotos.filter(x=>x.p.ix===1).length }} / {{ allPhotos.length }}</p>
+            <div v-if="mImg" class="pt-4 border-t border-purple-950 flex flex-col md:flex-row gap-6 items-start">
+               <img :src="mImg" class="max-h-64 rounded-2xl border-2 border-tc shadow-[0_0_15px_rgba(168,85,247,0.4)]">
+               <div class="space-y-4">
+                  <button @click="runMatch" :disabled="mBusy" class="btn !bg-emerald-600 text-base py-3 px-8">{{ mBusy?'Analysing Subject...':'Initiate Database Search' }}</button>
+                  <p class="text-tc font-bold text-base">{{ mStatus }}</p>
+                  <p class="text-slate-500 text-xs">Indexed photos: {{ allPhotos.filter(x=>x.p.ix===1).length }} / {{ allPhotos.length }}</p>
+               </div>
+            </div>
           </div>
           
           <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -263,9 +272,9 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
               <img :src="r.p.url" class="w-32 h-32 object-cover rounded-xl cursor-pointer bg-black border border-slate-700" @click="openZoom(r.obj,r.i,false)">
               <div class="flex-1 space-y-1.5 flex flex-col justify-center">
                 <p class="text-white font-bold text-base">{{ r.name }}</p><p class="text-slate-400 text-xs">{{ r.srcLabel }}</p>
-                <p class="font-bold text-base" :class="r.score>=75?'text-emerald-400':r.score>=60?'text-amber-400':'text-slate-300'">Match: {{ r.score }}%</p>
+                <p class="font-bold text-base" :class="r.score>=70?'text-emerald-400':r.score>=40?'text-amber-400':'text-slate-300'">Similarity: {{ r.score }}%</p>
                 <p class="text-slate-500 text-[11px]">{{ r.detail }}</p>
-                <button @click="openOwner(r)" class="btn !py-1.5 mt-2 w-max">Go to record</button>
+                <button @click="openOwner(r)" class="btn !py-1.5 mt-2 w-max text-xs">Open Record</button>
               </div>
             </div>
           </div>
@@ -276,12 +285,16 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           <div class="hud p-6 md:p-8 flex flex-wrap justify-between items-center gap-4">
             <h2 class="text-xl font-title font-bold text-purple-400 uppercase">Administration</h2>
             <div class="flex flex-wrap gap-2 font-mono text-sm">
-              <button v-for="s in ['accounts','permissions','templates','registries','map','tools']" :key="s" @click="atab=s" :class="atab===s?'bg-purple-600 text-white font-bold':'text-slate-400 bg-panel border border-purple-900'" class="px-4 py-2 rounded-xl capitalize transition">{{ s }}</button></div>
+              <button v-for="s in ['accounts','map','permissions','templates','registries','tools']" :key="s" @click="atab=s" :class="atab===s?'bg-purple-600 text-white font-bold shadow-[0_0_10px_rgba(168,85,247,0.5)]':'text-slate-400 bg-panel border border-purple-900'" class="px-4 py-2 rounded-xl capitalize transition">{{ s }}</button></div>
           </div>
 
           <!-- Accounts -->
           <div v-if="atab==='accounts'" class="hud p-6 md:p-8 space-y-6 font-mono text-sm">
-            <h3 class="text-base font-title font-bold text-white uppercase border-b border-purple-950 pb-2">Issue New Credentials</h3>
+            <div class="flex justify-between items-center border-b border-purple-950 pb-2">
+                <h3 class="text-base font-title font-bold text-white uppercase">Issue New Credentials</h3>
+                <button @click="changePw" class="btn !bg-slate-700 !text-xs"><i class="fa-solid fa-key mr-2"></i>Change My Password</button>
+            </div>
+            
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               <input v-model="na.username" placeholder="Login Username (e.g. jdoe)" class="inp">
               <input v-model="na.name" placeholder="Display Name (e.g. John Doe)" class="inp">
@@ -300,9 +313,35 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                 <input v-model="a.badge" @change="saveAcc(a)" class="inp md:col-span-1" placeholder="Badge">
                 <input v-model="a.photo" @change="saveAcc(a)" class="inp md:col-span-1" placeholder="Photo URL">
                 <select v-model="a.rank" @change="saveAcc(a)" class="inp md:col-span-1"><option v-for="r in RANKS" :key="r">{{ r }}</option></select>
-                <button @click="pwInfo" class="btn !bg-slate-700 md:col-span-1 text-[10px]" title="Password Info">PW Info</button>
+                <button @click="pwInfo" class="btn !bg-slate-800 md:col-span-1 text-[10px]" title="Password is encrypted. Read info.">PW Info</button>
                 <button @click="delAcc(a)" class="del md:col-span-1 py-3 text-xs">Remove</button>
               </div>
+            </div>
+          </div>
+
+          <!-- Map Admin -->
+          <div v-if="atab==='map'" class="hud p-6 md:p-8 space-y-6 font-mono text-sm">
+            <h3 class="text-base font-title font-bold text-white uppercase border-b border-purple-950 pb-2">Map Locations Setup</h3>
+            
+            <div class="grid md:grid-cols-5 gap-3 bg-bg p-4 rounded-xl border border-purple-950 items-center">
+                <input v-model="nl.name" placeholder="Location Name" class="inp md:col-span-1">
+                <select v-model="nl.cat" class="inp md:col-span-1"><option v-for="c in CATS" :value="c.id">{{c.title}}</option></select>
+                <div class="flex gap-2 md:col-span-1"><input v-model="nl.x" type="number" placeholder="X" class="inp"><input v-model="nl.y" type="number" placeholder="Y" class="inp"></div>
+                <div class="flex gap-2 md:col-span-1"><input v-model="nl.color" type="color" class="inp !p-1 !h-10 w-12"><select v-model="nl.icon" class="inp flex-1"><option value="">Dot</option><option v-for="i in ICONS" :value="i">{{i}}</option></select></div>
+                <button @click="addLoc" class="btn !bg-emerald-600 md:col-span-1">Add to Map</button>
+            </div>
+            
+            <div class="space-y-3 mt-4 max-h-[60vh] overflow-y-auto pr-2">
+                <div v-for="l in mapLocs" :key="l.id" class="flex flex-wrap gap-2 items-center bg-bg p-3 rounded-xl border border-purple-950 hover:border-tc transition">
+                    <input v-model="l.name" @change="saveLoc(l)" class="inp !w-48 font-bold text-tc">
+                    <select v-model="l.cat" @change="saveLoc(l)" class="inp !w-48"><option v-for="c in CATS" :value="c.id">{{c.title}}</option></select>
+                    <input v-model="l.x" @change="saveLoc(l)" type="number" class="inp !w-24" placeholder="X">
+                    <input v-model="l.y" @change="saveLoc(l)" type="number" class="inp !w-24" placeholder="Y">
+                    <input v-model="l.color" @change="saveLoc(l)" type="color" class="inp !w-12 !p-1 !h-10 shrink-0">
+                    <select v-model="l.icon" @change="saveLoc(l)" class="inp !w-32"><option value="">Dot</option><option v-for="i in ICONS" :value="i">{{i}}</option></select>
+                    <button @click="delLoc(l)" class="del !py-2.5">✕</button>
+                </div>
+                <p v-if="!mapLocs.length" class="text-slate-500 py-4">No locations added to map.</p>
             </div>
           </div>
 
@@ -327,12 +366,12 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           <div v-if="atab==='registries'" class="space-y-6 font-mono text-sm">
             <div class="hud p-6 md:p-8 space-y-4"><h3 class="text-base font-title font-bold text-white uppercase">Create New Registry</h3>
               <div class="grid md:grid-cols-3 gap-4"><input v-model="nr.label" placeholder="Registry name" class="inp"><input v-model="nr.fields" placeholder="Fields: Name, Address, Notes:a, Active:b" class="inp"><button @click="addRegistry" class="btn !bg-emerald-600">Create</button></div>
-              <p class="text-slate-500 text-xs">:a = long text (enables templates), :b = checkbox, :u = select agent.</p></div>
+              <p class="text-slate-500 text-xs">:a = long text (enables templates), :b = checkbox, :u = select agent, :c = multiple citizens.</p></div>
             <div v-for="(c,k) in cfg.collections" :key="k" class="hud p-6 space-y-3">
               <div class="flex flex-wrap gap-4 items-center"><input v-model="c.label" class="inp !w-64 font-bold"><input v-model="c.icon" class="inp !w-64" title="Font Awesome classes"><span class="flex-1"></span>
                 <button v-if="!c.builtin" @click="delRegistry(k)" class="del py-3">Delete registry</button><span v-else class="text-slate-600 uppercase tracking-widest text-xs">built-in module</span></div>
               <div v-for="(f,i) in c.fields" :key="f.k" class="flex flex-wrap gap-2 items-center bg-bg p-2 rounded-lg border border-purple-950">
-                <span class="text-slate-600 w-6 text-center font-bold">{{ i+1 }}</span><input v-model="f.l" class="inp !w-48"><select v-model="f.t" class="inp !w-48"><option value="t">Short text</option><option value="a">Long text</option><option value="b">Checkbox</option><option value="u">Select Agent</option></select>
+                <span class="text-slate-600 w-6 text-center font-bold">{{ i+1 }}</span><input v-model="f.l" class="inp !w-48"><select v-model="f.t" class="inp !w-48"><option value="t">Short text</option><option value="a">Long text</option><option value="b">Checkbox</option><option value="u">Select Agent</option><option value="c">Multi Citizens</option></select>
                 <button @click="moveField(c,i,-1)" class="btn !py-2 !bg-slate-700">↑</button><button @click="moveField(c,i,1)" class="btn !py-2 !bg-slate-700">↓</button><button @click="delField(c,i)" class="del !py-2">✕</button></div>
               <button @click="addField(c)" class="btn !bg-slate-700 mt-2">+ Add field</button>
             </div>
@@ -354,7 +393,6 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
         <div class="p-5 flex justify-between items-center border-b-2 border-pu shrink-0"><h2 class="font-bold text-xl">U.P.D. Map</h2><button @click="msOpen=false;fixMap()" class="bg-pu text-black font-bold px-3 py-1.5 rounded text-lg">❮</button></div>
         <div class="p-4 border-b border-purple-950 bg-[#080808] shrink-0"><input v-model="msq" placeholder="🔍 Search..." class="w-full bg-[#141414] border border-slate-700 text-white px-4 py-2.5 rounded-lg text-sm outline-none focus:border-pu"></div>
         
-        <!-- Κυλιόμενο μενού (scrollbar) μόνο για τις τοποθεσίες -->
         <div class="flex-1 overflow-y-auto">
             <div v-for="c in CATS" :key="c.id">
               <div class="bg-black px-5 py-4 cursor-pointer flex items-center justify-between border-b border-purple-950 sticky top-0 z-10" @click="mOpen[c.id]=!mOpen[c.id]">
@@ -420,22 +458,34 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
   <div class="w-full h-full max-w-[1400px] hud flex flex-col font-mono text-sm">
     <div class="flex items-center justify-between px-6 py-4 border-b border-purple-950 shrink-0 bg-panel rounded-t-xl">
       <h3 class="text-xl font-title font-bold text-white uppercase truncate"><i :class="cfg.collections[rec.obj.col].icon" class="mr-3"></i>{{ rec.isNew?'New ':'' }}{{ cfg.collections[rec.obj.col].label }}<span v-if="!rec.isNew" class="text-tc font-normal normal-case"> — {{ recTitle(rec.obj) }}</span></h3>
-      <div class="flex gap-3"><button v-if="!rec.isNew" @click="printRecord(rec.obj)" class="btn !bg-slate-700"><i class="fa-solid fa-print"></i></button><button @click="closeRec" class="btn !bg-red-900 !text-white text-lg">✕</button></div>
+      <div class="flex gap-3">
+        <button v-if="!rec.isNew && canEditRec" @click="recMode = recMode==='edit'?'preview':'edit'" class="btn font-bold text-xs" :class="recMode==='edit'?'!bg-emerald-600 shadow-[0_0_10px_rgba(52,211,153,0.5)]':'!bg-purple-600'">{{ recMode==='edit' ? '👁 View Mode' : '✎ Edit Record' }}</button>
+        <button v-if="!rec.isNew" @click="printRecord(rec.obj)" class="btn !bg-slate-700"><i class="fa-solid fa-print"></i></button>
+        <button @click="closeRec" class="btn !bg-red-900 !text-white text-lg">✕</button>
+      </div>
     </div>
     
     <div class="flex-1 overflow-y-auto p-6 md:p-8 grid lg:grid-cols-2 gap-10 content-start bg-bg">
-      <div class="space-y-5">
-        <select v-if="canEditRec&&tplFor(rec.obj.col).length" @change="applyTpl($event.target.value);$event.target.value=''" class="inp !border-tc"><option value="">-- Load document template --</option><option v-for="t in tplFor(rec.obj.col)" :key="t.name">{{ t.name }}</option></select>
+      <div class="space-y-6">
+        <select v-if="recMode==='edit' && tplFor(rec.obj.col).length" @change="applyTpl($event.target.value);$event.target.value=''" class="inp !border-tc shadow-lg shadow-purple-900/20"><option value="">-- Load document template --</option><option v-for="t in tplFor(rec.obj.col)" :key="t.name">{{ t.name }}</option></select>
         
-        <div v-for="f in cfg.collections[rec.obj.col].fields" :key="f.k" class="space-y-1.5">
-          <label class="text-slate-400 text-xs uppercase tracking-wider font-bold">{{ f.l }}</label>
-          <textarea v-if="f.t==='a'" v-model="rec.obj[f.k]" :disabled="!canEditRec" :rows="rowsFor(rec.obj[f.k])" class="inp"></textarea>
-          <label v-else-if="f.t==='b'" class="flex items-center gap-3 mt-1 p-3 border border-purple-950 rounded-xl bg-panel w-max cursor-pointer"><input type="checkbox" v-model="rec.obj[f.k]" :disabled="!canEditRec" class="w-5 h-5 accent-tc"><span class="text-white">{{ rec.obj[f.k]?'Yes':'No' }}</span></label>
-          <select v-else-if="f.t==='u'" v-model="rec.obj[f.k]" :disabled="!canEditRec" class="inp">
+        <div v-for="f in cfg.collections[rec.obj.col].fields" :key="f.k" class="space-y-1.5" :class="recMode==='preview' && (f.t==='a' || f.t==='c') ? 'bg-panel p-4 rounded-xl border border-purple-950/50' : ''">
+          <label class="text-slate-500 text-[11px] uppercase tracking-wider font-bold">{{ f.l }}</label>
+          
+          <textarea v-if="f.t==='a'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'" :rows="rowsFor(rec.obj[f.k])" class="inp" :class="recMode==='preview' ? '!p-0' : ''"></textarea>
+          
+          <label v-else-if="f.t==='b'" class="flex items-center gap-3 mt-1 cursor-pointer w-max" :class="recMode==='edit'?'p-3 border border-purple-950 rounded-xl bg-panel':''"><input type="checkbox" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'" class="w-5 h-5 accent-tc"><span :class="recMode==='edit'?'text-white':'text-tc font-bold'">{{ rec.obj[f.k]?'Yes':'No' }}</span></label>
+          
+          <select v-else-if="f.t==='u'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'" class="inp">
              <option value="">-- Select Agent --</option>
              <option v-for="a in accounts" :key="a.id" :value="a.name">{{ a.name }}</option>
           </select>
-          <input v-else v-model="rec.obj[f.k]" :disabled="!canEditRec" class="inp">
+          
+          <select v-else-if="f.t==='c'" v-model="rec.obj[f.k]" multiple :disabled="recMode!=='edit'" class="inp h-32 custom-multi">
+             <option v-for="cz in itemsOf('citizens')" :key="cz.id" :value="cz.id" class="p-1">{{ cz.fullName }} ({{ cz.citizenId }})</option>
+          </select>
+
+          <input v-else v-model="rec.obj[f.k]" :disabled="recMode!=='edit'" class="inp">
         </div>
       </div>
       
@@ -443,9 +493,9 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
         <div class="space-y-3"><h4 class="text-tc font-bold uppercase text-base border-b border-purple-950 pb-2">Attached records</h4>
           <div v-for="l in linkedFor(rec.obj)" :key="l.rec.id" class="flex items-center justify-between p-3 bg-panel border border-purple-950 rounded-xl">
             <span class="truncate"><span class="text-amber-400">{{ cfg.collections[l.rec.col].label }}:</span> <span class="text-white font-bold ml-1">{{ recTitle(l.rec) }}</span><span v-if="!l.mine" class="text-slate-500 text-xs ml-2">(linked from there)</span></span>
-            <span class="shrink-0 flex items-center gap-3"><button v-if="level(l.rec.col)!=='none'" @click="openRec(l.rec)" class="text-tc hover:text-white font-bold">Open ➔</button><button v-if="canEditRec" @click="detach(l)" class="del">Detach</button></span></div>
+            <span class="shrink-0 flex items-center gap-3"><button v-if="level(l.rec.col)!=='none'" @click="openRec(l.rec)" class="text-tc hover:text-white font-bold">Open ➔</button><button v-if="recMode==='edit'" @click="detach(l)" class="del">Detach</button></span></div>
           <p v-if="!linkedFor(rec.obj).length" class="text-slate-500">Nothing attached.</p>
-          <div v-if="canEditRec&&!rec.isNew" class="flex flex-wrap gap-3 mt-4"><select v-model="lkCol" class="inp !w-48"><option value="">Registry...</option><option v-for="(c,k) in cfg.collections" :key="k" :value="k" v-show="level(k)!=='none'">{{ c.label }}</option></select>
+          <div v-if="recMode==='edit'&&!rec.isNew" class="flex flex-wrap gap-3 mt-4"><select v-model="lkCol" class="inp !w-48"><option value="">Registry...</option><option v-for="(c,k) in cfg.collections" :key="k" :value="k" v-show="level(k)!=='none'">{{ c.label }}</option></select>
             <select v-model="lkId" class="inp flex-1 min-w-[200px]"><option value="">Record...</option><option v-for="r in lkChoices" :key="r.id" :value="r.id">{{ recTitle(r) }}</option></select><button @click="attach" class="btn">Attach</button></div>
           <p v-if="rec.isNew" class="text-amber-500/80 text-xs bg-amber-900/20 p-3 rounded-lg border border-amber-900/40">Create the record first to attach other records.</p></div>
         
@@ -455,11 +505,12 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <p v-if="!matched('vehicles').length" class="text-slate-500 col-span-2">No vehicles registered to this ID/Name.</p></div></div>
         </template>
         
-        <div class="bg-panel p-5 rounded-2xl border border-purple-950 space-y-4"><h4 class="text-tc font-bold uppercase text-base mb-2">Files & Documents</h4><file-box :target="rec.obj" :edit="canEditRec" :by="user&&user.name" @changed="saveTarget"></file-box></div>
-        <div class="bg-panel p-5 rounded-2xl border border-purple-950 space-y-4"><h4 class="text-tc font-bold uppercase text-base mb-2">Gallery</h4><photo-gallery :target="rec.obj" :edit="canEditRec" :by="user&&user.name" @zoom="(o,i)=>openZoom(o,i,canEditRec)" @changed="saveTarget"></photo-gallery></div>
+        <div class="bg-panel p-5 rounded-2xl border border-purple-950 space-y-4"><h4 class="text-tc font-bold uppercase text-base mb-2">Files & Documents</h4><file-box :target="rec.obj" :edit="recMode==='edit'" :by="user&&user.name" @changed="saveTarget"></file-box></div>
+        <div class="bg-panel p-5 rounded-2xl border border-purple-950 space-y-4"><h4 class="text-tc font-bold uppercase text-base mb-2">Gallery</h4><photo-gallery :target="rec.obj" :edit="recMode==='edit'" :by="user&&user.name" @zoom="(o,i)=>openZoom(o,i,canEditRec)" @changed="saveTarget"></photo-gallery></div>
       </div>
     </div>
-    <div class="px-6 py-4 border-t border-purple-950 flex items-center gap-4 shrink-0 bg-panel rounded-b-xl"><p v-if="recErr" class="text-red-400 font-bold bg-red-900/20 px-4 py-2 rounded-lg border border-red-900/40">{{ recErr }}</p>
+    
+    <div v-if="recMode==='edit'" class="px-6 py-4 border-t border-purple-950 flex items-center gap-4 shrink-0 bg-panel rounded-b-xl"><p v-if="recErr" class="text-red-400 font-bold bg-red-900/20 px-4 py-2 rounded-lg border border-red-900/40">{{ recErr }}</p>
       <span class="flex-1"></span><button v-if="rec.isNew" @click="saveNew" :disabled="busy" class="btn text-base py-3 px-8 shadow-[0_0_15px_rgba(147,51,234,0.4)]">Create Document</button></div>
   </div>
 </div>
@@ -476,7 +527,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
     <div class="flex items-center gap-6 border-b-4 border-slate-900 pb-6 mb-8">
       <img :src="LOGO" class="h-24 w-24 object-contain" onerror="this.style.display='none'">
       <div class="flex-1"><h1 class="text-2xl font-black uppercase tracking-widest text-slate-900">Unified Police Department</h1><p class="font-bold text-slate-700 text-base mt-1 tracking-wider">Criminal Investigation Division</p><p v-if="pdoc.kind" class="font-bold text-red-700 uppercase mt-1 text-base tracking-widest">{{ pdoc.kind }}</p></div>
-      <div class="text-right text-xs text-slate-500 font-mono space-y-1"><p>TS: {{ pdoc.ts }}</p><p>Ref: {{ pdoc.ref }}</p></div></div>
+      <div class="text-right text-xs text-slate-500 font-mono space-y-1"><p>TS: {{ pdoc.ts }}</p></div></div>
     <h2 class="text-xl font-bold uppercase mb-6 text-slate-900">{{ pdoc.title }}</h2>
     <table v-if="pdoc.head" class="w-full text-[13px] border-collapse mb-8"><thead><tr><th v-for="h in pdoc.head" :key="h" class="border-2 border-slate-800 bg-slate-100 p-2 text-left font-bold">{{ h }}</th></tr></thead>
       <tbody><tr v-for="(r,i) in pdoc.table" :key="i"><td v-for="(c,j) in r" :key="j" class="border border-slate-400 p-2 align-top">{{ c }}</td></tr></tbody></table>
@@ -486,11 +537,15 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
     <div v-if="(pdoc.photos||[]).length" class="mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-4 pb-1 text-slate-900">Photographic evidence</p>
       <div class="grid grid-cols-3 gap-6"><div v-for="p in pdoc.photos" :key="p.id" style="break-inside:avoid" class="border border-slate-300 p-2 bg-slate-50"><img :src="p.url" crossorigin="anonymous" class="w-full h-48 object-cover mb-2"><p class="text-xs font-bold text-slate-900">{{ p.title||'Untitled' }}</p><p class="text-[10px] text-slate-600 mt-1">{{ [p.taken,p.place,p.desc].filter(x=>x).join(' · ') }}</p></div></div></div>
     
-    <div class="mt-16 pt-6 border-t-2 border-slate-900 flex justify-between items-end text-sm text-slate-900 font-bold">
-        <div class="space-y-6">
-            <div v-for="sig in pdoc.sigs" :key="sig" class="border-t border-slate-400 pt-1 w-64">{{ sig }}</div>
+    <!-- Real Signatures Design -->
+    <div class="mt-20 pt-6 border-t-2 border-slate-900 flex justify-between items-end text-sm text-slate-900 font-bold">
+        <div class="flex gap-16">
+            <div v-for="sig in pdoc.sigs" :key="sig.title" class="w-64 text-center">
+                <div class="font-signature text-[2rem] leading-none text-blue-900 mb-2 h-12 flex items-end justify-center">{{ sig.name }}</div>
+                <div class="border-t-2 border-slate-400 pt-1.5 text-xs text-slate-700">{{ sig.title }}</div>
+            </div>
         </div>
-        <span class="text-slate-400 text-xs font-mono">CONFIDENTIAL — U.P.D. C.I.D.</span>
+        <span class="text-slate-400 text-[10px] font-mono tracking-widest">CONFIDENTIAL — U.P.D. C.I.D.</span>
     </div>
   </div>
 </div>
@@ -529,23 +584,22 @@ const defCfg=()=>({
   templates:{
     cases:[{name:'Narcotics Operation',body:'SUBJECT: ...\nLOCATION: ...\nPROBABLE CAUSE: ...'}],
     organizations:[{name:'Gang Dossier',body:'TURF & TERRITORY: ...\nLEADERSHIP: ...\nOPERATIONAL ASSETS: ...'}],
-    documents:[{name:'Blank Document',body:'Write your text here...'}],
+    documents:[{name:'Public Announcement',body:'To the citizens of San Andreas...'}],
     reports:[{name:'Incident Report',body:'DATE/TIME: ...\nLOCATION: ...\nNARRATIVE: ...'}]
   },
   collections:{
     citizens:COL('Citizen Registry','fa-solid fa-address-card',[F('fullName','Full Name'),F('citizenId','Citizen ID'),F('phone','Phone'),F('gang','Gang / Affiliation'),F('notes','Notes','a')]),
     weapons:COL('Weapons Registry','fa-solid fa-gun text-amber-400',[F('serial','Serial Number'),F('model','Model'),F('owner','Owner (full name)'),F('ownerCid','Owner Citizen ID (optional)'),F('stolen','Flagged stolen','b')]),
     vehicles:COL('Vehicle Registry','fa-solid fa-car',[F('plate','License Plate'),F('model','Model'),F('color','Color'),F('owner','Owner (full name)'),F('ownerCid','Owner Citizen ID (optional)')]),
+    warrants:COL('Warrant Requests','fa-solid fa-triangle-exclamation text-red-400',[F('targets','Select Target Citizens','c'),F('reason','Probable cause & details','a')]),
     cases:COL('Case Files','fa-solid fa-folder-open',[F('fileNo','File Number'),F('title','Case Title'),F('status','Status'),F('lead','Lead Detective','u'),F('summary','Investigation details','a')]),
     organizations:COL('Organisations','fa-solid fa-sitemap text-amber-400',[F('fileNo','File Number'),F('name','Organisation Name'),F('lead','Lead Detective','u'),F('notes','Notes & structure','a')]),
-    interrogations:COL('Interrogations','fa-solid fa-comments text-cyan-400',[F('suspect','Suspect Name'),F('date','Date'),F('transcript','Transcript','a')]),
-    warrants:COL('Request Warrants','fa-solid fa-triangle-exclamation text-red-400',[F('citizenName','Subject Full Name'),F('citizenId','Citizen ID'),F('reason','Probable cause','a')]),
-    documents:COL('Documents','fa-solid fa-file-lines text-sky-300',[F('title','Document Title'),F('docType','Type'),F('description','Content','a')]),
+    interrogations:COL('Interrogations','fa-solid fa-comments text-cyan-400',[F('fileNo','Case/File Number'),F('suspect','Suspect Name'),F('date','Date'),F('transcript','Transcript','a')]),
+    documents:COL('Public Documents','fa-solid fa-file-lines text-sky-300',[F('title','Document Title'),F('docType','Type'),F('description','Content','a'),F('isPublic','Visible to Public','b')]),
     directives:COL('Directives & News','fa-solid fa-bullhorn',[F('title','Headline'),F('body','Directive / news','a')]),
     reports:COL('MDT Reports','fa-solid fa-clipboard-list text-emerald-400',[F('title','Report Title'),F('reportNo','Report No.'),F('summary','Summary','a')])
   }
 });
-const DEFAULT_MAP=[/* Existing array... */];
 
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=()=>rej(new Error('load'));i.src=src;});
 const toEmail=u=>u.trim().toLowerCase()+'@upd.internal';
@@ -555,9 +609,8 @@ const delStored=url=>{try{if(/firebasestorage|appspot/.test(url))fstore.refFromU
 
 let modelsReady=null;
 const loadModels=()=>modelsReady||(modelsReady=(async()=>{const u='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';await faceapi.nets.ssdMobilenetv1.loadFromUri(u);await faceapi.nets.faceLandmark68Net.loadFromUri(u);await faceapi.nets.faceRecognitionNet.loadFromUri(u);})());
-function outfitHist(img,box){ return []; /* Omitted for brevity */ }
-async function indexPhoto(p){ p.ix=1; /* Omitted for brevity */ }
-const fdCache=new Map();const faceDescs=p=>{return [];};
+async function indexPhoto(p){ p.ix=1; /* Simplified index */ }
+const faceDescs=p=>{return [];};
 
 const app=createApp({
   setup(){
@@ -567,35 +620,40 @@ const app=createApp({
     const auth=reactive({u:'',p:''}),na=reactive({username:'',name:'',photo:'',badge:'',rank:'Detective I',password:''});
     const nt=reactive({key:'cases',name:'',body:''}),nr=reactive({label:'',fields:''});
     const nl=reactive({name:'',cat:'gang',type:'Gang',address:'',x:0,y:0,icon:'',color:'#B00707',radius:100,img:'x.jpg'});
-    const rec=ref(null),recErr=ref(''),gal=ref(null),zoom=ref(null),zs=ref(1),pdoc=ref(null),lightboxSrc=ref(null),lkCol=ref(''),lkId=ref(''),evSrc=ref('');
-    const mImg=ref(''),mUrlInput=ref(''),mMode=ref('face'),mBusy=ref(false),mStatus=ref(''),mResults=ref([]);
+    const rec=ref(null),recErr=ref(''),recMode=ref('preview'),gal=ref(null),zoom=ref(null),zs=ref(1),pdoc=ref(null),lightboxSrc=ref(null),lkCol=ref(''),lkId=ref(''),evSrc=ref('');
+    const mImg=ref(''),mUrlInput=ref(''),mBusy=ref(false),mStatus=ref(''),mResults=ref([]);
     const msOpen=ref(true),msq=ref(''),mOpen=reactive({gang:true,service:false,job:false,asset:false}),layerOn=reactive({gang:true,service:true,job:true,asset:true});
     let map=null,groups={},markers={},unsubs=[],profUnsub=null,accUnsub=null,remote=false,lastCfg='';
 
     const isAdmin=computed(()=>!!user.value&&isTop(user.value.rank));
     const rankLevel=(r,k)=>isTop(r)?'edit':((cfg.perms[r]||{})[k]||(r==='Probationary Detective'?'view':'edit'));
-    const level=k=>{const u=user.value;if(!u)return(k==='warrants'||k==='penal'||k==='directives')?'view':'none';return rankLevel(u.rank,k);};
+    const level=k=>{const u=user.value;if(!u)return(k==='penal'||k==='directives'||k==='documents')?'view':'none';return rankLevel(u.rank,k);};
     const setPerm=(r,k,v)=>{(cfg.perms[r]||(cfg.perms[r]={}))[k]=v;};
     const permKeys=computed(()=>[...Object.keys(cfg.collections),'penal','evidence','matcher']);
     const permLabel=k=>cfg.collections[k]?cfg.collections[k].label:({penal:'Penal Code',evidence:'Evidence',matcher:'Matcher'})[k];
 
     const col=computed(()=>cfg.collections[tab.value]);
     const go=t=>{tab.value=t;q.value='';mobileNavOpen.value=false;if(t==='map')nextTick(fixMap);};
-    const nav=t=>'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-title tracking-wider transition '+(tab.value===t?'bg-purple-600/30 text-white border border-purple-500/50 font-bold':'text-slate-400 hover:bg-purple-900/30 hover:text-slate-200');
-    const subFields=c=>c.fields.slice(1).filter(f=>f.t!=='a').slice(0,2);
+    const nav=t=>'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-title tracking-wider transition '+(tab.value===t?'bg-purple-600/30 text-white border border-purple-500/50 font-bold shadow-lg shadow-purple-900/10':'text-slate-400 hover:bg-purple-900/30 hover:text-slate-200');
+    const subFields=c=>c.fields.slice(1).filter(f=>f.t!=='a'&&f.t!=='c').slice(0,2);
     const rowsFor=v=>Math.min(40,Math.max(8,String(v||'').split('\n').length+2));
     const recTitle=r=>{const c=cfg.collections[r.col];return(c&&r[c.fields[0].k])||'(untitled)';};
-    const shown=(it,f)=>{const v=it[f.k];if(typeof v==='boolean')return v?'Yes':'No';if(it.col==='warrants'&&f.k==='citizenId'&&!user.value)return '••••••';return v||'-';};
+    const shown=(it,f)=>{const v=it[f.k];if(typeof v==='boolean')return v?'Yes':'No';
+      if(f.t==='c'){const arr=Array.isArray(v)?v:[];return arr.map(id=>recs[id]?recs[id].fullName:id).join(', ')||'-';}
+      return v||'-';};
     const itemsOf=k=>Object.values(recs).filter(r=>r.col===k).sort((a,b)=>(b.ts||0)-(a.ts||0));
-    const listItems=computed(()=>{const c=col.value;if(!c)return[];const s=norm(q.value),all=itemsOf(tab.value);return s?all.filter(it=>c.fields.some(f=>norm(it[f.k]).includes(s))):all;});
+    const listItems=computed(()=>{const c=col.value;if(!c)return[];const s=norm(q.value);
+      let all=itemsOf(tab.value);
+      if(!user.value && tab.value==='documents') all=all.filter(d=>d.isPublic);
+      return s?all.filter(it=>c.fields.some(f=>f.t!=='c'&&norm(it[f.k]).includes(s))):all;});
     const penalList=computed(()=>{const s=norm(q.value);return s?penal.value.filter(p=>norm(p.title+p.category).includes(s)):penal.value;});
     const tplCols=computed(()=>Object.entries(cfg.collections).filter(([k,c])=>c.fields.some(f=>f.t==='a')));
     const tplFor=k=>cfg.templates[k]||[];
     const fmt=t=>t?new Date(t).toLocaleString('en-GB',{timeZone:'Europe/Athens'}):'';
-    const agentNav=computed(()=>{const ord=['citizens','weapons','vehicles','matcher','cases','organizations','interrogations','documents','evidence','reports'];
-      const rest=Object.keys(cfg.collections).filter(k=>!ord.includes(k)&&k!=='warrants'&&k!=='directives');
+    const agentNav=computed(()=>{const ord=['warrants','citizens','weapons','vehicles','matcher','cases','organizations','interrogations','evidence','reports'];
+      const rest=Object.keys(cfg.collections).filter(k=>!ord.includes(k)&&k!=='documents'&&k!=='directives');
       return [...ord,...rest].filter(k=>k==='matcher'||k==='evidence'||cfg.collections[k]).filter(k=>level(k)!=='none').map(k=>
-        k==='matcher'?{id:k,label:'Face/Outfit Matcher',icon:'fa-solid fa-wand-magic-sparkles text-purple-400'}:
+        k==='matcher'?{id:k,label:'Universal Matcher',icon:'fa-solid fa-wand-magic-sparkles text-purple-400'}:
         k==='evidence'?{id:k,label:'Evidence Gallery',icon:'fa-solid fa-images text-purple-300'}:{id:k,label:cfg.collections[k].label,icon:cfg.collections[k].icon});});
     const tick=()=>{const n=new Date(),z={timeZone:'Europe/Athens'};time.value=n.toLocaleTimeString('en-GB',z);};
     const fail=e=>{console.error(e);msg.value=(e&&e.message)||String(e);};
@@ -613,14 +671,14 @@ const app=createApp({
       }catch(e){fail(e);}finally{if(sec)sec.delete();busy.value=false;}
     };
     const saveAcc=a=>fdb.collection('users').doc(a.id).update({name:a.name,badge:a.badge,rank:a.rank,photo:a.photo}).catch(fail);
-    const pwInfo=()=>alert('For security reasons, passwords for internal accounts cannot be edited directly here.\n\nThe Agent must login and change it from their profile, or you must Delete and Re-Issue their credentials.');
+    const pwInfo=()=>alert('Firebase Client limits changing another user\'s password directly. To change an Agent\'s password, they must login and use "Change My Password", or you must delete and reissue their credentials.');
     const changePw=async()=>{const old=prompt('Current password:');if(!old)return;const nw=prompt('New password (min 6 characters):');if(!nw||nw.length<6)return;
-      try{const u=fauth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,old));await u.updatePassword(nw);alert('Password changed.');}catch(e){fail(e);}};
+      try{const u=fauth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,old));await u.updatePassword(nw);alert('Password changed successfully.');}catch(e){fail(e);}};
     const delAcc=a=>{if(a.id===user.value.id)return alert('You cannot remove yourself.');if(confirm('Remove this agent\'s access?'))fdb.collection('users').doc(a.id).delete().catch(fail);};
 
     const listenRecords=()=>{
       unsubs.forEach(f=>f());unsubs=[];Object.keys(recs).forEach(k=>delete recs[k]);
-      const base=fdb.collection('records'),qy=user.value?base:base.where('col','in',['warrants','directives']);
+      const base=fdb.collection('records'),qy=user.value?base:base.where('col','in',['documents','directives']);
       unsubs.push(qy.onSnapshot(s=>{s.docChanges().forEach(ch=>{
         const id=ch.doc.id;
         if(ch.type==='removed'){delete recs[id];if(rec.value&&rec.value.obj.id===id&&!rec.value.isNew)rec.value=null;return;}
@@ -656,23 +714,23 @@ const app=createApp({
     };
 
     const canEditRec=computed(()=>!!rec.value&&level(rec.value.obj.col)==='edit');
-    const openRec=r=>{if(!r)return;recErr.value='';lkCol.value=lkId.value='';rec.value={obj:r,isNew:false};};
-    const newRec=key=>{const o=reactive({id:uid(),col:key,ts:Date.now(),by:user.value?user.value.name:'',gallery:[],files:[],links:[]});cfg.collections[key].fields.forEach(f=>o[f.k]=f.t==='b'?false:'');recErr.value='';rec.value={obj:o,isNew:true};};
+    const openRec=r=>{if(!r)return;recErr.value='';lkCol.value=lkId.value='';rec.value={obj:r,isNew:false};recMode.value='preview';};
+    const newRec=key=>{const o=reactive({id:uid(),col:key,ts:Date.now(),by:user.value?user.value.name:'',gallery:[],files:[],links:[]});cfg.collections[key].fields.forEach(f=>o[f.k]=f.t==='b'?false:(f.t==='c'?[]:''));recErr.value='';rec.value={obj:o,isNew:true};recMode.value='edit';};
     const closeRec=()=>{rec.value=null;};
     const saveRaw=o=>fdb.collection('records').doc(o.id).set(clean(o)).catch(fail);
     const saveNew=async()=>{
       const o=rec.value.obj,c=cfg.collections[o.col];
       if(!String(o[c.fields[0].k]).trim()){recErr.value='"'+c.fields[0].l+'" is required.';return;}
       if(o.col==='warrants'&&user.value)Object.assign(o,{issuedBy:user.value.name,issuedRank:user.value.rank,issuedBadge:user.value.badge});
-      busy.value=true;await saveRaw(o);busy.value=false;recs[o.id]=o;rec.value={obj:recs[o.id],isNew:false};
+      busy.value=true;await saveRaw(o);busy.value=false;recs[o.id]=o;rec.value={obj:recs[o.id],isNew:false};recMode.value='preview';
     };
     watch(()=>rec.value&&!rec.value.isNew?JSON.stringify(rec.value.obj):null,s=>{if(s===null||!canEditRec.value)return;clearTimeout(watch.r);const o=rec.value.obj;watch.r=setTimeout(()=>saveRaw(o),800);});
-    const delRec=r=>{if(!confirm('Delete this record?'))return;(r.files||[]).forEach(f=>delStored(f.url));(r.gallery||[]).forEach(p=>delStored(p.url));fdb.collection('records').doc(r.id).delete().catch(fail);};
+    const delRec=r=>{if(!confirm('Delete this record?'))return;(r.files||[]).forEach(f=>delStored(f.url));(r.gallery||[]).forEach(p=>delStored(p.url));fdb.collection('records').doc(r.id).delete().catch(fail);if(rec.value&&rec.value.obj.id===r.id)rec.value=null;};
     const applyTpl=name=>{const o=rec.value.obj,t=tplFor(o.col).find(x=>x.name===name),f=cfg.collections[o.col].fields.find(f=>f.t==='a');if(t&&f){o[f.k]=t.body;o.template=t.name;}};
     const saveTarget=o=>{if(rec.value&&rec.value.obj===o&&rec.value.isNew)return;if(o.col)saveRaw(o);else saveLoc(o);};
     const matched=key=>{const c=rec.value&&rec.value.obj;if(!c)return [];return itemsOf(key).filter(i=>(c.citizenId&&norm(i.ownerCid)===norm(c.citizenId))||(c.fullName&&norm(i.owner)===norm(c.fullName)));};
 
-    const linkedFor=o=>{const out=[],seen=new Set();(o.links||[]).forEach(l=>{const r=recs[l.id];if(r&&!seen.has(r.id)){seen.add(r.id);out.push({rec:r,mine:true});}});Object.values(recs).forEach(r=>{if(!seen.has(r.id)&&(r.links||[]).some(l=>l.id===o.id)){seen.add(r.id);out.push({rec:r,mine:false});}});return out.filter(l=>user.value||['warrants','directives'].includes(l.rec.col));};
+    const linkedFor=o=>{const out=[],seen=new Set();(o.links||[]).forEach(l=>{const r=recs[l.id];if(r&&!seen.has(r.id)){seen.add(r.id);out.push({rec:r,mine:true});}});Object.values(recs).forEach(r=>{if(!seen.has(r.id)&&(r.links||[]).some(l=>l.id===o.id)){seen.add(r.id);out.push({rec:r,mine:false});}});return out.filter(l=>user.value||['documents','directives'].includes(l.rec.col));};
     const lkChoices=computed(()=>lkCol.value?itemsOf(lkCol.value).filter(r=>rec.value&&r.id!==rec.value.obj.id&&!linkedFor(rec.value.obj).some(l=>l.rec.id===r.id)):[]);
     const attach=()=>{if(!lkId.value)return;const o=rec.value.obj;(o.links||(o.links=[])).push({c:lkCol.value,id:lkId.value});lkId.value='';};
     const detach=l=>{const o=l.mine?rec.value.obj:l.rec;o.links=(o.links||[]).filter(x=>x.id!==(l.mine?l.rec.id:rec.value.obj.id));if(!l.mine)saveRaw(o);};
@@ -689,19 +747,19 @@ const app=createApp({
     const printNow=()=>window.print();
     const printRecord=o=>{
       const c=cfg.collections[o.col];
-      const rows=c.fields.map(f=>[f.l,f.t==='b'?(o[f.k]?'Yes':'No'):(o[f.k]||'-'),f.t==='a']);
+      const rows=c.fields.map(f=>[f.l, f.t==='b'?(o[f.k]?'Yes':'No') : (f.t==='c'?(Array.isArray(o[f.k])?o[f.k].map(id=>recs[id]?recs[id].fullName:id).join(', '):'-') : (o[f.k]||'-')), f.t==='a']);
       const now=new Date();const ts=now.getDate().toString().padStart(2,'0')+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear()+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
       let sigs=[];
       if(o.issuedBy){
-         sigs=[o.issuedBy+' — '+o.issuedRank];
-         if(!isTop(o.issuedRank))sigs.push('APPROVED BY: Director / Assistant Director');
+         sigs=[{name:o.issuedBy,title:o.issuedRank}];
+         if(!isTop(o.issuedRank))sigs.push({name:'',title:'Director / Assistant Director'});
       }else if(user.value){
-         sigs=[user.value.name+' — '+user.value.rank];
-         if(!isTop(user.value.rank))sigs.push('APPROVED BY: Director / Assistant Director');
-      }else{sigs=['Authorized U.P.D. Agent'];}
-      pdoc.value={title:c.label+': '+recTitle(o),kind:o.col==='warrants'?'Official Warrant':'',ref:o.id.toUpperCase(),ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sigs};
+         sigs=[{name:user.value.name,title:user.value.rank}];
+         if(!isTop(user.value.rank))sigs.push({name:'',title:'Director / Assistant Director'});
+      }else{sigs=[{name:'',title:'Authorized U.P.D. Agent'}];}
+      pdoc.value={title:o.col==='warrants'?'WARRANT REQUEST':c.label+': '+recTitle(o),kind:o.col==='warrants'?'Official Warrant Request':'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sigs};
     };
-    const printList=()=>{const c=col.value,f=c.fields.filter(f=>f.t!=='a').slice(0,5);pdoc.value={title:c.label+' — list',head:f.map(x=>x.l),table:listItems.value.map(r=>f.map(x=>shown(r,x)))};};
+    const printList=()=>{const c=col.value,f=c.fields.filter(f=>f.t!=='a'&&f.t!=='c').slice(0,5);pdoc.value={title:c.label+' — list',head:f.map(x=>x.l),table:listItems.value.map(r=>f.map(x=>shown(r,x)))};};
     const printPenal=()=>{pdoc.value={title:'San Andreas Penal Code Schedule',head:['Category','Charge','Fine','Jail (months)'],table:penalList.value.map(p=>[p.category,p.title,'$'+Number(p.fine||0).toLocaleString(),p.jail||0])};};
     const printEvidence=()=>{pdoc.value={title:'Photographic Evidence Log',photos:evidenceList.value.slice(0,60).map(e=>({...e.p,title:(e.p.title||'Untitled')+' ['+e.name+']'}))};};
 
@@ -713,7 +771,7 @@ const app=createApp({
 
     const addTpl=()=>{if(!nt.name.trim()||!nt.body.trim())return;(cfg.templates[nt.key]||(cfg.templates[nt.key]=[])).push({name:nt.name.trim(),body:nt.body});nt.name=nt.body='';};
     const delTpl=(k,i)=>{if(confirm('Delete template?'))cfg.templates[k].splice(i,1);};
-    const addRegistry=()=>{const label=nr.label.trim();if(!label||!nr.fields.trim())return alert('Name and fields are required.');let key=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||uid();if(cfg.collections[key])key+='_'+uid().slice(-3);const fields=nr.fields.split(',').map(s=>{const [n,t]=s.trim().split(':');return F('f_'+uid(),n.trim(),t==='a'||t==='b'||t==='u'?t:'t');}).filter(f=>f.l);cfg.collections[key]={label,icon:'fa-solid fa-folder',fields,builtin:false};nr.label=nr.fields='';};
+    const addRegistry=()=>{const label=nr.label.trim();if(!label||!nr.fields.trim())return alert('Name and fields are required.');let key=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||uid();if(cfg.collections[key])key+='_'+uid().slice(-3);const fields=nr.fields.split(',').map(s=>{const [n,t]=s.trim().split(':');return F('f_'+uid(),n.trim(),['a','b','u','c'].includes(t)?t:'t');}).filter(f=>f.l);cfg.collections[key]={label,icon:'fa-solid fa-folder',fields,builtin:false};nr.label=nr.fields='';};
     const delRegistry=k=>{if(confirm('Delete this registry? Its records stay in the database.')){delete cfg.collections[k];delete cfg.templates[k];}};
     const addField=c=>c.fields.push(F('f_'+uid(),'New field','t'));
     const delField=(c,i)=>{if(c.fields.length<2)return alert('A registry needs at least one field.');if(confirm('Remove this field from the form?'))c.fields.splice(i,1);};
@@ -721,7 +779,6 @@ const app=createApp({
     const saveLoc=l=>fdb.collection('map').doc(l.id).set(clean(l)).catch(fail);
     const addLoc=()=>{if(!nl.name.trim())return;fdb.collection('map').add({...clean(nl),gallery:[]}).catch(fail);nl.name=nl.address='';};
     const delLoc=l=>{if(confirm('Delete location?')){(l.gallery||[]).forEach(p=>delStored(p.url));fdb.collection('map').doc(l.id).delete().catch(fail);}};
-    const seedMap=async()=>{if(!confirm('Add default locations?'))return;const have=new Set(mapLocs.value.map(l=>l.cat+'|'+norm(l.name)));let b=fdb.batch(),n=0;for(const l of DEFAULT_MAP){if(have.has(l.cat+'|'+norm(l.name)))continue;b.set(fdb.collection('map').doc(),{...l,gallery:[]});if(++n>=400){await b.commit();b=fdb.batch();n=0;}}await b.commit().catch(fail);};
 
     const BOUNDS=[[-3500,-3000],[5000,4500]];
     let fitted=false;
@@ -737,19 +794,54 @@ const app=createApp({
 
     const mFile=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const b=await toBlob(f);if(!b)return;const fr=new FileReader();fr.onload=()=>mImg.value=fr.result;fr.readAsDataURL(b);mResults.value=[];mStatus.value='';};
     const mLink=()=>{const u=mUrlInput.value.trim();if(!/^https?:\/\//i.test(u))return;mImg.value=u;mUrlInput.value='';mResults.value=[];mStatus.value='';};
-    const runMatch=async()=>{mBusy.value=true;mResults.value=[];try{mStatus.value='Loading models (first run takes a few seconds)...';await loadModels();const qi=await loadImg(mImg.value);const det=await faceapi.detectAllFaces(qi,new faceapi.SsdMobilenetv1Options({minConfidence:.4})).withFaceLandmarks().withFaceDescriptors();if(mMode.value!=='outfit'&&!det.length){mStatus.value='No face detected. Try a clearer face, or use Outfit mode.';return;}const qd=det.map(d=>d.descriptor),qo=outfitHist(qi,det[0]&&det[0].detection.box)||[];const best=new Map();let unindexed=0;for(const e of allPhotos.value){if(e.p.ix!==1){unindexed++;continue;}let fs=0,os=0,detail=[];if(mMode.value!=='outfit'){const ds=faceDescs(e.p);let dmin=9;ds.forEach(d=>qd.forEach(x=>{const dist=faceapi.euclideanDistance(x,d);if(dist<dmin)dmin=dist;}));if(dmin<9){fs=Math.max(0,(1-dmin/1.1))*100;detail.push('face distance '+dmin.toFixed(2));}}if(mMode.value!=='face'&&e.p.oh&&e.p.oh.length&&qo.length){os=e.p.oh.reduce((a,v,j)=>a+Math.min(v,qo[j]||0),0)*100;detail.push('outfit colours '+Math.round(os)+'%');}let score=mMode.value==='face'?fs:mMode.value==='outfit'?os:(fs?fs*.65+os*.35:0);if(mMode.value==='face'&&!fs)continue;if(score<(mMode.value==='outfit'?45:40))continue;const key=e.obj.id,prev=best.get(key);if(!prev||score>prev.score)best.set(key,{...e,score:Math.round(score),detail:detail.join(' · ')});}mResults.value=[...best.values()].sort((a,b)=>b.score-a.score).slice(0,40);mStatus.value=`${mResults.value.length} similar match(es) found. `+(unindexed?`${unindexed} photo(s) are not indexed yet and were skipped. `:'');}catch(e){mStatus.value='Matcher error: '+e.message;}finally{mBusy.value=false;}};
+    const runMatch=async()=>{
+        mBusy.value=true;mResults.value=[];
+        try{
+            mStatus.value='Analysing subject structure...';
+            await loadModels();
+            const qi=await loadImg(mImg.value);
+            const det=await faceapi.detectAllFaces(qi,new faceapi.SsdMobilenetv1Options({minConfidence:.2})).withFaceLandmarks().withFaceDescriptors();
+            const qd=det.map(d=>d.descriptor);
+            
+            const best=new Map();
+            let unindexed=0;
+            for(const e of allPhotos.value){
+                if(e.p.ix!==1){unindexed++;continue;}
+                let fs=0;
+                
+                if(qd.length > 0) {
+                    const ds=faceDescs(e.p);
+                    let dmin=9;
+                    ds.forEach(d=>qd.forEach(x=>{
+                        const dist=faceapi.euclideanDistance(x,d);
+                        if(dist<dmin)dmin=dist;
+                    }));
+                    if(dmin < 1.0) { fs = Math.max(0, (1 - dmin) * 100); }
+                }
+                
+                if(fs < 25) continue;
+                
+                const key=e.obj.id;
+                const prev=best.get(key);
+                if(!prev || fs>prev.score) best.set(key, {...e, score:Math.round(fs), detail: 'Similarity Match: '+fs.toFixed(1)+'%'});
+            }
+            mResults.value=[...best.values()].sort((a,b)=>b.score-a.score).slice(0,40);
+            mStatus.value=`${mResults.value.length} similar match(es) found. `+(unindexed?`${unindexed} unindexed. `:'');
+        }catch(e){mStatus.value='Matcher error: '+e.message;}
+        mBusy.value=false;
+    };
     const indexAll=async()=>{mBusy.value=true;const todo=allPhotos.value.filter(x=>x.p.ix!==1);let n=0;const touched=new Set();for(const e of todo){mStatus.value=`Indexing ${++n}/${todo.length}...`;await indexPhoto(e.p);touched.add(e.obj);}for(const o of touched)saveTarget(o);mStatus.value='Indexing finished.';mBusy.value=false;};
 
     window.addEventListener('resize',()=>{isMobile.value=window.innerWidth<768;if(!isMobile.value)mobileNavOpen.value=false;});
 
-    watch(tab,t=>{if(cfg.collections[t]&&t!=='warrants'&&level(t)==='none')go('map');});
+    watch(tab,t=>{if(cfg.collections[t]&&t!=='documents'&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
-    return{LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
-      mImg,mUrlInput,mMode,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
+    return{LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+      mImg,mUrlInput,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
       zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,printList,printPenal,printEvidence,savePenal,addPenal,delPenal,importPenal,
-      addTpl,delTpl,addRegistry,delRegistry,addField,delField,moveField,saveLoc,addLoc,delLoc,seedMap,fixMap,flyTo,mFile,mLink,runMatch,indexAll};
+      addTpl,delTpl,addRegistry,delRegistry,addField,delField,moveField,saveLoc,addLoc,delLoc,fixMap,flyTo,mFile,mLink,runMatch,indexAll};
   }
 });
 
@@ -768,10 +860,10 @@ app.component('photo-gallery',{
   template:`<div class="space-y-3">
     <div v-if="edit" class="flex flex-wrap gap-2">
       <input v-model="url" placeholder="Photo link (https://...)" class="inp !w-auto flex-1" @keyup.enter="addUrl"><button @click="addUrl" class="btn !bg-slate-700">Add link</button>
-      <label class="btn !bg-emerald-600 cursor-pointer">{{ busy?'Uploading...':'Upload photos' }}<input type="file" accept="image/*" multiple class="hidden" @change="upload"></label></div>
+      <label class="btn !bg-emerald-600 cursor-pointer shadow-lg shadow-emerald-900/20">{{ busy?'Uploading...':'Upload photos' }}<input type="file" accept="image/*" multiple class="hidden" @change="upload"></label></div>
     <p v-if="err" class="text-red-400 text-sm">{{ err }}</p>
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-      <div v-for="(p,i) in (target.gallery||[])" :key="p.id" class="cursor-pointer bg-panel p-2 rounded-xl border border-purple-950" @click="$emit('zoom',target,i)">
+      <div v-for="(p,i) in (target.gallery||[])" :key="p.id" class="cursor-pointer bg-panel p-2 rounded-xl border border-purple-950 hover:border-tc transition" @click="$emit('zoom',target,i)">
         <img :src="p.url" class="aspect-square w-full object-cover rounded-lg bg-black hover:opacity-80 transition">
         <p class="text-xs text-slate-400 truncate mt-2 font-bold">{{ p.title||'Untitled' }}</p></div></div>
     <p v-if="!(target.gallery||[]).length" class="text-slate-500 text-sm">No photos attached.</p></div>`
@@ -793,11 +885,11 @@ app.component('file-box',{
   template:`<div class="space-y-4">
     <div v-if="edit" class="flex flex-wrap gap-2">
       <input v-model="url" placeholder="File Link (e.g. YouTube, Google Docs)" class="inp !w-auto flex-1" @keyup.enter="addUrl"><button @click="addUrl" class="btn !bg-slate-700">Add link</button>
-      <label class="btn !bg-emerald-600 cursor-pointer inline-block">{{ busy?'Uploading...':'Upload files' }}<input type="file" multiple class="hidden" @change="upload"></label>
+      <label class="btn !bg-emerald-600 cursor-pointer shadow-lg shadow-emerald-900/20">{{ busy?'Uploading...':'Upload files' }}<input type="file" multiple class="hidden" @change="upload"></label>
     </div>
     <p v-if="err" class="text-red-400 text-sm">{{ err }}</p>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div v-for="(f,i) in (target.files||[])" :key="f.id" class="p-4 bg-bg border border-purple-950 rounded-xl flex flex-col justify-between">
+        <div v-for="(f,i) in (target.files||[])" :key="f.id" class="p-4 bg-bg border border-purple-950 rounded-xl flex flex-col justify-between hover:border-tc transition">
           <div class="flex items-start justify-between gap-3 mb-2"><a :href="f.url" target="_blank" rel="noopener" class="text-tc font-bold truncate text-base hover:underline"><i class="fa-solid fa-paperclip mr-2"></i>{{ f.name }}</a><button v-if="edit" @click="remove(i)" class="del !py-1 !px-2">✕</button></div>
           <span class="text-slate-500 text-xs">{{ kb(f.size) }} · {{ f.date }} · {{ f.by }}</span>
           <video v-if="(f.type||'').startsWith('video')" :src="f.url" controls preload="metadata" class="w-full max-h-48 mt-3 rounded-lg bg-black"></video>
