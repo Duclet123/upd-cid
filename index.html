@@ -556,11 +556,13 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
   <p class="noprint max-w-4xl mx-auto text-xs text-slate-300 mb-3">Clean PDF: in the browser print dialog, disable “Headers and footers”. Page numbers are supplied by the document.</p>
   <div class="noprint max-w-4xl mx-auto flex gap-4 mb-6 justify-end"><button @click="printNow" :disabled="printBusy" class="btn text-base py-3 px-6"><i class="fa-solid fa-print mr-2"></i> Print / Save as PDF</button><button @click="pdoc=null" class="btn !bg-red-900 !text-white text-base py-3 px-6">✕ Close</button></div>
   <div class="sheet bg-white text-slate-900 max-w-4xl mx-auto p-12 text-[13px] leading-relaxed shadow-2xl" style="font-family:'Ubuntu',sans-serif">
-    <header class="text-center flex flex-col items-center border-b-4 border-slate-900 pb-6 mb-8" style="break-inside:avoid">
-      <img :src="LOGO" class="h-24 w-24 object-contain mb-4" onerror="this.style.display='none'">
-      <h1 class="text-2xl md:text-3xl font-black uppercase tracking-widest text-slate-900">Criminal Investigation Division</h1>
-      <p class="font-bold text-slate-700 text-base mt-2 uppercase tracking-wider">Unified Police Department</p>
-      <p v-if="pdoc.kind" class="font-bold text-red-700 uppercase mt-3 text-base tracking-widest">{{ pdoc.kind }}</p>
+    <header class="flex items-center justify-center gap-5 border-b-4 border-slate-900 pb-6 mb-8" style="break-inside:avoid">
+      <img :src="LOGO" class="h-24 w-24 object-contain shrink-0" onerror="this.style.display='none'">
+      <div class="text-center min-w-0">
+        <h1 class="text-2xl md:text-3xl font-black uppercase tracking-widest text-slate-900">Criminal Investigation Division</h1>
+        <p class="font-bold text-slate-700 text-base mt-2 uppercase tracking-wider">Unified Police Department</p>
+        <p v-if="pdoc.kind" class="font-bold text-red-700 uppercase mt-3 text-base tracking-widest">{{ pdoc.kind }}</p>
+      </div>
     </header>
     <h2 class="text-xl font-bold uppercase mb-6 text-slate-900 text-center">{{ pdoc.title }}</h2>
     <div v-if="pdoc.profile" class="flex gap-6 items-center mb-8 p-5 border-2 border-slate-300 rounded-lg" style="break-inside:avoid"><img :src="pdoc.profile.url" @error="imageFallback" :alt="pdoc.profile.name" class="w-28 h-36 object-contain bg-white border border-slate-400 rounded"><div><p class="text-xs text-slate-500 uppercase tracking-wider">Citizen identification</p><p class="text-xl font-bold text-slate-900 mt-2">{{ pdoc.profile.name }}</p><p class="font-mono text-sm text-slate-700 mt-2">Citizen ID: {{ pdoc.profile.citizenId }}</p></div></div>
@@ -962,15 +964,12 @@ const app=createApp({
       return {name:person.name,title:person.rank,badge:person.badge||''};
     };
     const makeSignatures=o=>{
-      const primary=o.issuedBy?{name:o.issuedBy,title:o.issuedRank||'U.P.D. Agent',badge:o.issuedBadge||''}:user.value?{name:user.value.name,title:user.value.rank,badge:user.value.badge||''}:{name:'',title:'Authorized U.P.D. Agent',badge:''};
-      if(!o.issuedBy&&o.col==='warrants'&&o.workflow?.status==='Approved'&&o.workflow.reviewedBy){const reviewer=accounts.value.find(a=>a.id===o.workflow.reviewedUid);return [{name:o.workflow.reviewedBy,title:reviewer?.rank||'Director / Assistant Director',badge:reviewer?.badge||''}];}
-      // A director slot inferred from the printer is automatic, so it rotates too.
-      if(!o.issuedBy&&isTop(primary.title))return [directorSignature('')];
+      const primary=user.value?{name:user.value.name,title:user.value.rank,badge:user.value.badge||''}:{name:'',title:'Authorized U.P.D. Agent',badge:''};
       const out=[primary];
-      if(primary.name&&!isTop(primary.title)){
-        if(o.col==='warrants'&&o.workflow?.status==='Approved'&&o.workflow.reviewedBy){const reviewer=accounts.value.find(a=>a.id===o.workflow.reviewedUid);out.push({name:o.workflow.reviewedBy,title:reviewer?.rank||'Director / Assistant Director',badge:reviewer?.badge||''});}
-        else out.push(directorSignature(primary.name));
-      }
+      if(o.col==='warrants'&&o.workflow?.status==='Approved'&&o.workflow.reviewedBy){
+        const reviewer=accounts.value.find(a=>a.id===o.workflow.reviewedUid);
+        if(o.workflow.reviewedUid!==user.value?.id&&norm(o.workflow.reviewedBy)!==norm(primary.name))out.push({name:o.workflow.reviewedBy,title:reviewer?.rank||'Director / Assistant Director',badge:reviewer?.badge||''});
+      }else if(primary.name&&!isTop(primary.title))out.push(directorSignature(primary.name));
       return out;
     };
     const printRecord=o=>{
