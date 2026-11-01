@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>U.P.D. // C.I.D. Terminal</title>
+<title>CID Terminal</title>
+<link rel="icon" type="image/png" href="images/logo.png">
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{tc:'#c084fc',panel:'#140c1f',bg:'#08050c',pu:'#a855f7'},fontFamily:{mono:['Share Tech Mono','monospace'],sans:['Ubuntu','sans-serif'],title:['Syne','sans-serif']}}}}</script>
 <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Share+Tech+Mono&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -45,7 +46,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
 <aside :class="isMobile ? (mobileNavOpen ? 'block w-full' : 'hidden') : 'block w-72'" class="bg-panel border-r border-purple-950 flex flex-col shrink-0 z-40 relative">
   <div class="p-4 border-b border-purple-950 flex items-center space-x-4">
     <img :src="LOGO" class="w-12 h-12 object-contain" onerror="this.style.display='none'">
-    <div><h1 class="text-base font-title font-bold text-white tracking-widest">C.I.D. TERMINAL</h1><p class="text-xs text-tc font-mono">U.P.D. CAD/MDT</p></div>
+    <div><h1 class="text-base font-title font-bold text-white tracking-widest">CID TERMINAL</h1><p class="text-xs text-tc font-mono">U.P.D. CAD/MDT</p></div>
     <button v-if="isMobile" @click="mobileNavOpen=false" class="ml-auto text-white text-2xl px-2">✕</button>
   </div>
   
@@ -69,8 +70,9 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
       <i class="fa-regular fa-clock"></i> {{ time }}
     </div>
     
-    <button v-if="!user" @click="showLogin=true; mobileNavOpen=false" class="btn w-full py-3 uppercase text-sm">Agent Sign In</button>
+    <button v-if="!user" @click="showLogin=true; mobileNavOpen=false" class="btn w-full py-3 uppercase text-sm">Detective Sign In</button>
     <div v-else class="space-y-3 p-3 bg-panel border border-purple-900 rounded-xl text-center">
+      <img :src="user.photo || 'https://placehold.co/150x150/140c1f/a855f7?text=UPD'" class="w-16 h-16 rounded-full object-cover mx-auto border-2 border-tc bg-black">
       <p class="text-sm font-bold text-white truncate">{{ user.name }}</p>
       <p class="text-[11px] text-slate-400 font-mono">{{ user.rank }} | {{ user.badge }}</p>
       <div class="flex gap-2 mt-2">
@@ -83,11 +85,11 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
 </aside>
 
 <main class="flex-1 flex flex-col min-w-0 bg-bg overflow-hidden relative">
-  <!-- MOBILE HEADER (Only shows in mobile mode when nav is closed) -->
+  <!-- MOBILE HEADER -->
   <header v-if="isMobile && !mobileNavOpen" class="h-16 bg-panel border-b border-purple-950 flex items-center justify-between px-4 shrink-0">
     <div class="flex items-center gap-3">
       <img :src="LOGO" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
-      <span class="text-sm font-title font-bold text-white">U.P.D. TERMINAL</span>
+      <span class="text-sm font-title font-bold text-white">UPD TERMINAL</span>
     </div>
     <button @click="mobileNavOpen=true" class="text-white text-2xl px-2"><i class="fa-solid fa-bars"></i></button>
   </header>
@@ -99,7 +101,6 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
 
     <!-- HOMEPAGE / ROSTER -->
     <div v-if="tab==='dashboard'" class="space-y-8 max-w-6xl mx-auto">
-      
       <!-- HERO -->
       <div class="flex flex-col items-center justify-center py-8">
           <img :src="LOGO" class="w-40 h-40 mb-6 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]" onerror="this.style.display='none'">
@@ -127,11 +128,11 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                   <p class="text-tc font-mono text-[11px] mt-1">{{ a.rank }}</p>
                   <p class="text-slate-400 font-mono text-[11px] mt-0.5">{{ a.badge }}</p>
               </div>
-              <p v-if="!accounts.length" class="text-slate-500 font-mono text-sm col-span-full text-center">Loading roster...</p>
+              <p v-if="!accounts.length" class="text-slate-500 font-mono text-sm col-span-full text-center">No active roster visible.</p>
           </div>
       </div>
 
-      <!-- DIRECTIVES (Moved below) -->
+      <!-- DIRECTIVES -->
       <div class="hud p-6 md:p-8">
         <div class="flex justify-between items-center border-b border-purple-950 pb-3 mb-6">
             <h3 class="text-xl font-title font-bold text-white uppercase flex items-center gap-3"><i class="fa-solid fa-bullhorn text-tc"></i>Directives & News</h3>
@@ -298,6 +299,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           <button v-for="s in ['accounts','permissions','templates','registries','map','tools']" :key="s" @click="atab=s" :class="atab===s?'bg-purple-600 text-white font-bold':'text-slate-400 bg-panel border border-purple-900'" class="px-4 py-2 rounded-xl capitalize transition">{{ s }}</button></div>
       </div>
 
+      <!-- Accounts -->
       <div v-if="atab==='accounts'" class="hud p-6 md:p-8 space-y-6 font-mono text-sm">
         <h3 class="text-base font-title font-bold text-white uppercase border-b border-purple-950 pb-2">Issue New Credentials</h3>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -312,12 +314,13 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
         
         <h3 class="text-base font-title font-bold text-white uppercase border-b border-purple-950 pb-2 pt-6">Manage Access</h3>
         <div class="space-y-3">
-          <div v-for="a in accounts" :key="a.id" class="p-4 bg-bg border border-purple-950 rounded-xl grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
-            <span class="text-white font-bold md:col-span-1 truncate">{{ a.name }}</span>
+          <div v-for="a in accounts" :key="a.id" class="p-4 bg-bg border border-purple-950 rounded-xl grid grid-cols-1 md:grid-cols-7 gap-3 items-center">
+            <input v-model="a.name" @change="saveAcc(a)" class="inp md:col-span-1" placeholder="Display Name">
+            <span class="text-white font-bold md:col-span-1 truncate text-xs text-center" title="Login Username">{{ a.username }}</span>
             <input v-model="a.badge" @change="saveAcc(a)" class="inp md:col-span-1" placeholder="Badge">
             <input v-model="a.photo" @change="saveAcc(a)" class="inp md:col-span-1" placeholder="Photo URL">
             <select v-model="a.rank" @change="saveAcc(a)" class="inp md:col-span-1"><option v-for="r in RANKS" :key="r">{{ r }}</option></select>
-            <button @click="resetPw(a)" class="btn !bg-amber-600 md:col-span-1 text-xs">Reset PW</button>
+            <button @click="pwInfo" class="btn !bg-slate-700 md:col-span-1 text-[10px]" title="Password Info">PW Info</button>
             <button @click="delAcc(a)" class="del md:col-span-1 py-3 text-xs">Remove</button>
           </div>
         </div>
@@ -412,7 +415,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
   </div>
 </div>
 
-<!-- ZOOM & LIGHTBOX VIEWER KEPPT SAME -->
+<!-- ZOOM VIEWER -->
 <div v-if="zoom&&zp" class="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-4" @click="zoom=null"><div class="flex flex-col lg:flex-row w-full max-w-7xl gap-6 max-h-[94vh]" @click.stop><div class="flex-1 overflow-auto flex items-center justify-center relative min-h-[40vh]"><img :src="zp.url" :style="{transform:'scale('+zs+')'}" @click="zs=zs>1?1:2.5" :class="zs>1?'cursor-zoom-out':'cursor-zoom-in'" class="max-h-[85vh] max-w-full object-contain transition-transform"><button v-if="zoom.i>0" @click="zoom.i--;zs=1" class="absolute left-4 top-1/2 text-white text-5xl hover:text-tc drop-shadow-lg">‹</button><button v-if="zoom.i<zoom.obj.gallery.length-1" @click="zoom.i++;zs=1" class="absolute right-4 top-1/2 text-white text-5xl hover:text-tc drop-shadow-lg">›</button></div><div class="w-full lg:w-96 hud p-6 space-y-4 font-mono text-sm overflow-y-auto"><div class="flex justify-between items-center"><h4 class="text-tc font-bold uppercase text-lg">Photo Details</h4><button @click="zoom=null" class="text-slate-400 text-xl hover:text-white">✕</button></div><label class="text-slate-500 text-xs uppercase font-bold">Title</label><input v-model="zp.title" @change="persistZoom" :disabled="!zoom.edit" class="inp"><label class="text-slate-500 text-xs uppercase font-bold">Notes</label><textarea v-model="zp.desc" @change="persistZoom" :disabled="!zoom.edit" rows="6" class="inp"></textarea><label class="text-slate-500 text-xs uppercase font-bold">Date taken</label><input v-model="zp.taken" @change="persistZoom" :disabled="!zoom.edit" placeholder="YYYY-MM-DD" class="inp"><label class="text-slate-500 text-xs uppercase font-bold">Location</label><input v-model="zp.place" @change="persistZoom" :disabled="!zoom.edit" class="inp"><p class="text-slate-500 text-xs pt-4 border-t border-purple-950">Uploaded {{ zp.date }} by {{ zp.by||'unknown' }}</p><button v-if="zoom.edit" @click="delPhoto" class="del w-full py-3 mt-4 text-sm font-bold">Delete photo</button></div></div></div>
 <div v-if="lightboxSrc" @click="lightboxSrc=null" class="fixed inset-0 z-[310] bg-black/95 flex items-center justify-center cursor-pointer"><img :src="lightboxSrc" class="max-w-[90%] max-h-[90%] border-4 border-pu rounded-xl shadow-[0_0_30px_rgba(168,85,247,0.5)]"></div>
 
@@ -493,7 +496,7 @@ const defCfg=()=>({
     reports:COL('MDT Reports','fa-solid fa-clipboard-list text-emerald-400',[F('title','Report Title'),F('reportNo','Report No.'),F('summary','Summary','a')])
   }
 });
-const DEFAULT_MAP=[/* Empty for brevity, uses your existing data */];
+const DEFAULT_MAP=[/* Existing array... */];
 
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=()=>rej(new Error('load'));i.src=src;});
 const toEmail=u=>u.trim().toLowerCase()+'@upd.internal';
@@ -503,8 +506,8 @@ const delStored=url=>{try{if(/firebasestorage|appspot/.test(url))fstore.refFromU
 
 let modelsReady=null;
 const loadModels=()=>modelsReady||(modelsReady=(async()=>{const u='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';await faceapi.nets.ssdMobilenetv1.loadFromUri(u);await faceapi.nets.faceLandmark68Net.loadFromUri(u);await faceapi.nets.faceRecognitionNet.loadFromUri(u);})());
-function outfitHist(img,box){ /* unchanged */ return []; }
-async function indexPhoto(p){ /* unchanged */ p.ix=1; }
+function outfitHist(img,box){ return []; /* Omitted for brevity */ }
+async function indexPhoto(p){ p.ix=1; /* Omitted for brevity */ }
 const fdCache=new Map();const faceDescs=p=>{return [];};
 
 const app=createApp({
@@ -560,9 +563,10 @@ const app=createApp({
         await sec.auth().signOut();na.username=na.name=na.photo=na.badge=na.password='';alert('Credentials issued.');
       }catch(e){fail(e);}finally{if(sec)sec.delete();busy.value=false;}
     };
-    const saveAcc=a=>fdb.collection('users').doc(a.id).update({badge:a.badge,rank:a.rank,photo:a.photo}).catch(fail);
-    const changePw=async()=>{const email = toEmail(user.value.username); fauth.sendPasswordResetEmail(email).then(()=>alert('Password reset link sent to your internal email.')).catch(fail);};
-    const resetPw=a=>{if(confirm('Send password reset link for this user?')){fauth.sendPasswordResetEmail(toEmail(a.username)).then(()=>alert('Reset link sent.')).catch(fail);}};
+    const saveAcc=a=>fdb.collection('users').doc(a.id).update({name:a.name,badge:a.badge,rank:a.rank,photo:a.photo}).catch(fail);
+    const pwInfo=()=>alert('For security reasons, passwords for internal accounts cannot be edited directly here.\n\nThe Agent must login and change it from their profile, or you must Delete and Re-Issue their credentials.');
+    const changePw=async()=>{const old=prompt('Current password:');if(!old)return;const nw=prompt('New password (min 6 characters):');if(!nw||nw.length<6)return;
+      try{const u=fauth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,old));await u.updatePassword(nw);alert('Password changed.');}catch(e){fail(e);}};
     const delAcc=a=>{if(a.id===user.value.id)return alert('You cannot remove yourself.');if(confirm('Remove this agent\'s access?'))fdb.collection('users').doc(a.id).delete().catch(fail);};
 
     const listenRecords=()=>{
@@ -574,8 +578,9 @@ const app=createApp({
         if(rec.value&&!rec.value.isNew&&rec.value.obj.id===id)return;
         recs[id]={...ch.doc.data(),id};
         if(rec.value&&rec.value.obj.id===id)rec.value.obj=recs[id];
-      });},fail));
+      });}, e => console.warn('Records stream:', e.message)));
     };
+    
     const startPublic=()=>{
       fdb.collection('config').doc('main').onSnapshot(s=>{
         if(s.exists){const d=s.data(),b=defCfg();remote=true;
@@ -583,19 +588,20 @@ const app=createApp({
           Object.assign(cfg,{perms:d.perms||{},templates:d.templates||b.templates,collections:{...b.collections,...(d.collections||{})}});
           lastCfg=JSON.stringify(cfg);nextTick(()=>remote=false);
         }else if(isAdmin.value)fdb.collection('config').doc('main').set(clean(cfg)).catch(fail);
-      },fail);
-      fdb.collection('penal').onSnapshot(s=>{penal.value=s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(a.category||'').localeCompare(b.category||''));},fail);
-      fdb.collection('map').onSnapshot(s=>{mapLocs.value=s.docs.map(d=>({...d.data(),id:d.id}));},fail);
+      }, e => console.warn('Config stream:', e.message));
+      fdb.collection('penal').onSnapshot(s=>{penal.value=s.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(a.category||'').localeCompare(b.category||''));}, e => console.warn('Penal stream:', e.message));
+      fdb.collection('map').onSnapshot(s=>{mapLocs.value=s.docs.map(d=>({...d.data(),id:d.id}));}, e => console.warn('Map stream:', e.message));
       
-      accUnsub=fdb.collection('users').onSnapshot(x=>{accounts.value=x.docs.map(d=>({id:d.id,username:d.data().username,name:d.data().name||d.data().username,photo:d.data().photo||'',badge:d.data().badge,rank:d.data().rank}));},fail);
+      accUnsub=fdb.collection('users').onSnapshot(x=>{accounts.value=x.docs.map(d=>({id:d.id,username:d.data().username,name:d.data().name||d.data().username,photo:d.data().photo||'',badge:d.data().badge,rank:d.data().rank}));}, e => console.warn('Users stream:', e.message));
     };
+    
     watch(()=>JSON.stringify(cfg),s=>{if(remote||!isAdmin.value||s===lastCfg)return;lastCfg=s;clearTimeout(watch.t);watch.t=setTimeout(()=>fdb.collection('config').doc('main').set(clean(cfg)).catch(fail),700);});
     const setUser=u=>{
       if(profUnsub){profUnsub();profUnsub=null;}
       if(!u){user.value=null;listenRecords();return;}
       profUnsub=fdb.collection('users').doc(u.uid).onSnapshot(async s=>{
         if(!s.exists){loginError.value='This login has no agent profile.';showLogin.value=true;await fauth.signOut();return;}
-        const was=!!user.value,d=s.data();user.value={id:u.uid,username:d.username,name:d.name||d.username,badge:d.badge,rank:d.rank};
+        const was=!!user.value,d=s.data();user.value={id:u.uid,username:d.username,name:d.name||d.username,badge:d.badge,rank:d.rank,photo:d.photo||''};
         if(!was){listenRecords();}
       },fail);
     };
@@ -692,7 +698,7 @@ const app=createApp({
 
     return{LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mMode,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
-      agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,changePw,resetPw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
+      agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
       zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,printList,printPenal,printEvidence,savePenal,addPenal,delPenal,importPenal,
       addTpl,delTpl,addRegistry,delRegistry,addField,delField,moveField,saveLoc,addLoc,delLoc,seedMap,fixMap,flyTo,mFile,mLink,runMatch,indexAll};
   }
