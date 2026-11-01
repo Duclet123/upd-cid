@@ -151,3 +151,19 @@ The expandable timeline uses horizontal event cards, scroll buttons and keyboard
 scrolling. Events remain newest-first and can load 30 more at a time.
 Legacy duplicate field keys are rendered and printed once; schema definitions,
 custom fields and citizen data are retained.
+
+INTERROGATIONS AND RECORDINGS
+Interrogations group case/session details, participants, and source/reliability
+into separate panels. The transcript has a full-width section below the details
+and evidence. Recording accepts a primary video link; compatible existing file
+links and known legacy video-link fields also appear in its recording selector.
+YouTube, Vimeo, Streamable and Google Drive use their embedded players. Direct
+HTTPS video files use native playback controls. Original-source links remain
+available for restricted or unsupported playback. Recording URLs persist in the
+normal audited record. The transcript remains last in the printed document.
+
+PRINT ONLY COMPLETED CONTENT
+All printable registries omit undefined/null values, whitespace-only text and
+empty selections. Numeric zero and boolean No remain meaningful printed values.
+Blank transcripts, empty media sections, absent profile photos and unfilled
+signature slots are omitted. Photo captions and metadata print only when present.
