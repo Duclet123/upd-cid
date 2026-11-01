@@ -1460,26 +1460,58 @@ app.component('recording-player',{
 });
 
 
+app.component('file-preview-content',{
+ props:{file:Object,source:Object,pdfUrl:String,zoom:Number,fitMode:String},emits:['failed'],
+ computed:{imageStyle(){return this.fitMode==='custom'?{width:this.zoom+'%',maxWidth:'none',height:'auto'}:this.fitMode==='width'?{width:'100%',maxWidth:'none',height:'auto'}:{width:'100%',height:'100%',objectFit:'contain'};}},
+ template:`<div class="w-full h-full overflow-auto bg-[#101018]" tabindex="0" aria-label="Scrollable file preview">
+ <img v-if="source.kind==='image'" :src="source.src" :alt="file.name||'Attached image'" @error="$emit('failed')" :style="imageStyle" class="block mx-auto">
+ <video v-else-if="source.kind==='video'" :src="source.src" @error="$emit('failed')" controls preload="metadata" class="w-full h-full object-contain bg-black"></video>
+ <audio v-else-if="source.kind==='audio'" :src="source.src" @error="$emit('failed')" controls preload="metadata" class="w-full my-8"></audio>
+ <object v-else-if="source.kind==='pdf'" :data="pdfUrl" type="application/pdf" :aria-label="file.name||'PDF preview'" class="w-full h-full bg-white"><div class="p-8 text-sm text-slate-700">Your browser cannot display this PDF here. <a :href="file.url" target="_blank" rel="noopener noreferrer" class="underline">Open PDF ↗</a></div></object>
+ <iframe v-else :src="source.src" :title="file.name||'Attached file'" sandbox="allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer" allowfullscreen class="w-full h-full bg-white border-0"></iframe>
+ </div>`
+});
 app.component('file-preview',{
- props:{file:Object},data(){return {failed:false,zoom:100,expanded:false};},
- computed:{source(){return attachmentPreviewSource(this.file);},previewUrl(){if(this.source?.kind!=='pdf')return this.source?.src||'';const url=new URL(this.source.src),fragment=new URLSearchParams(url.hash.slice(1));fragment.set('zoom',String(this.zoom));url.hash=fragment.toString();return url.href;},stageStyle(){const scale=this.source?.kind==='pdf'?1:this.zoom/100;return {width:(100*scale)+'%',height:(70*scale)+'vh',minHeight:(360*scale)+'px'};},surfaceStyle(){const scale=this.source?.kind==='pdf'?1:this.zoom/100;return {width:(100/scale)+'%',height:(100/scale)+'%',transform:'scale('+scale+')',transformOrigin:'top left'};}},
- methods:{changeZoom(step){this.zoom=Math.max(50,Math.min(300,this.zoom+step));},resetZoom(){this.zoom=100;}},
- watch:{'file.url'(){this.failed=false;this.expanded=false;this.resetZoom();}},
- template:`<section v-if="source" class="space-y-2" :class="expanded?'fixed inset-3 z-[350] overflow-auto bg-panel border border-purple-900 rounded-xl p-4 shadow-2xl':'mt-4'" @keydown.esc="if(expanded){$event.stopPropagation();expanded=false;}" aria-label="Attached file preview">
- <div v-if="source.kind!=='audio'&&!failed" class="flex justify-end items-center gap-2 text-xs">
- <button @click="changeZoom(-25)" :disabled="zoom<=50" aria-label="Zoom out file preview" class="btn !bg-slate-800 !px-3 !py-1">−</button>
- <output class="text-slate-400 w-12 text-center" aria-live="polite">{{ zoom }}%</output>
- <button @click="changeZoom(25)" :disabled="zoom>=300" aria-label="Zoom in file preview" class="btn !bg-slate-800 !px-3 !py-1">+</button>
- <button @click="resetZoom" aria-label="Reset file preview zoom" class="text-slate-400 hover:text-white px-2">Reset</button><button @click="expanded=!expanded" :aria-label="expanded?'Close expanded file preview':'Expand file preview'" class="btn !bg-slate-800 !px-3 !py-1">{{ expanded?'Close expanded view':'Expand preview' }}</button></div>
- <audio v-if="source.kind==='audio'&&!failed" :src="source.src" @error="failed=true" controls preload="metadata" class="w-full"></audio>
- <div v-else-if="!failed" class="w-full h-[70vh] min-h-[360px] overflow-auto rounded-lg border border-slate-700 bg-slate-950" tabindex="0" aria-label="Scrollable file preview">
- <div class="relative" :style="stageStyle">
- <div class="absolute top-0 left-0" :style="surfaceStyle">
- <img v-if="source.kind==='image'" :src="source.src" :alt="file.name||'Attached image'" @error="failed=true" class="w-full h-full object-contain bg-white">
- <video v-else-if="source.kind==='video'" :src="source.src" @error="failed=true" controls preload="metadata" class="w-full h-full bg-black"></video>
- <object v-else-if="source.kind==='pdf'" :data="previewUrl" type="application/pdf" :aria-label="file.name||'PDF preview'" class="w-full h-full bg-white"><a :href="file.url" target="_blank" rel="noopener noreferrer">Open PDF</a></object><iframe v-else :key="source.src" :src="source.src" :title="file.name||'Attached file'" sandbox="allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer" allowfullscreen class="w-full h-full bg-white border-0"></iframe>
- </div></div></div>
- <p class="text-[10px] text-slate-500">{{ failed?'Preview could not load.':'If the preview is blocked or requires access,' }} <a :href="file.url" target="_blank" rel="noopener noreferrer" class="text-tc underline">open the original file ↗</a></p>
+ props:{file:Object},data(){return {failed:false,zoom:100,fitMode:'page',expanded:false};},
+ computed:{
+ source(){return attachmentPreviewSource(this.file);},
+ canZoom(){return ['image','pdf'].includes(this.source?.kind);},
+ previewUrl(){if(this.source?.kind!=='pdf')return this.source?.src||'';const url=new URL(this.source.src),fragment=new URLSearchParams(url.hash.slice(1));fragment.set('zoom',this.fitMode==='width'?'page-width':this.fitMode==='page'?'page-fit':String(this.zoom));url.hash=fragment.toString();return url.href;},
+ zoomLabel(){return this.fitMode==='width'?'Fit width':this.fitMode==='page'?'Fit page':this.zoom+'%';},
+ fileLabel(){return this.file.name&&this.file.name!=='Linked External File'?this.file.name:'Attached document';}
+ },
+ methods:{
+ changeZoom(step){this.fitMode='custom';this.zoom=Math.max(50,Math.min(300,this.zoom+step));},
+ resetZoom(){this.zoom=100;this.fitMode='width';},
+ fitPage(){this.zoom=100;this.fitMode='page';},
+ openViewer(){this.failed=false;this.resetZoom();this.expanded=true;this.$nextTick?.(()=>this.$refs.closeViewer?.focus());},
+ closeViewer(){this.expanded=false;this.fitPage();this.$nextTick?.(()=>this.$refs.openViewer?.focus());}
+ },
+ watch:{'file.url'(){this.failed=false;this.expanded=false;this.zoom=100;this.fitMode='page';}},
+ template:`<section v-if="source" class="mt-4 overflow-hidden rounded-xl border border-slate-800 bg-[#111119]" aria-label="Attached file preview">
+ <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800">
+ <div class="flex items-center gap-3 min-w-0"><span class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-300 flex items-center justify-center shrink-0"><i class="fa-regular fa-file-lines"></i></span><div class="min-w-0"><p class="text-xs text-slate-200 font-medium truncate">{{ fileLabel }}</p><p class="text-[10px] text-slate-500 mt-0.5">Document preview</p></div></div>
+ <button ref="openViewer" @click="openViewer" aria-label="Expand file preview" class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-purple-500/10 border border-purple-500/20 px-3 py-2 text-xs text-purple-200 hover:bg-purple-500/20 transition"><i class="fa-solid fa-expand"></i><span>Open viewer</span></button>
+ </div>
+ <div v-if="!expanded&&!failed" class="h-[420px] md:h-[520px]"><file-preview-content :file="file" :source="source" :pdf-url="previewUrl" :zoom="100" fit-mode="page" @failed="failed=true"></file-preview-content></div>
+ <div v-else class="h-40 flex items-center justify-center text-xs text-slate-500">{{ expanded?'Open in document viewer':'Preview could not load.' }}</div>
+ <div class="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-slate-800 text-[10px]"><span class="text-slate-500">For a larger view, open the viewer.</span><a :href="file.url" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-purple-200 shrink-0">Open original ↗</a></div>
+ <teleport to="body"><div v-if="expanded" class="fixed inset-0 z-[350] bg-black/85 backdrop-blur-sm p-2 sm:p-5 flex items-center justify-center" @click.self="closeViewer" @keydown.esc.stop.prevent="closeViewer">
+ <section role="dialog" aria-modal="true" :aria-label="'Document viewer: '+fileLabel" class="w-full max-w-[1500px] h-[95dvh] flex flex-col overflow-hidden rounded-2xl border border-slate-700/70 bg-[#111119] shadow-2xl">
+ <header class="shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-800">
+ <div class="min-w-0"><p class="text-[10px] uppercase tracking-widest text-purple-300 mb-1">Document viewer</p><h3 class="text-sm font-semibold text-white truncate">{{ fileLabel }}</h3></div>
+ <div class="flex items-center gap-2 shrink-0"><a :href="file.url" target="_blank" rel="noopener noreferrer" aria-label="Open original file" class="w-9 h-9 rounded-lg border border-slate-800 text-slate-400 hover:text-white inline-flex items-center justify-center"><i class="fa-solid fa-arrow-up-right-from-square"></i></a><button ref="closeViewer" @click="closeViewer" aria-label="Close document viewer" class="w-9 h-9 rounded-lg border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800"><i class="fa-solid fa-xmark"></i></button></div>
+ </header>
+ <div class="flex-1 min-h-0 relative overflow-hidden">
+ <file-preview-content v-if="!failed" :file="file" :source="source" :pdf-url="previewUrl" :zoom="zoom" :fit-mode="fitMode" @failed="failed=true"></file-preview-content>
+ <div v-else class="h-full flex flex-col items-center justify-center gap-3 text-sm text-slate-400"><p>Preview could not load.</p><a :href="file.url" target="_blank" rel="noopener noreferrer" class="text-purple-300 underline">Open original file ↗</a></div>
+ </div>
+ <footer class="shrink-0 flex flex-wrap items-center justify-center gap-2 sm:gap-4 px-3 py-3 bg-[#15151f] border-t border-slate-800">
+ <template v-if="canZoom&&!failed"><div class="flex items-center rounded-full border border-slate-700/70 bg-black/20 p-1"><button @click="changeZoom(-25)" :disabled="zoom<=50&&fitMode==='custom'" aria-label="Zoom out file preview" class="w-9 h-8 rounded-full text-slate-300 hover:bg-slate-700 disabled:opacity-30"><i class="fa-solid fa-minus text-xs"></i></button><output class="min-w-20 text-center text-xs text-slate-300" aria-live="polite">{{ zoomLabel }}</output><button @click="changeZoom(25)" :disabled="zoom>=300&&fitMode==='custom'" aria-label="Zoom in file preview" class="w-9 h-8 rounded-full text-slate-300 hover:bg-slate-700 disabled:opacity-30"><i class="fa-solid fa-plus text-xs"></i></button></div>
+ <button @click="resetZoom" :aria-pressed="fitMode==='width'" aria-label="Fit file preview to width" class="rounded-full border px-3 py-2 text-xs transition" :class="fitMode==='width'?'border-purple-500/40 bg-purple-500/10 text-purple-200':'border-slate-700 text-slate-400 hover:text-white'"><i class="fa-solid fa-arrows-left-right mr-1.5"></i>Fit width</button>
+ <button @click="fitPage" :aria-pressed="fitMode==='page'" aria-label="Fit whole file preview" class="rounded-full border px-3 py-2 text-xs transition" :class="fitMode==='page'?'border-purple-500/40 bg-purple-500/10 text-purple-200':'border-slate-700 text-slate-400 hover:text-white'"><i class="fa-solid fa-compress mr-1.5"></i>Whole page</button></template>
+ <p v-else class="text-[11px] text-slate-500">Use the file viewer’s own controls to adjust the document.</p>
+ </footer></section></div></teleport>
  </section><p v-else class="text-xs text-slate-500 mt-3">No supported file link to preview.</p>`
 });
 app.component('file-box',{
