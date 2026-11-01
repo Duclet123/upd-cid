@@ -32,6 +32,18 @@ body{font-family:Arial,Helvetica,sans-serif;background:#08050c;color:#e9d5ff;fon
 .record-body summary:focus-visible{outline:2px solid #a855f7;outline-offset:4px;border-radius:4px}
 @media(max-width:639px){.inp{font-size:16px}.btn{max-width:100%}.record-body .min-w-\[200px\]{min-width:0;width:100%}}
 
+
+.penal-snippet summary{list-style:none}.penal-snippet summary::-webkit-details-marker{display:none}
+.penal-snippet .snippet-full{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}
+.penal-snippet.snippet-expanded .snippet-preview{display:none}
+.penal-snippet.snippet-expanded .snippet-full{margin-top:.5rem}
+@media(hover:hover) and (pointer:fine){
+ .penal-snippet:not(.snippet-expanded):hover,.penal-snippet:not(.snippet-expanded):focus-within{z-index:60}
+ .penal-snippet:not(.snippet-expanded):hover>.snippet-full,.penal-snippet:not(.snippet-expanded):focus-within>.snippet-full{display:block;position:absolute;bottom:100%;left:-.5rem;width:min(380px,75vw);max-height:36vh;overflow:auto;z-index:60;padding:1rem;border:1px solid #6b21a8;border-radius:.75rem;background:#1a1027;box-shadow:0 12px 40px #0009;color:#e2e8f0;font-size:.8rem}
+ .penal-snippet.snippet-below:not(.snippet-expanded):hover>.snippet-full,.penal-snippet.snippet-below:not(.snippet-expanded):focus-within>.snippet-full{bottom:auto;top:100%}
+ .penal-snippet.snippet-right:not(.snippet-expanded)>.snippet-full{left:auto;right:-.5rem}
+}
+
 /* Preview Mode Styling */
 .inp:disabled{opacity:1;border-color:transparent;background:transparent;padding-left:0;color:#e9d5ff;font-family:Arial,Helvetica,sans-serif;font-size:1rem;font-weight:400;cursor:default;-webkit-appearance:none;}
 textarea.inp:disabled{resize:none;overflow:hidden;min-height:auto;}
@@ -207,7 +219,11 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                 <div class="flex justify-between items-start gap-2"><span class="font-mono text-xs font-bold text-amber-400">{{ p.code||'—' }}</span><span v-if="p.classification" class="text-[9px] font-bold uppercase rounded px-2 py-1" :class="penalClassStyle(p.classification)">{{ p.classification }}</span></div>
                 <h4 class="font-bold text-white leading-snug min-h-[2.5rem]">{{ p.title }}</h4>
                 <div class="grid grid-cols-2 gap-2 border-t border-purple-950 pt-3"><div><p class="text-[9px] text-slate-500 uppercase tracking-wider">Fine</p><p class="font-mono font-bold text-emerald-400 mt-0.5">${{ penalAmount(p.fine) }}</p></div><div class="text-right"><p class="text-[9px] text-slate-500 uppercase tracking-wider">Prison</p><p class="font-mono font-bold text-rose-300 mt-0.5">{{ penalAmount(p.jail) }} <span class="font-normal text-[10px] text-slate-500">months</span></p></div></div>
-                <details v-if="p.description||p.descriptionEl||p.bail" class="border-t border-purple-950 pt-2"><summary class="text-[11px] text-slate-400 hover:text-amber-300 cursor-pointer">Description &amp; bail</summary><div class="pt-3 space-y-3 text-xs leading-relaxed"><p v-if="p.descriptionEl" class="whitespace-pre-wrap text-slate-300">{{ p.descriptionEl }}</p><p v-if="p.description" class="whitespace-pre-wrap text-slate-400" lang="en">{{ p.description }}</p><p v-if="p.bail" class="text-amber-300">Bail: {{ p.bail }}</p></div></details>
+                <div v-if="p.description||p.descriptionEl||hasPrintValue(p.bail)" class="border-t border-purple-950 pt-3 space-y-3">
+                  <penal-snippet v-if="p.descriptionEl" label="Description · EL" :text="p.descriptionEl"></penal-snippet>
+                  <penal-snippet v-if="p.description" label="Description" :text="p.description" lang="en"></penal-snippet>
+                  <penal-snippet v-if="hasPrintValue(p.bail)" label="Bail" :text="String(p.bail)" tone="amber"></penal-snippet>
+                </div>
               </article>
             </div>
           </section>
@@ -1474,6 +1490,15 @@ app.component('recording-player',{
 });
 
 
+
+
+app.component('penal-snippet',{
+ props:{text:{type:String,default:''},label:String,tone:String,lang:String},data(){return {expanded:false,above:true,alignRight:false,detailId:'penal-snippet-'+uid()};},
+ methods:{placePopup(event){const rect=event.currentTarget.getBoundingClientRect();this.above=rect.top>window.innerHeight*.36+20;this.alignRight=rect.left+Math.min(380,window.innerWidth*.75)>window.innerWidth-16;}},
+ computed:{long(){return this.text.length>160||this.text.split(String.fromCharCode(10)).length>3;},preview(){const text=this.text.replace(/\s+/g,' ').trim();return text.length>160?text.slice(0,157).trimEnd()+'…':text;}},
+ template:`<div v-if="!long" class="space-y-1"><p class="text-[9px] uppercase tracking-wider text-slate-500">{{ label }}</p><p :lang="lang" class="text-xs whitespace-pre-wrap break-words leading-relaxed" :class="tone==='amber'?'text-amber-300':'text-slate-300'">{{ text }}</p></div>
+ <div v-else class="penal-snippet relative text-xs" :class="{'snippet-expanded':expanded,'snippet-below':!above,'snippet-right':alignRight}" @pointerenter="placePopup" @focusin="placePopup" :lang="lang"><button type="button" @click="expanded=!expanded" @keydown.esc.stop.prevent="expanded=false" :aria-expanded="expanded" :aria-controls="detailId" class="w-full text-left cursor-help rounded focus-visible:outline focus-visible:outline-1 focus-visible:outline-purple-500"><span class="flex items-center justify-between gap-2 mb-1"><span class="text-[9px] uppercase tracking-wider text-slate-500">{{ label }}</span><span class="text-[9px] text-purple-300"><i class="fa-solid fa-circle-info mr-1"></i>{{ expanded?'Less':'More' }}</span></span><span class="snippet-preview block leading-relaxed whitespace-pre-wrap break-words" :class="tone==='amber'?'text-amber-300':'text-slate-300'">{{ preview }}</span></button><div :id="detailId" :role="expanded?'region':'tooltip'" class="snippet-full mt-1 text-slate-200" :class="expanded?'':'hidden'" tabindex="0">{{ text }}</div></div>`
+});
 
 app.component('document-library',{
  props:{records:{type:Array,default:()=>[]},signedIn:Boolean,canEdit:Boolean,formatTime:Function},emits:['open','create','print'],
