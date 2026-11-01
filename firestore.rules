@@ -52,40 +52,58 @@ service cloud.firestore {
       return data.col != 'warrants' || (data.get('targets', []) is list && data.get('targets', []).size() > 0)
         || (data.get('otherTargets', '') is string && data.get('otherTargets', '').size() > 0);
     }
-    function requestUpdate(old, next) {
-      let previous = old.get('workflow', {}).get('status', 'Draft');
-      let status = next.get('workflow', {}).get('status', 'Draft');
-      return old.col != 'warrants' || (
-        previous in ['Draft','Rejected'] && (status == 'Draft' || (previous == 'Rejected' && status == 'Rejected')
-          || (status == 'Submitted' && next.workflow.submittedUid == request.auth.uid
-            && next.workflow.submittedBy == get(/databases/$(db)/documents/users/$(request.auth.uid)).data.name))
-      ) || (
-        top() && previous == 'Submitted' && status in ['Approved','Rejected']
-        && next.diff(old).affectedKeys().hasOnly(['workflow','version','updatedAt','auditId'])
-        && next.workflow.diff(old.workflow).affectedKeys().hasOnly(['status','note','reviewedUid','reviewedBy','reviewedAt'])
-        && next.workflow.reviewedUid == request.auth.uid
-        && next.workflow.reviewedBy == get(/databases/$(db)/documents/users/$(request.auth.uid)).data.name
-        && (status != 'Rejected' || next.workflow.note.size() > 0)
-      );
+    function requestUpdate(old, next) { return draftRequest(next); }
+    function uniqueValue(data) {
+      return data.col == 'citizens' ? string(data.get('citizenId', '')).upper().replace('\\s+', '')
+        : data.col == 'vehicles' ? string(data.get('plate', '')).upper().replace('\\s+', '')
+        : data.col == 'weapons' ? string(data.get('serial', '')).upper().replace('\\s+', '') : '';
+    }
+    function uniqueKey(data) { return uniqueValue(data) == '' ? '' : data.col + '_' + uniqueValue(data); }
+    function uniqueOwned(id, data) {
+      let key = uniqueKey(data);
+      return data.get('uniqueKey', '') == key && (key == '' ||
+        (existsAfter(/databases/$(db)/documents/uniqueKeys/$(key))
+          && getAfter(/databases/$(db)/documents/uniqueKeys/$(key)).data.recordId == id));
+    }
+    function uniqueReleased(id, data) {
+      let key = uniqueKey(data);
+      return key == '' || !existsAfter(/databases/$(db)/documents/uniqueKeys/$(key))
+        || getAfter(/databases/$(db)/documents/uniqueKeys/$(key)).data.recordId != id;
+    }
+    match /uniqueKeys/{key} {
+      allow get: if agent() && (!exists(/databases/$(db)/documents/uniqueKeys/$(key)) || view(resource.data.col));
+      allow list: if false;
+      allow create, update: if edit(request.resource.data.col)
+        && request.resource.data.keys().hasOnly(['recordId','col','value'])
+        && existsAfter(/databases/$(db)/documents/records/$(request.resource.data.recordId))
+        && uniqueKey(getAfter(/databases/$(db)/documents/records/$(request.resource.data.recordId)).data) == key
+        && request.resource.data.value == uniqueValue(getAfter(/databases/$(db)/documents/records/$(request.resource.data.recordId)).data)
+        && getAfter(/databases/$(db)/documents/records/$(request.resource.data.recordId)).data.col == request.resource.data.col
+        && (!exists(/databases/$(db)/documents/uniqueKeys/$(key)) || resource.data.recordId == request.resource.data.recordId);
+      allow delete: if edit(resource.data.col)
+        && (!existsAfter(/databases/$(db)/documents/records/$(resource.data.recordId))
+          || getAfter(/databases/$(db)/documents/records/$(resource.data.recordId)).data.get('uniqueKey', '') != key);
     }
     match /records/{id} {
       function restoring() {
         let trash = /databases/$(db)/documents/trash/$(id);
         return exists(trash) && !get(trash).data.get('purging', false) && !existsAfter(trash)
           && request.resource.data.version == get(trash).data.record.get('version', 0) + 1
-          && request.resource.data.diff(get(trash).data.record).affectedKeys().hasOnly(['version','auditId','updatedAt']);
+          && request.resource.data.diff(get(trash).data.record).affectedKeys().hasOnly(['version','auditId','updatedAt','uniqueKey','workflow','legacyWorkflow']);
       }
       allow get: if agent() && !exists(/databases/$(db)/documents/records/$(id));
       allow read: if publicRecord(resource.data) || view(resource.data.col);
-      allow create: if edit(request.resource.data.col)
+      allow create: if edit(request.resource.data.col) && draftRequest(request.resource.data) && uniqueOwned(id, request.resource.data)
         && auditFor(id, request.resource.data)
         && ((request.resource.data.version == 1 && !exists(/databases/$(db)/documents/trash/$(id)) && draftRequest(request.resource.data) && targetRequest(request.resource.data)) || restoring());
       allow update: if request.resource.data.col == resource.data.col && edit(resource.data.col)
         && request.resource.data.version == resource.data.get('version', 0) + 1
+        && uniqueOwned(id, request.resource.data)
+        && (uniqueKey(resource.data) == uniqueKey(request.resource.data) || uniqueReleased(id, resource.data))
         && request.resource.data.auditId != resource.data.get('auditId', '')
         && auditFor(id, request.resource.data) && targetRequest(request.resource.data)
         && requestUpdate(resource.data, request.resource.data);
-      allow delete: if edit(resource.data.col)
+      allow delete: if edit(resource.data.col) && uniqueReleased(id, resource.data)
         && existsAfter(/databases/$(db)/documents/trash/$(id))
         && getAfter(/databases/$(db)/documents/trash/$(id)).data.record == resource.data;
       match /history/{event} {
@@ -112,7 +130,7 @@ service cloud.firestore {
     match /trash/{id} {
       allow get: if agent() && !exists(/databases/$(db)/documents/trash/$(id));
       allow read: if view(resource.data.col);
-      allow create: if edit(request.resource.data.col)
+      allow create: if edit(request.resource.data.col) && draftRequest(request.resource.data) && uniqueOwned(id, request.resource.data)
         && exists(/databases/$(db)/documents/records/$(id))
         && !existsAfter(/databases/$(db)/documents/records/$(id))
         && request.resource.data.record == get(/databases/$(db)/documents/records/$(id)).data

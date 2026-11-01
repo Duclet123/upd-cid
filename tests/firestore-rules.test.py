@@ -35,21 +35,19 @@ def save(data,version,auth=admin,actor='admin'):
  return call('POST',':commit',{'writes':[write('records/new-warrant',data),write('records/new-warrant/history/event'+str(version),log,True)]},auth),data
 record={'id':'new-warrant','col':'warrants','targets':['citizen-a','citizen-b'],'reason':'Test','workflow':{'status':'Draft'}}
 (st,res),record=save(record,1);expect(st,res,200,'create multi-citizen draft + audit atomically')
-(st,res),submitted=save({**record,'workflow':{'status':'Submitted','submittedUid':'admin','submittedBy':'admin','submittedAt':1}},2);expect(st,res,200,'submit draft + audit')
-(st,res),_=save({**submitted,'reason':'silently changed'},3);expect(st,res,403,'deny editing submitted warrant')
-review={**submitted,'workflow':{**submitted['workflow'],'status':'Approved','note':'','reviewedUid':'agent','reviewedBy':'agent','reviewedAt':2}}
-(st,res),_=save(review,3,agent,'agent');expect(st,res,403,'deny approval by ordinary detective')
-review['workflow'].update(reviewedUid='admin',reviewedBy='admin')
-(st,res),approved=save(review,3);expect(st,res,200,'director approves submitted warrant')
+(st,res),_=save({**record,'workflow':{'status':'Submitted'}},2);expect(st,res,403,'cannot submit a warrant for approval')
+(st,res),submitted=save({**record,'reason':'Editable draft'},2,agent,'agent');expect(st,res,200,'ordinary detective edits a draft')
+(st,res),_=save({**submitted,'workflow':{'status':'Approved'}},3);expect(st,res,403,'director cannot approve a warrant either')
+(st,res),approved=save({**submitted,'reason':'Still a draft request'},3);expect(st,res,200,'draft remains editable')
 st,res=call('GET','/records/new-warrant/history/event1',auth='');expect(st,res,403,'history is private')
 # Trash atomically preserves the exact active record and private audit trail.
 trash={'col':'warrants','record':approved,'deletedBy':'admin','deletedUid':'admin','auditId':'trashevent'}
 trashWrite=write('trash/new-warrant',trash);trashWrite['updateTransforms']=[{'fieldPath':'deletedAt','setToServerValue':'REQUEST_TIME'}]
 log={'actorUid':'admin','actorName':'admin','version':3,'action':'trashed','changes':{'lifecycle':{'before':'Active','after':'Trash'}}}
-st,res=call('POST',':commit',{'writes':[trashWrite,write('records/new-warrant/history/trashevent',log,True),{'delete':ROOT+'records/new-warrant'}]},admin);expect(st,res,200,'move approved warrant to trash')
+st,res=call('POST',':commit',{'writes':[trashWrite,write('records/new-warrant/history/trashevent',log,True),{'delete':ROOT+'records/new-warrant'}]},admin);expect(st,res,200,'move draft warrant to trash')
 restored={**approved,'version':4,'auditId':'restoreevent','updatedAt':100}
 log.update(version=4,action='restored')
-st,res=call('POST',':commit',{'writes':[write('records/new-warrant',restored),{'delete':ROOT+'trash/new-warrant'},write('records/new-warrant/history/restoreevent',log,True)]},admin);expect(st,res,200,'restore approved warrant with complete history')
+st,res=call('POST',':commit',{'writes':[write('records/new-warrant',restored),{'delete':ROOT+'trash/new-warrant'},write('records/new-warrant/history/restoreevent',log,True)]},admin);expect(st,res,200,'restore draft warrant with complete history')
 st,res=call('DELETE','/records/new-warrant/history/event1',auth=admin);expect(st,res,403,'cannot delete history from an active record')
 trash={'col':'warrants','record':restored,'deletedBy':'admin','deletedUid':'admin','auditId':'trash-for-permanent'}
 trashWrite=write('trash/new-warrant',trash);trashWrite['updateTransforms']=[{'fieldPath':'deletedAt','setToServerValue':'REQUEST_TIME'}]
@@ -70,4 +68,45 @@ st,entries=call('GET','/records/new-warrant/history',auth=admin);expect(st,entri
 st,res=call('POST',':commit',{'writes':[{'delete':entry['name']} for entry in entries.get('documents',[])]},admin);expect(st,res,200,'director batch deletes all history entries')
 st,res=call('DELETE','/trash/new-warrant',auth=admin);expect(st,res,200,'director permanently removes locked trash record')
 st,res=call('GET','/records/new-warrant/history');expect(st,res,200,'verify orphan history cleanup');assert not res.get('documents')
+# Registry uniqueness is normalized and enforced atomically, not just by UI.
+def registry_write(recordId,col,value,auth=admin,actor='admin',reserve=True,key_override=None):
+ field={'citizens':'citizenId','vehicles':'plate','weapons':'serial'}[col]
+ normalized=''.join(value.upper().split());key=key_override or col+'_'+normalized
+ data={'id':recordId,'col':col,field:value,'uniqueKey':key,'version':1,'auditId':'identity-audit','fullName':'Registry Test'}
+ audit={'actorUid':actor,'actorName':actor,'version':1,'action':'created','changes':{'identity':{'before':'','after':value}}}
+ writes=[write('records/'+recordId,data),write('records/'+recordId+'/history/identity-audit',audit,True)]
+ if reserve:writes.append(write('uniqueKeys/'+key,{'recordId':recordId,'col':col,'value':normalized}))
+ return call('POST',':commit',{'writes':writes},auth),data,key
+(st,res),citizen,key=registry_write('citizen-original','citizens',' ab c123 ');expect(st,res,200,'reserve normalized citizen ID')
+(st,res),_,_=registry_write('citizen-duplicate','citizens','ABC123');expect(st,res,403,'block duplicate citizen ID across users')
+(st,res),_,_=registry_write('citizen-no-lock','citizens','OTHER123',reserve=False);expect(st,res,403,'cannot bypass unique identity reservation')
+(st,res),_,_=registry_write('citizen-fake-key','citizens','ABC123',key_override='citizens_FAKE');expect(st,res,403,'cannot forge a different unique key')
+(st,res),_,_=registry_write('vehicle-original','vehicles',' ab 12 cd ');expect(st,res,200,'reserve normalized plate')
+(st,res),_,_=registry_write('vehicle-duplicate','vehicles','AB12CD');expect(st,res,403,'block duplicate plate')
+(st,res),_,_=registry_write('weapon-original','weapons',' sn-123 ');expect(st,res,200,'reserve firearm serial')
+(st,res),_,_=registry_write('weapon-duplicate','weapons','SN-123');expect(st,res,403,'block duplicate firearm serial')
+st,res=call('DELETE','/uniqueKeys/'+key,auth=admin);expect(st,res,403,'cannot release identity of an active record')
+trashData={'col':'citizens','record':citizen,'deletedBy':'admin','deletedUid':'admin','auditId':'trash-identity'}
+trashWrite=write('trash/citizen-original',trashData);trashWrite['updateTransforms']=[{'fieldPath':'deletedAt','setToServerValue':'REQUEST_TIME'}]
+audit={'actorUid':'admin','actorName':'admin','version':1,'action':'trashed','changes':{'state':{'before':'Active','after':'Trash'}}}
+st,res=call('POST',':commit',{'writes':[trashWrite,write('records/citizen-original/history/trash-identity',audit,True),{'delete':ROOT+'records/citizen-original'},{'delete':ROOT+'uniqueKeys/'+key}]},admin);expect(st,res,200,'moving citizen to trash releases its identity atomically')
+(st,res),_,_=registry_write('citizen-replacement','citizens','ABC123');expect(st,res,200,'identity can be used after previous record moves to trash')
+restoredCitizen={**citizen,'version':2,'auditId':'restore-identity'};audit.update(version=2,action='restored')
+st,res=call('POST',':commit',{'writes':[write('records/citizen-original',restoredCitizen),write('records/citizen-original/history/restore-identity',audit,True),write('uniqueKeys/'+key,{'recordId':'citizen-original','col':'citizens','value':'ABC123'}),{'delete':ROOT+'trash/citizen-original'}]},admin);expect(st,res,403,'restoration cannot create a duplicate citizen')
+# Changing an identifier moves its reservation without leaving an old lock.
+updatedVehicle={'id':'vehicle-original','col':'vehicles','plate':'NEW 456','uniqueKey':'vehicles_NEW456','version':2,'auditId':'identity-change','fullName':'Registry Test'}
+audit={'actorUid':'admin','actorName':'admin','version':2,'action':'updated','changes':{'plate':{'before':' ab 12 cd ','after':'NEW 456'}}}
+st,res=call('POST',':commit',{'writes':[write('records/vehicle-original',updatedVehicle),write('records/vehicle-original/history/identity-change',audit,True),write('uniqueKeys/vehicles_NEW456',{'recordId':'vehicle-original','col':'vehicles','value':'NEW456'}),{'delete':ROOT+'uniqueKeys/vehicles_AB12CD'}]},admin);expect(st,res,200,'identifier edits move their unique reservation')
+legacy={'id':'legacy-warrant','col':'warrants','targets':['citizen-a'],'reason':'Legacy','version':1,'auditId':'old','workflow':{'status':'Approved','reviewedBy':'Former reviewer'}}
+st,res=call('PATCH','/records/legacy-warrant',{'fields':fields(legacy)});expect(st,res,200,'seed legacy approved warrant')
+updated={**legacy,'version':2,'auditId':'legacy-draft','workflow':{'status':'Draft'},'legacyWorkflow':legacy['workflow'],'reason':'Editable draft request'}
+audit={'actorUid':'agent','actorName':'agent','version':2,'action':'updated','changes':{'workflow':{'before':'Approved','after':'Draft'}}}
+st,res=call('POST',':commit',{'writes':[write('records/legacy-warrant',updated),write('records/legacy-warrant/history/legacy-draft',audit,True)]},agent);expect(st,res,200,'legacy approval statuses can be archived and reopened as drafts')
+from concurrent.futures import ThreadPoolExecutor
+with ThreadPoolExecutor(max_workers=2) as pool:
+ first=pool.submit(registry_write,'race-first','vehicles','RACE 123')
+ second=pool.submit(registry_write,'race-second','vehicles','race123',agent,'agent')
+ outcomes=sorted([first.result()[0][0],second.result()[0][0]])
+ assert outcomes==[200,403],outcomes
+print('PASS concurrent duplicate plate attempts allow exactly one winner')
 print('ALL RULE SCENARIOS PASSED')
