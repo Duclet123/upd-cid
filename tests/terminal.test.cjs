@@ -1,0 +1,44 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const html=fs.readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');
+const errors=[],queries=[],writes=[];let state,components={};
+const database=new Map();
+const snapshot=(id,data)=>({id,exists:!!data,data:()=>data});
+function doc(col,id){return {id,key:col+'/'+id,collection(name){return fdb.collection(this.key+'/'+name)},onSnapshot(cb){cb(snapshot(id,database.get(this.key)));return ()=>{}},async get(){return snapshot(id,database.get(this.key))},async set(data){writes.push({col,id,data});database.set(this.key,data)},async update(data){database.set(this.key,{...database.get(this.key),...data})},async delete(){database.delete(this.key)}}}
+const fdb={collection(col){return {doc(id='auto'){return doc(col,id)},where(...args){queries.push({col,args});return this},orderBy(){return this},limit(){return this},onSnapshot(cb){cb({docs:[],docChanges:()=>[]});return ()=>{}},async get(){return {docs:[...database.entries()].filter(([k])=>k.startsWith(col+'/')).map(([k,v])=>snapshot(k.split('/')[1],v))}},async add(data){const d=doc(col,'auto');await d.set(data);return d}}},async runTransaction(fn){const pending=[];const result=await fn({get:r=>r.get(),set:(r,d)=>pending.push(()=>{database.set(r.key,d);writes.push({key:r.key,data:d})}),delete:r=>pending.push(()=>database.delete(r.key))});pending.forEach(f=>f());return result},batch(){return {set(){},update(){},delete(){},async commit(){}}}};
+const ctx={console:{log:console.log,warn(){},error:e=>errors.push(String(e))},window:{innerWidth:1200,addEventListener(){}},document:{getElementById:()=>null,createElement:()=>({})},Image:class{},setTimeout,clearTimeout,setInterval:()=>0,confirm:()=>true,alert(){},prompt(){},Date,Math,Map,Set,JSON,Promise,Uint8Array,FileReader:class{},firebase:{initializeApp(){},firestore:()=>fdb,auth:()=>({onAuthStateChanged(){},async signOut(){}})}};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync(process.env.VUE_TEST_RUNTIME||require.resolve('vue/dist/vue.global.prod.js'),'utf8'),ctx);
+ctx.firebase.firestore.FieldValue={serverTimestamp:()=>Date.now()};
+const actualVue=ctx.Vue;ctx.Vue={...actualVue,onMounted(){},createApp(options){return {component(name,c){components[name]=c},mount(){state=options.setup()}}}};
+const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(x=>x.includes('FIREBASE_CONFIG'));
+vm.runInContext(scripts[0],ctx);
+// No real Firebase requests are made: Firestore is simulated for deterministic scenarios.
+const tick=()=>new Promise(r=>setTimeout(r,5));
+(async()=>{
+assert(state);assert.equal(state.level('warrants'),'none');assert.equal(state.level('documents'),'view');
+state.user.value={id:'admin',rank:'Director',name:'Test',badge:'CID-1'};await tick();
+state.newRec('warrants');state.rec.value.obj.otherTargets='Unknown masked person';await state.saveNew();assert.equal(state.rec.value.isNew,false);assert.equal(state.rec.value.obj.version,1);
+assert.equal(state.recTitle(state.rec.value.obj),'Unknown masked person');state.recMode.value='edit';state.rec.value.obj.reason='Updated';await state.closeRec();assert.equal(state.rec.value,null);assert.equal(database.get('records/'+writes.find(w=>w.key?.startsWith('records/')).key.split('/')[1]).reason,'Updated');
+state.newRec('documents');assert.equal(state.rec.value.obj.isPublic,false);state.rec.value.obj.title='Public notice';state.rec.value.obj.isPublic=true;await state.saveNew();assert.equal(state.rec.value.obj.isPublic,true);
+// Failed write must preserve new form.
+const transaction=fdb.runTransaction;fdb.runTransaction=async()=>{throw Error('Permission denied test')};state.newRec('cases');state.rec.value.obj.fileNo='CASE-1';await state.saveNew();assert.equal(state.rec.value.isNew,true);assert(state.recErr.value.includes('Permission denied'));fdb.runTransaction=transaction;
+// New map locations keep their photos.
+state.nl.name='Test location';state.nl.gallery=[{id:'p',url:'https://example.com/p.jpg'}];await state.addLoc();assert.equal(database.get('map/auto').gallery.length,1);assert.equal(state.nl.gallery.length,0);
+// Photo link component emits a persist event with shared URL.
+const c=components['photo-gallery'];let event;const comp={url:'https://example.com/photo.jpg',target:{gallery:[]},by:'Test',err:'',$emit:(...e)=>event=e,...c.methods};await comp.addUrl();assert.equal(comp.target.gallery.length,1);assert.equal(event[0],'changed');
+state.user.value={id:'prob',rank:'Probationary Detective',name:'Test'};await tick();assert.equal(state.level('interrogations'),'none');assert.equal(state.level('citizens'),'view');
+assert(!queries.some(q=>q.col==='records'&&q.args[0]==='col'&&q.args[1]==='in'));assert(!html.includes('firebase-storage-compat'));assert(!html.includes('faceDescs'));assert(!html.includes('Upload photos'));
+// New feature checks.
+state.user.value={id:'admin',rank:'Director',name:'Test',badge:'CID-1'};await tick();
+state.newRec('citizens');state.rec.value.obj.fullName='Alice Citizen';state.rec.value.obj.citizenId='CID-A';await state.saveNew();const alice=state.rec.value.obj;
+state.newRec('citizens');state.rec.value.obj.fullName='Bob Citizen';state.rec.value.obj.citizenId='CID-B';await state.saveNew();const bob=state.rec.value.obj;
+state.newRec('warrants');state.rec.value.obj.targets=[alice.id,bob.id];state.rec.value.obj.reason='Investigation';await state.saveNew();const request=state.rec.value.obj;assert.equal(request.targets.length,2);assert.equal(state.requestState(request),'Draft');state.printRecord(request);assert(state.pdoc.value.rows.some(r=>String(r[1]).includes('Alice Citizen')&&String(r[1]).includes('Bob Citizen')));
+await state.transitionRequest('Submitted');assert.equal(state.requestState(request),'Submitted');assert.equal(state.canEditRec.value,false);await state.transitionRequest('Approved');assert.equal(state.requestState(request),'Approved');assert.equal(request.workflow.reviewedUid,'admin');
+state.newRec('warrants');state.rec.value.obj.targets=[alice.id,bob.id];await state.saveNew();const rejected=state.rec.value.obj;await state.transitionRequest('Submitted');state.reviewDraft.value='Missing supporting evidence';await state.transitionRequest('Rejected');assert.equal(state.requestState(rejected),'Rejected');assert.equal(state.canEditRec.value,true);rejected.reason='Added evidence';await state.transitionRequest('Submitted');assert.equal(state.requestState(rejected),'Submitted');assert.equal(rejected.workflow.note,undefined);
+state.openRec(alice);assert(state.citizenSections.value.find(s=>s.key==='warrants').items.some(r=>r.id===request.id));state.globalQuery.value='CID-B';assert(state.globalResults.value.some(r=>r.obj.id===bob.id));
+state.newRec('cases');assert.equal(state.rec.value.obj.status,'Open');state.rec.value.obj.fileNo='EXTERNAL-009';await state.saveNew();const caseRecord=state.rec.value.obj;const historyBefore=[...database.keys()].filter(k=>k.startsWith('records/'+caseRecord.id+'/history/')).length;await state.saveTarget(caseRecord);assert.equal([...database.keys()].filter(k=>k.startsWith('records/'+caseRecord.id+'/history/')).length,historyBefore);assert.equal(state.saveLabel(caseRecord),'Saved');
+caseRecord.status='Closed';await state.saveTarget(caseRecord);assert.equal(state.saveStates[caseRecord.id].phase,'saved');assert([...database.entries()].some(([k,v])=>k.startsWith('records/'+caseRecord.id+'/history/')&&v.changes.status?.after==='Closed'));
+await state.delRec(caseRecord);assert(!database.has('records/'+caseRecord.id));assert(database.has('trash/'+caseRecord.id));assert.equal(database.get('trash/'+caseRecord.id).record.fileNo,'EXTERNAL-009');await state.restoreTrash({...database.get('trash/'+caseRecord.id),id:caseRecord.id});assert(database.has('records/'+caseRecord.id));assert(!database.has('trash/'+caseRecord.id));assert.equal(database.get('records/'+caseRecord.id).status,'Closed');
+state.mImg.value='data:image/test';state.compareImage({p:{url:'https://example.com/a.jpg'},name:'Evidence',score:70});assert.equal(state.comparison.value.score,70);assert.equal(state.comparison.value.query,'data:image/test');
+console.log('PASS: audit, no-op saves, case status, multi-citizen request print, submission/approval locks, citizen overview, unified search, trash/restore, comparison; requests, public-document defaults, successful/failed saves, map photo persistence, gallery links, rank queries, JavaScript setup.');
+console.log('Expected handled errors:',errors.length);
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {generateKeyPairSync} from 'node:crypto';
+import {emptyTrash} from '../scripts/empty-trash.mjs';
+const {privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});
+const serviceAccount={project_id:'cid-upd',client_email:'test@example.invalid',private_key:privateKey.export({type:'pkcs8',format:'pem'})};
+const doc={name:'projects/cid-upd/databases/(default)/documents/trash/example',updateTime:'2026-01-01T00:00:00Z',fields:{deletedAt:{timestampValue:'2026-01-01T00:00:00Z'}}};
+const response=(data,status=200)=>({ok:status>=200&&status<300,status,json:async()=>data});
+function mockFetch({conflict=false,historyFailure=false}={}){const calls=[];return {calls,async fetch(url,options={}){calls.push({url,method:options.method||'GET'});if(url.includes('oauth2'))return response({access_token:'test-token'});if(url.includes('/trash?'))return response({documents:[doc]});if(options.method==='PATCH')return conflict?response({},412):response({...doc,updateTime:'locked'});if(url.includes('/history?'))return response({documents:[{name:'projects/cid-upd/databases/(default)/documents/records/example/history/one'}]});if(options.method==='DELETE'&&url.includes('/history/')&&historyFailure)return response({},403);if(options.method==='DELETE')return response({});throw Error('Unexpected request');}};}
+test('preview never locks or deletes',async()=>{const mock=mockFetch();const r=await emptyTrash({serviceAccount,fetchImpl:mock.fetch});assert.equal(r.eligible,1);assert.equal(r.purged,0);assert(!mock.calls.some(c=>['DELETE','PATCH'].includes(c.method)));});
+test('purge locks, deletes history, then removes trash',async()=>{const mock=mockFetch();const r=await emptyTrash({serviceAccount,dryRun:false,fetchImpl:mock.fetch});assert.equal(r.purged,1);const changes=mock.calls.filter(c=>c.method!=='GET'&&!c.url.includes('oauth2'));assert.deepEqual(changes.map(c=>c.method),['PATCH','DELETE','DELETE']);assert(changes[1].url.includes('/history/'));assert(changes[2].url.includes('/trash/'));});
+test('restore race skips item without deleting history',async()=>{const mock=mockFetch({conflict:true});const r=await emptyTrash({serviceAccount,dryRun:false,fetchImpl:mock.fetch});assert.equal(r.skipped,1);assert(!mock.calls.some(c=>c.method==='DELETE'));});
+test('history failure preserves locked trash for retry',async()=>{const mock=mockFetch({historyFailure:true});await assert.rejects(emptyTrash({serviceAccount,dryRun:false,fetchImpl:mock.fetch}),/History cleanup failed/);assert(!mock.calls.some(c=>c.method==='DELETE'&&c.url.includes('/trash/')));});
+test('reject credentials for a different Firebase project',async()=>{await assert.rejects(emptyTrash({serviceAccount:{...serviceAccount,project_id:'another-project'}}),/Unexpected Firebase project/);});

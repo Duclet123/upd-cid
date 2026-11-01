@@ -39,11 +39,90 @@ service cloud.firestore {
       allow list: if top();
       allow create, update, delete: if top();
     }
+    function auditFor(id, data) {
+      let entry = /databases/$(db)/documents/records/$(id)/history/$(data.auditId);
+      return data.auditId is string && existsAfter(entry)
+        && getAfter(entry).data.actorUid == request.auth.uid
+        && getAfter(entry).data.version == data.version;
+    }
+    function draftRequest(data) {
+      return data.col != 'warrants' || data.get('workflow', {}).get('status', 'Draft') == 'Draft';
+    }
+    function targetRequest(data) {
+      return data.col != 'warrants' || (data.get('targets', []) is list && data.get('targets', []).size() > 0)
+        || (data.get('otherTargets', '') is string && data.get('otherTargets', '').size() > 0);
+    }
+    function requestUpdate(old, next) {
+      let previous = old.get('workflow', {}).get('status', 'Draft');
+      let status = next.get('workflow', {}).get('status', 'Draft');
+      return old.col != 'warrants' || (
+        previous in ['Draft','Rejected'] && (status == 'Draft' || (previous == 'Rejected' && status == 'Rejected')
+          || (status == 'Submitted' && next.workflow.submittedUid == request.auth.uid
+            && next.workflow.submittedBy == get(/databases/$(db)/documents/users/$(request.auth.uid)).data.name))
+      ) || (
+        top() && previous == 'Submitted' && status in ['Approved','Rejected']
+        && next.diff(old).affectedKeys().hasOnly(['workflow','version','updatedAt','auditId'])
+        && next.workflow.diff(old.workflow).affectedKeys().hasOnly(['status','note','reviewedUid','reviewedBy','reviewedAt'])
+        && next.workflow.reviewedUid == request.auth.uid
+        && next.workflow.reviewedBy == get(/databases/$(db)/documents/users/$(request.auth.uid)).data.name
+        && (status != 'Rejected' || next.workflow.note.size() > 0)
+      );
+    }
     match /records/{id} {
+      function restoring() {
+        let trash = /databases/$(db)/documents/trash/$(id);
+        return exists(trash) && !get(trash).data.get('purging', false) && !existsAfter(trash)
+          && request.resource.data.version == get(trash).data.record.get('version', 0) + 1
+          && request.resource.data.diff(get(trash).data.record).affectedKeys().hasOnly(['version','auditId','updatedAt']);
+      }
+      allow get: if agent() && !exists(/databases/$(db)/documents/records/$(id));
       allow read: if publicRecord(resource.data) || view(resource.data.col);
-      allow create: if edit(request.resource.data.col);
-      allow update: if request.resource.data.col == resource.data.col && edit(resource.data.col);
-      allow delete: if edit(resource.data.col);
+      allow create: if edit(request.resource.data.col)
+        && auditFor(id, request.resource.data)
+        && ((request.resource.data.version == 1 && !exists(/databases/$(db)/documents/trash/$(id)) && draftRequest(request.resource.data) && targetRequest(request.resource.data)) || restoring());
+      allow update: if request.resource.data.col == resource.data.col && edit(resource.data.col)
+        && request.resource.data.version == resource.data.get('version', 0) + 1
+        && request.resource.data.auditId != resource.data.get('auditId', '')
+        && auditFor(id, request.resource.data) && targetRequest(request.resource.data)
+        && requestUpdate(resource.data, request.resource.data);
+      allow delete: if edit(resource.data.col)
+        && existsAfter(/databases/$(db)/documents/trash/$(id))
+        && getAfter(/databases/$(db)/documents/trash/$(id)).data.record == resource.data;
+      match /history/{event} {
+        function parent() { return /databases/$(db)/documents/records/$(id); }
+        function trash() { return /databases/$(db)/documents/trash/$(id); }
+        allow read: if (exists(parent()) && view(get(parent()).data.col))
+          || (exists(trash()) && view(get(trash()).data.col));
+        allow create: if agent() && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.actorName == get(/databases/$(db)/documents/users/$(request.auth.uid)).data.name
+          && request.resource.data.at == request.time
+          && request.resource.data.keys().hasOnly(['actorUid','actorName','at','version','action','changes'])
+          && ((existsAfter(parent()) && edit(getAfter(parent()).data.col)
+              && getAfter(parent()).data.auditId == event
+              && getAfter(parent()).data.version == request.resource.data.version
+              && request.resource.data.action in ['created','updated','restored']
+              && (!exists(parent()) || get(parent()).data.get('auditId', '') != event))
+            || (!existsAfter(parent()) && existsAfter(trash()) && edit(getAfter(trash()).data.col)
+              && getAfter(trash()).data.auditId == event && request.resource.data.action == 'trashed'));
+        allow update, delete: if false;
+      }
+    }
+    match /trash/{id} {
+      allow get: if agent() && !exists(/databases/$(db)/documents/trash/$(id));
+      allow read: if view(resource.data.col);
+      allow create: if edit(request.resource.data.col)
+        && exists(/databases/$(db)/documents/records/$(id))
+        && !existsAfter(/databases/$(db)/documents/records/$(id))
+        && request.resource.data.record == get(/databases/$(db)/documents/records/$(id)).data
+        && request.resource.data.col == request.resource.data.record.col
+        && request.resource.data.deletedUid == request.auth.uid
+        && request.resource.data.deletedAt == request.time
+        && request.resource.data.keys().hasOnly(['col','record','deletedAt','deletedBy','deletedUid','auditId'])
+        && existsAfter(/databases/$(db)/documents/records/$(id)/history/$(request.resource.data.auditId));
+      allow update: if false;
+      allow delete: if edit(resource.data.col) && !resource.data.get('purging', false)
+        && existsAfter(/databases/$(db)/documents/records/$(id))
+        && getAfter(/databases/$(db)/documents/records/$(id)).data.version == resource.data.record.get('version', 0) + 1;
     }
   }
 }

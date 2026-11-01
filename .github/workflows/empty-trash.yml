@@ -1,0 +1,29 @@
+name: Empty terminal trash daily
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Count eligible items without deleting them'
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: cid-trash-cleanup
+  cancel-in-progress: false
+jobs:
+  empty-trash:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Empty trash (daily) or preview (manual default)
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+        run: node scripts/empty-trash.mjs

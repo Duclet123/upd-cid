@@ -1,0 +1,11 @@
+{
+  "name": "upd-cid-terminal",
+  "private": true,
+  "scripts": {
+    "test": "node tests/templates.test.cjs && node tests/terminal.test.cjs && node --test tests/cleanup.test.mjs",
+    "trash:preview": "node scripts/empty-trash.mjs"
+  },
+  "devDependencies": {
+    "vue": "3.4.21"
+  }
+}

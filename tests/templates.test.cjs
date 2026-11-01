@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
+const context={console};vm.createContext(context);
+vm.runInContext(fs.readFileSync(process.env.VUE_TEST_RUNTIME||require.resolve('vue/dist/vue.global.prod.js'),'utf8'),context);
+const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+for(const m of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))if(m[1].trim())new vm.Script(m[1]);
+const options={decodeEntities:s=>s,onError:e=>{throw e;}};
+context.Vue.compile(html.slice(html.indexOf('<div id="app"'),html.lastIndexOf('\n<script>')),options);
+for(const m of html.matchAll(/template:`([\s\S]*?)`/g))context.Vue.compile(m[1],options);
+assert(!html.includes('firebase-storage-compat'));
+console.log('PASS: inline JavaScript syntax and all Vue templates.');
