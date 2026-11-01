@@ -1440,14 +1440,24 @@ app.component('recording-player',{
 
 
 app.component('file-preview',{
- props:{file:Object},data(){return {failed:false};},
- computed:{source(){return attachmentPreviewSource(this.file);}},
- watch:{'file.url'(){this.failed=false;}},
+ props:{file:Object},data(){return {failed:false,zoom:100};},
+ computed:{source(){return attachmentPreviewSource(this.file);},surfaceStyle(){const scale=this.zoom/100;return {width:(100/scale)+'%',height:(100/scale)+'%',transform:'scale('+scale+')',transformOrigin:'top left'};}},
+ methods:{changeZoom(step){this.zoom=Math.max(50,Math.min(300,this.zoom+step));},resetZoom(){this.zoom=100;}},
+ watch:{'file.url'(){this.failed=false;this.resetZoom();}},
  template:`<section v-if="source" class="mt-4 space-y-2" aria-label="Attached file preview">
- <img v-if="source.kind==='image'&&!failed" :src="source.src" :alt="file.name||'Attached image'" @error="failed=true" class="w-full max-h-[75vh] object-contain rounded-lg bg-white">
- <video v-else-if="source.kind==='video'&&!failed" :src="source.src" @error="failed=true" controls preload="metadata" class="w-full max-h-[75vh] rounded-lg bg-black"></video>
- <audio v-else-if="source.kind==='audio'&&!failed" :src="source.src" @error="failed=true" controls preload="metadata" class="w-full"></audio>
- <iframe v-else-if="!failed" :key="source.src" :src="source.src" :title="file.name||'Attached file'" sandbox="allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer" allowfullscreen class="w-full h-[70vh] min-h-[360px] rounded-lg border border-slate-700 bg-white"></iframe>
+ <div v-if="source.kind!=='audio'&&!failed" class="flex justify-end items-center gap-2 text-xs">
+ <button @click="changeZoom(-25)" :disabled="zoom<=50" aria-label="Zoom out file preview" class="btn !bg-slate-800 !px-3 !py-1">−</button>
+ <output class="text-slate-400 w-12 text-center" aria-live="polite">{{ zoom }}%</output>
+ <button @click="changeZoom(25)" :disabled="zoom>=300" aria-label="Zoom in file preview" class="btn !bg-slate-800 !px-3 !py-1">+</button>
+ <button @click="resetZoom" aria-label="Reset file preview zoom" class="text-slate-400 hover:text-white px-2">Reset</button></div>
+ <audio v-if="source.kind==='audio'&&!failed" :src="source.src" @error="failed=true" controls preload="metadata" class="w-full"></audio>
+ <div v-else-if="!failed" class="w-full h-[70vh] min-h-[360px] overflow-auto rounded-lg border border-slate-700 bg-slate-950" tabindex="0" aria-label="Scrollable file preview">
+ <div class="relative" :style="{width:zoom+'%',height:(70*zoom/100)+'vh',minHeight:(360*zoom/100)+'px'}">
+ <div class="absolute top-0 left-0" :style="surfaceStyle">
+ <img v-if="source.kind==='image'" :src="source.src" :alt="file.name||'Attached image'" @error="failed=true" class="w-full h-full object-contain bg-white">
+ <video v-else-if="source.kind==='video'" :src="source.src" @error="failed=true" controls preload="metadata" class="w-full h-full bg-black"></video>
+ <iframe v-else :key="source.src" :src="source.src" :title="file.name||'Attached file'" sandbox="allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer" allowfullscreen class="w-full h-full bg-white border-0"></iframe>
+ </div></div></div>
  <p class="text-[10px] text-slate-500">{{ failed?'Preview could not load.':'If the preview is blocked or requires access,' }} <a :href="file.url" target="_blank" rel="noopener noreferrer" class="text-tc underline">open the original file ↗</a></p>
  </section><p v-else class="text-xs text-slate-500 mt-3">No supported file link to preview.</p>`
 });
