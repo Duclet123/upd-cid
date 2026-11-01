@@ -130,3 +130,14 @@ and a link to the original Google Doc, where embedded photos remain available.
 Empty templates and missing file numbers are preserved. Investigative status
 is initially Not recorded. Original Drive files and sharing are unchanged.
 Keep import bundles private; do not commit case data into the public repository.
+
+PENAL CODE BROWSER AND SHARED EDITOR
+Charges appear as compact cards grouped by category. Category and classification
+filters combine with text search. Sort by code, charge name, fine or prison time;
+numeric sorting applies within each category. Open a card's disclosure for its
+English/Greek descriptions and bail. Category headers collapse their cards.
+Edit Penal Code opens one shared editor with searchable charge selection.
+New and existing charges stay in a separate draft until Save charge is pressed.
+Switching/closing prompts before discarding edits; Escape also closes the editor.
+Save failures preserve the draft. Concurrent changes/deletions are detected before
+saving or deleting. Existing provenance fields are retained when saving edits.

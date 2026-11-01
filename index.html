@@ -174,29 +174,35 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
         </div>
 
         <!-- PENAL CODE -->
-        <div v-if="tab==='penal'" class="space-y-6">
-          <div class="hud p-6 md:p-8 flex flex-wrap items-center justify-between gap-4">
-            <h2 class="text-xl font-title font-bold text-amber-400 uppercase">Penal Code Schedule</h2>
-            <div class="flex flex-wrap gap-3 w-full md:w-auto">
-              <input v-model="q" placeholder="Search..." class="inp !w-full md:!w-64">
-              <button v-if="level('penal')==='edit'" @click="addPenal" class="btn">+ Add charge</button>
-              <label v-if="level('penal')==='edit'" class="btn !bg-amber-600 cursor-pointer">Import Excel<input type="file" accept=".xlsx,.xls,.csv" @change="importPenal" class="hidden"></label></div>
-          </div>
-          <p v-if="level('penal')==='edit'" class="text-sm font-mono text-slate-500">Import columns: Category, Title, Fine, Jail. Changes save automatically. Prepared Google Drive imports are available in Administration → Tools.</p>
-          <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <div v-for="p in penalList" :key="p.id" class="hud p-5 space-y-3 font-mono text-sm">
-              <template v-if="level('penal')==='edit'">
-                <div class="flex gap-2"><input v-model="p.code" @change="savePenal(p)" placeholder="Code" aria-label="Penal code" class="inp"><input v-model="p.classification" @change="savePenal(p)" placeholder="Classification" class="inp"></div><input v-model="p.bail" @change="savePenal(p)" placeholder="Bail" class="inp"><textarea v-model="p.description" @change="savePenal(p)" placeholder="Description (English)" class="inp" rows="3"></textarea><textarea v-model="p.descriptionEl" @change="savePenal(p)" placeholder="Περιγραφή (Ελληνικά)" class="inp" rows="3"></textarea><input v-model="p.category" @change="savePenal(p)" placeholder="Category" class="inp"><input v-model="p.title" @change="savePenal(p)" placeholder="Charge" class="inp">
-                <div class="flex gap-2 items-center"><input v-model.number="p.fine" @change="savePenal(p)" type="number" class="inp" placeholder="Fine $"><input v-model.number="p.jail" @change="savePenal(p)" type="number" class="inp" placeholder="Jail (months)"><button @click="delPenal(p)" class="del px-3 py-2">✕</button></div>
-              </template>
-              <template v-else>
-                <span class="text-xs text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 uppercase font-bold">{{ p.category }}</span>
-                <p v-if="p.code||p.classification" class="text-xs text-slate-400">{{ p.code }} · {{ p.classification }}</p><h3 class="text-base font-bold text-white">{{ p.title }}</h3><p v-if="p.descriptionEl" class="text-slate-300 whitespace-pre-wrap">{{ p.descriptionEl }}</p><details v-if="p.description"><summary class="text-tc cursor-pointer">English description</summary><p class="mt-2 whitespace-pre-wrap">{{ p.description }}</p></details><p v-if="p.bail" class="text-xs text-slate-400">Bail: {{ p.bail }}</p>
-                <div class="flex justify-between pt-3 border-t border-purple-950"><span class="text-emerald-400 font-bold">${{ Number(p.fine||0).toLocaleString() }}</span><span class="text-red-400 font-bold">{{ p.jail||0 }} Months</span></div>
-              </template>
+        <div v-if="tab==='penal'" class="space-y-5">
+          <div class="hud p-5 md:p-6 space-y-5">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+              <div><p class="text-[10px] font-mono text-slate-500 tracking-[.2em] uppercase mb-1">Department of Justice · Reference library</p><h2 class="text-xl md:text-2xl font-title font-bold text-amber-400 uppercase"><i class="fa-solid fa-scale-balanced mr-3"></i>Penal Code</h2><p class="text-xs text-slate-400 mt-2">{{ penal.length }} charges <span class="text-purple-800 mx-1">/</span> {{ penalCategories.length }} categories</p></div>
+              <button v-if="level('penal')==='edit'" @click="openPenalEditor" class="btn !bg-amber-600 !text-white"><i class="fa-solid fa-pen-to-square mr-2"></i>Edit Penal Code</button>
             </div>
-            <p v-if="!penalList.length" class="col-span-full text-center py-10 text-slate-500 font-mono text-base">No charges.</p>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <label class="sm:col-span-2 block"><span class="sr-only">Search Penal Code</span><input v-model="q" placeholder="Search code, charge or description…" class="inp"></label>
+              <label><span class="sr-only">Classification</span><select v-model="penalClass" class="inp"><option value="">All classifications</option><option v-for="name in penalClasses" :key="name" :value="name">{{ name }}</option></select></label>
+              <label><span class="sr-only">Sort charges</span><select v-model="penalSort" class="inp"><option value="code">Code · ascending</option><option value="title">Charge · A–Z</option><option value="fine-desc">Fine · highest first</option><option value="fine-asc">Fine · lowest first</option><option value="jail-desc">Prison · longest first</option><option value="jail-asc">Prison · shortest first</option></select></label>
+            </div>
+            <nav aria-label="Penal Code categories" class="flex gap-2 overflow-x-auto pb-1">
+              <button @click="penalCategory=''" :aria-pressed="penalCategory===''" :class="penalCategory===''?'border-amber-500 bg-amber-500/10 text-amber-300':'border-purple-950 text-slate-400 hover:text-white'" class="shrink-0 rounded-xl border px-3 py-2 text-xs font-bold">All categories <span class="ml-2 opacity-60">{{ penal.length }}</span></button>
+              <button v-for="category in penalCategories" :key="category.name" @click="penalCategory=category.name" :aria-pressed="penalCategory===category.name" :class="penalCategory===category.name?'border-amber-500 bg-amber-500/10 text-amber-300':'border-purple-950 text-slate-400 hover:text-white'" class="shrink-0 rounded-xl border px-3 py-2 text-xs font-bold">{{ category.name }} <span class="ml-2 opacity-60">{{ category.count }}</span></button>
+            </nav>
           </div>
+          <div class="flex justify-between items-center text-xs text-slate-500 px-1"><p role="status">{{ penalList.length }} {{ penalList.length===1?'charge':'charges' }} shown · grouped by category</p><button v-if="q||penalCategory||penalClass" @click="resetPenalFilters" class="text-amber-400 hover:text-white">Clear filters</button></div>
+          <section v-for="group in penalGroups" :key="group.name" class="space-y-3">
+            <button @click="penalCollapsed[group.name]=!penalCollapsed[group.name]" :aria-expanded="!penalCollapsed[group.name]" class="w-full flex items-center gap-3 text-left py-2"><span class="w-1 h-5 rounded bg-amber-500"></span><h3 class="text-sm font-title font-bold text-white uppercase tracking-wide">{{ group.name }}</h3><span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-950 text-slate-400">{{ group.items.length }}</span><span class="flex-1 border-t border-purple-950"></span><i class="fa-solid text-[10px] text-slate-500" :class="!penalCollapsed[group.name]?'fa-chevron-up':'fa-chevron-down'"></i></button>
+            <div v-show="!penalCollapsed[group.name]" class="grid sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 items-start">
+              <article v-for="p in group.items" :key="p.id" class="hud !rounded-xl p-4 space-y-3 text-sm hover:border-amber-700/50 transition-colors">
+                <div class="flex justify-between items-start gap-2"><span class="font-mono text-xs font-bold text-amber-400">{{ p.code||'—' }}</span><span v-if="p.classification" class="text-[9px] font-bold uppercase rounded px-2 py-1" :class="penalClassStyle(p.classification)">{{ p.classification }}</span></div>
+                <h4 class="font-bold text-white leading-snug min-h-[2.5rem]">{{ p.title }}</h4>
+                <div class="grid grid-cols-2 gap-2 border-t border-purple-950 pt-3"><div><p class="text-[9px] text-slate-500 uppercase tracking-wider">Fine</p><p class="font-mono font-bold text-emerald-400 mt-0.5">${{ penalAmount(p.fine) }}</p></div><div class="text-right"><p class="text-[9px] text-slate-500 uppercase tracking-wider">Prison</p><p class="font-mono font-bold text-rose-300 mt-0.5">{{ penalAmount(p.jail) }} <span class="font-normal text-[10px] text-slate-500">months</span></p></div></div>
+                <details v-if="p.description||p.descriptionEl||p.bail" class="border-t border-purple-950 pt-2"><summary class="text-[11px] text-slate-400 hover:text-amber-300 cursor-pointer">Description &amp; bail</summary><div class="pt-3 space-y-3 text-xs leading-relaxed"><p v-if="p.descriptionEl" class="whitespace-pre-wrap text-slate-300">{{ p.descriptionEl }}</p><p v-if="p.description" class="whitespace-pre-wrap text-slate-400" lang="en">{{ p.description }}</p><p v-if="p.bail" class="text-amber-300">Bail: {{ p.bail }}</p></div></details>
+              </article>
+            </div>
+          </section>
+          <div v-if="!penalList.length" class="hud p-10 text-center"><i class="fa-solid fa-magnifying-glass text-2xl text-purple-800 mb-3"></i><p class="text-slate-400">{{ penal.length?'No charges match these filters.':'No charges have been added yet.' }}</p><button v-if="penal.length" @click="resetPenalFilters" class="text-amber-400 text-sm mt-3">Show all charges</button></div>
         </div>
 
         <!-- COLLECTION LIST -->
@@ -444,6 +450,36 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
   </div>
 </main>
 
+<!-- SHARED PENAL CODE EDITOR -->
+<div v-if="penalEditorOpen&&level('penal')==='edit'" class="fixed inset-0 z-[590] bg-black/90 p-3 md:p-8 flex items-center justify-center" @click.self="closePenalEditor">
+  <div id="penal-editor" role="dialog" aria-modal="true" aria-labelledby="penal-editor-title" @keydown.tab="trapPenalFocus" class="hud w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+    <header class="p-4 md:px-6 border-b border-purple-950 flex items-center justify-between gap-3 shrink-0"><div><h2 id="penal-editor-title" class="text-amber-400 font-title font-bold">Edit Penal Code</h2><p class="text-xs text-slate-500 mt-1">Select a charge, edit its details and save.</p></div><button @click="closePenalEditor" :disabled="penalSaving" class="btn !bg-slate-800 !px-3" aria-label="Close Penal Code editor">✕</button></header>
+    <div class="grid md:grid-cols-[250px_minmax(0,1fr)] min-h-0 overflow-y-auto">
+      <aside class="p-4 border-b md:border-b-0 md:border-r border-purple-950 space-y-3 bg-black/20">
+        <button id="penal-new-charge" @click="newPenalDraft" :disabled="penalSaving" class="btn w-full !bg-amber-600">+ New charge</button>
+        <input v-model="penalEditorSearch" placeholder="Find a charge…" aria-label="Find charge to edit" class="inp">
+        <select v-model="penalEditorCategory" aria-label="Editor category" class="inp"><option value="">All categories</option><option v-for="category in penalCategories" :key="category.name" :value="category.name">{{ category.name }}</option></select>
+        <select :value="penalDraft?.id||''" @change="selectPenalDraft($event.target.value);$event.target.value=penalDraft?.id||''" :disabled="penalSaving" class="inp md:hidden" aria-label="Charge to edit"><option value="">{{ penalDraft&&!penalDraft.id?'New charge':'Select a charge' }}</option><option v-for="p in penalEditorItems" :key="p.id" :value="p.id">{{ p.code }} · {{ p.title }}</option></select>
+        <div class="hidden md:block overflow-y-auto max-h-[48vh] space-y-1" aria-label="Charges"><button v-for="p in penalEditorItems" :key="p.id" @click="selectPenalDraft(p.id)" :disabled="penalSaving" :aria-pressed="penalDraft?.id===p.id" class="w-full text-left p-3 rounded-lg border text-xs" :class="penalDraft?.id===p.id?'border-amber-600 bg-amber-600/10':'border-transparent hover:bg-purple-950/40'"><span class="block text-amber-400 font-mono mb-1">{{ p.code||'No code' }}</span><span class="text-slate-300">{{ p.title }}</span></button><p v-if="!penalEditorItems.length" class="text-xs text-slate-500 py-3">No matching charges.</p></div>
+        <details class="text-xs text-slate-500 pt-2 border-t border-purple-950"><summary class="cursor-pointer">Import options</summary><div class="space-y-3 pt-3"><p>Excel import replaces the entire schedule. Columns: Category, Title, Fine, Jail.</p><label class="btn !bg-slate-800 cursor-pointer inline-block !text-xs" :class="penalSaving?'pointer-events-none opacity-50':''">Import Excel<input type="file" accept=".xlsx,.xls,.csv" @change="importPenal" :disabled="penalSaving||penalDirty" class="hidden"></label><p>Prepared Google Drive imports: Administration → Tools.</p><p v-if="penalDirty" class="text-amber-300">Save or discard your edits before importing.</p></div></details>
+      </aside>
+      <form v-if="penalDraft" @submit.prevent="savePenalDraft" class="p-4 md:p-6 space-y-4 min-w-0">
+        <div class="flex justify-between items-center gap-3"><h3 class="font-bold text-white">{{ penalDraft.id?'Charge details':'New charge' }}</h3><span role="status" class="text-[11px] text-amber-300">{{ penalSaving?'Saving…':penalDirty?'Unsaved changes':'No pending changes' }}</span></div>
+        <fieldset :disabled="penalSaving" class="space-y-4">
+          <div class="grid sm:grid-cols-2 gap-3"><label class="block text-xs text-slate-400">Code<input id="penal-edit-code" v-model="penalDraft.code" class="inp mt-1" placeholder="PC-101"></label><label class="block text-xs text-slate-400">Category<input v-model="penalDraft.category" list="penal-category-options" required class="inp mt-1" placeholder="General"><datalist id="penal-category-options"><option v-for="category in penalCategories" :key="category.name" :value="category.name"></option></datalist></label></div>
+          <label class="block text-xs text-slate-400">Charge name<input v-model="penalDraft.title" required class="inp mt-1" placeholder="Charge name"></label>
+          <div class="grid sm:grid-cols-3 gap-3"><label class="block text-xs text-slate-400">Classification<input v-model="penalDraft.classification" list="penal-class-options" class="inp mt-1" placeholder="Felony"><datalist id="penal-class-options"><option v-for="name in penalClasses" :key="name" :value="name"></option><option value="Infraction"></option><option value="Misdemeanor"></option><option value="Felony"></option></datalist></label><label class="block text-xs text-slate-400">Fine ($)<input v-model="penalDraft.fine" type="number" min="0" step="0.01" required class="inp mt-1"></label><label class="block text-xs text-slate-400">Prison (months)<input v-model="penalDraft.jail" type="number" min="0" step="1" required class="inp mt-1"></label></div>
+          <label class="block text-xs text-slate-400">Bail<input v-model="penalDraft.bail" class="inp mt-1" placeholder="ΝΑΙ / ΟΧΙ / N/A"></label>
+          <label class="block text-xs text-slate-400">Περιγραφή (Ελληνικά)<textarea v-model="penalDraft.descriptionEl" rows="4" class="inp mt-1"></textarea></label>
+          <label class="block text-xs text-slate-400">Description (English)<textarea v-model="penalDraft.description" rows="4" class="inp mt-1"></textarea></label>
+        </fieldset>
+        <p v-if="penalEditorError" role="alert" class="text-xs text-red-400">{{ penalEditorError }}</p><p v-if="penalEditorMessage" role="status" class="text-xs text-emerald-400">{{ penalEditorMessage }}</p>
+        <footer class="flex flex-wrap items-center gap-2 border-t border-purple-950 pt-4"><button type="submit" :disabled="penalSaving||(!penalDirty&&!!penalDraft.id)" class="btn !bg-emerald-700">{{ penalSaving?'Saving…':'Save charge' }}</button><button type="button" @click="resetPenalDraft" :disabled="penalSaving||!penalDirty" class="btn !bg-slate-800">Discard changes</button><button v-if="penalDraft.id" type="button" @click="deletePenalDraft" :disabled="penalSaving" class="del ml-auto">Delete charge</button></footer>
+      </form>
+      <div v-else class="p-10 text-sm text-slate-500 text-center">Select a charge or create a new one.</div>
+    </div>
+  </div>
+</div>
 <!-- GLOBAL SEARCH -->
 <div v-if="globalOpen" class="fixed inset-0 z-[600] bg-black/90 p-4 md:p-12 flex items-start justify-center" @click.self="globalOpen=false"><div class="hud w-full max-w-3xl p-5 flex flex-col max-h-[85vh]" role="dialog" aria-modal="true" aria-label="Universal search"><div class="flex gap-3"><input id="universal-search" v-model="globalQuery" autofocus placeholder="Search all accessible records (at least 2 characters)…" class="inp"><button @click="globalOpen=false" class="btn !bg-slate-700">✕</button></div><div class="overflow-y-auto mt-4 space-y-2"><button v-for="result in globalResults" :key="result.key" @click="openGlobalResult(result)" class="w-full text-left p-4 rounded-xl bg-bg border border-purple-950 hover:border-tc"><span class="text-xs text-tc block">{{ result.label }}</span><span class="text-white">{{ result.title }}</span></button><p v-if="globalQuery.trim().length>=2&&!globalResults.length" class="p-4 text-slate-400">No accessible results.</p><p class="text-xs text-slate-500 p-2">Up to 80 results, including map locations and penal charges.</p></div></div></div>
 <!-- MATCHER COMPARISON -->
@@ -746,7 +782,7 @@ const app=createApp({
     const assignedToMe=record=>!!user.value&&(record.leadUid?record.leadUid===user.value.id:norm(record.lead)===norm(user.value.name));
     const saveLabel=o=>({pending:'Unsaved changes',saving:'Saving…',saved:'Saved',error:'Save failed — retry'}[saveStates[o.id]?.phase]||'No pending changes');
     const col=computed(()=>cfg.collections[tab.value]);
-    const go=t=>{tab.value=t;q.value='';statusFilter.value=leadFilter.value='';sortOrder.value='newest';if(t==='trash')loadTrash();mobileNavOpen.value=false;if(t==='map')nextTick(fixMap);};
+    const go=t=>{tab.value=t;q.value='';statusFilter.value=leadFilter.value='';sortOrder.value='newest';if(t==='penal')penalCategory.value=penalClass.value='';if(t==='trash')loadTrash();mobileNavOpen.value=false;if(t==='map')nextTick(fixMap);};
     const nav=t=>'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-title tracking-wider transition '+(tab.value===t?'bg-purple-600/30 text-white border border-purple-500/50 font-bold shadow-lg shadow-purple-900/10':'text-slate-400 hover:bg-purple-900/30 hover:text-slate-200');
     const subFields=c=>c.fields.slice(1).filter(f=>f.t!=='a'&&f.t!=='c').slice(0,2);
     const rowsFor=v=>Math.min(40,Math.max(8,String(v||'').split('\n').length+2));
@@ -775,7 +811,22 @@ const app=createApp({
         if(sortOrder.value.startsWith('detective-')){const first=String(a.lead||'').trim(),second=String(b.lead||'').trim();if(!first&&second)return 1;if(first&&!second)return -1;const comparison=first.localeCompare(second,undefined,{sensitivity:'base',numeric:true});if(comparison)return sortOrder.value==='detective-desc'?-comparison:comparison;}
         const time=(b.ts||0)-(a.ts||0);return (sortOrder.value==='oldest'?-time:time)||String(a.id).localeCompare(String(b.id));
       });});
-    const penalList=computed(()=>{const s=norm(q.value);return s?penal.value.filter(p=>norm([p.code,p.title,p.category,p.classification,p.description,p.descriptionEl,p.bail].join(' ')).includes(s)):penal.value;});
+    const penalCategory=ref(''),penalClass=ref(''),penalSort=ref('code'),penalCollapsed=reactive({});
+    const penalCategoryName=p=>String(p.category||'').replace(/\s+/g,' ').trim()||'General';
+    const penalText=p=>norm([p.code,p.title,penalCategoryName(p),p.classification,p.description,p.descriptionEl,p.bail].join(' '));
+    const penalNumber=v=>Number.isFinite(Number(v))?Number(v):0;
+    const penalAmount=v=>penalNumber(v).toLocaleString('en-US',{maximumFractionDigits:2});
+    const penalCompare=(a,b)=>{const natural=(x,y)=>String(x||'').localeCompare(String(y||''),undefined,{numeric:true,sensitivity:'base'});let order=0;
+      if(penalSort.value==='title')order=natural(a.title,b.title);
+      else if(penalSort.value.startsWith('fine-')||penalSort.value.startsWith('jail-')){const [field,direction]=penalSort.value.split('-');order=(penalNumber(a[field])-penalNumber(b[field]))*(direction==='desc'?-1:1);}
+      return order||(!a.code&&b.code?1:a.code&&!b.code?-1:natural(a.code,b.code))||natural(a.title,b.title)||natural(a.id,b.id);};
+    const penalCategories=computed(()=>{const groups=new Map();for(const p of penal.value){const name=penalCategoryName(p),key=norm(name);if(!groups.has(key))groups.set(key,{name,count:0,code:p.code||''});const g=groups.get(key);g.count++;if(p.code&&(!g.code||String(p.code).localeCompare(g.code,undefined,{numeric:true})<0))g.code=String(p.code);}return [...groups.values()].sort((a,b)=>(!a.code&&b.code?1:a.code&&!b.code?-1:a.code.localeCompare(b.code,undefined,{numeric:true,sensitivity:'base'}))||a.name.localeCompare(b.name));});
+    const penalClasses=computed(()=>{const names=new Map();for(const p of penal.value){const name=String(p.classification||'').trim();if(name&&!names.has(norm(name)))names.set(norm(name),name);}return [...names.values()].sort((a,b)=>a.localeCompare(b));});
+    const penalList=computed(()=>{const query=norm(q.value);return penal.value.filter(p=>(!query||penalText(p).includes(query))&&(!penalCategory.value||norm(penalCategoryName(p))===norm(penalCategory.value))&&(!penalClass.value||norm(p.classification)===norm(penalClass.value))).slice().sort(penalCompare);});
+    const penalGroups=computed(()=>penalCategories.value.map(g=>({name:g.name,items:penalList.value.filter(p=>norm(penalCategoryName(p))===norm(g.name))})).filter(g=>g.items.length));
+    const penalClassStyle=name=>({'felony':'bg-rose-500/10 text-rose-300','misdemeanor':'bg-amber-500/10 text-amber-300','infraction':'bg-sky-500/10 text-sky-300'}[norm(name)]||'bg-slate-800 text-slate-400');
+    const resetPenalFilters=()=>{q.value=penalCategory.value=penalClass.value='';Object.keys(penalCollapsed).forEach(k=>delete penalCollapsed[k]);};
+    watch(q,()=>Object.keys(penalCollapsed).forEach(k=>delete penalCollapsed[k]));
     const tplCols=computed(()=>Object.entries(cfg.collections).filter(([k,c])=>c.fields.some(f=>f.t==='a')));
     const tplFor=k=>cfg.templates[k]||[];
     const fmt=t=>t?(typeof t.toDate==='function'?t.toDate():new Date(t)).toLocaleString('en-GB',{timeZone:'Europe/Athens'}):'';
@@ -1011,6 +1062,29 @@ const app=createApp({
     const savePenal=p=>fdb.collection('penal').doc(p.id).set(chargeData(p),{merge:true}).catch(fail);
     const addPenal=()=>fdb.collection('penal').add({category:'General',title:'New charge',fine:0,jail:0}).catch(fail);
     const delPenal=p=>{if(confirm('Delete this charge?'))fdb.collection('penal').doc(p.id).delete().catch(fail);};
+    const penalEditorOpen=ref(false),penalEditorSearch=ref(''),penalEditorCategory=ref(''),penalDraft=ref(null),penalBaseline=ref(null),penalSaving=ref(false),penalEditorError=ref(''),penalEditorMessage=ref('');
+    let penalPreviousFocus=null;
+    const penalDirty=computed(()=>!!penalDraft.value&&JSON.stringify(chargeData(penalDraft.value))!==JSON.stringify(chargeData(penalBaseline.value||{})));
+    const penalEditorItems=computed(()=>penal.value.filter(p=>(!penalEditorSearch.value||penalText(p).includes(norm(penalEditorSearch.value)))&&(!penalEditorCategory.value||norm(penalCategoryName(p))===norm(penalEditorCategory.value))).slice().sort((a,b)=>String(a.code||a.title).localeCompare(String(b.code||b.title),undefined,{numeric:true,sensitivity:'base'})));
+    const loadPenalDraft=p=>{penalDraft.value=p?{id:p.id,...chargeData(p)}:{id:'',...chargeData({category:penalEditorCategory.value||penalCategory.value||'General'})};penalBaseline.value=p?clean(p):clean(penalDraft.value);penalEditorError.value=penalEditorMessage.value='';};
+    const discardPenalOK=()=>!penalDirty.value||confirm('Discard unsaved changes to this charge?');
+    const selectPenalDraft=id=>{if(penalSaving.value||id===penalDraft.value?.id)return;if(!discardPenalOK())return;const p=penal.value.find(p=>p.id===id);if(p)loadPenalDraft(p);};
+    const newPenalDraft=()=>{if(penalSaving.value||!discardPenalOK())return;loadPenalDraft(null);nextTick(()=>document.getElementById('penal-edit-code')?.focus());};
+    const openPenalEditor=()=>{if(level('penal')!=='edit')return;penalPreviousFocus=document.activeElement;penalEditorSearch.value=penalEditorCategory.value='';loadPenalDraft(penalList.value[0]||penal.value[0]||null);penalEditorOpen.value=true;nextTick(()=>document.getElementById(penalDraft.value?.id?'penal-edit-code':'penal-new-charge')?.focus());};
+    const closePenalEditor=()=>{if(penalSaving.value||!discardPenalOK())return false;penalEditorOpen.value=false;penalDraft.value=penalBaseline.value=null;penalPreviousFocus?.focus?.();return true;};
+    const resetPenalDraft=()=>{if(penalSaving.value||!discardPenalOK())return;loadPenalDraft(penalBaseline.value);};
+    const trapPenalFocus=e=>{const nodes=[...e.currentTarget.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,[tabindex="0"]')].filter(n=>n.getClientRects().length);if(!nodes.length)return;const first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}};
+    const savePenalDraft=async()=>{
+      if(penalSaving.value||!penalDraft.value||level('penal')!=='edit')return;
+      penalEditorError.value=penalEditorMessage.value='';const draft=penalDraft.value,data=chargeData(draft);for(const key of ['code','title','category','classification','bail'])data[key]=data[key].trim();
+      if(!data.title||!data.category){penalEditorError.value='Charge name and category are required.';return;}
+      if(['fine','jail'].some(k=>String(draft[k]).trim()===''||!Number.isFinite(Number(draft[k]))||Number(draft[k])<0)||!Number.isInteger(Number(draft.jail))){penalEditorError.value='Enter a valid non-negative fine and whole months of prison time.';return;}
+      if(data.code&&penal.value.some(p=>p.id!==draft.id&&norm(p.code)===norm(data.code))){penalEditorError.value='This code is already used by another charge.';return;}
+      penalSaving.value=true;const id=draft.id||uid(),baseline=penalBaseline.value;
+      try{const ref=fdb.collection('penal').doc(id);const saved=await fdb.runTransaction(async tx=>{const snap=await tx.get(ref);if(draft.id&&(!snap.exists||JSON.stringify(chargeData(snap.data()))!==JSON.stringify(chargeData(baseline||{}))))throw Error('This charge changed elsewhere or was deleted. Reselect it before editing.');if(!draft.id&&snap.exists)throw Error('Could not create this charge. Please retry.');const merged={...(snap.exists?snap.data():{}),...data};tx.set(ref,merged);return {...merged,id};});const index=penal.value.findIndex(p=>p.id===id);if(index<0)penal.value.push(saved);else penal.value.splice(index,1,saved);loadPenalDraft(saved);penalEditorMessage.value='Charge saved.';}catch(e){penalEditorError.value=e.message||'Save failed. Your changes are still here.';}finally{penalSaving.value=false;}
+    };
+    const deletePenalDraft=async()=>{if(penalSaving.value||!penalDraft.value?.id||level('penal')!=='edit'||!confirm('Permanently delete this charge?'))return;penalSaving.value=true;penalEditorError.value='';const id=penalDraft.value.id,baseline=penalBaseline.value;try{await fdb.runTransaction(async tx=>{const ref=fdb.collection('penal').doc(id),snap=await tx.get(ref);if(snap.exists&&JSON.stringify(chargeData(snap.data()))!==JSON.stringify(chargeData(baseline||{})))throw Error('This charge changed elsewhere. Reselect it before deleting.');tx.delete(ref);});penal.value=penal.value.filter(p=>p.id!==id);loadPenalDraft(penalEditorItems.value[0]||null);penalEditorMessage.value='Charge deleted.';}catch(e){penalEditorError.value=e.message||'Delete failed.';}finally{penalSaving.value=false;}};
+    watch(()=>level('penal'),permission=>{if(permission!=='edit'){penalEditorOpen.value=false;penalDraft.value=penalBaseline.value=null;}});
     const num=v=>Number(String(v??'').replace(/[^0-9.\-]/g,''))||0;
     const importPenal=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const r=new FileReader();r.onload=async ev=>{try{const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);if(!rows.length)return alert('No rows found.');if(!confirm('Replace the whole schedule with '+rows.length+' imported charges?'))return;const old=await fdb.collection('penal').get();let b=fdb.batch(),n=0;const flush=async()=>{await b.commit();b=fdb.batch();n=0;};for(const d of old.docs){b.delete(d.ref);if(++n>=400)await flush();}for(const x of rows){b.set(fdb.collection('penal').doc(),{category:String(x.Category||x.category||'General'),title:String(x.Title||x.title||x.Offense||'Charge'),fine:num(x.Fine??x.fine),jail:num(x.Jail??x.jail)});if(++n>=400)await flush();}await b.commit();}catch(err){fail(err);}};r.readAsArrayBuffer(f);};
 
@@ -1094,6 +1168,7 @@ const app=createApp({
       document.activeElement?.blur?.();await nextTick();
       if(comparison.value){comparison.value=null;return 'comparison';}
       if(globalOpen.value){globalOpen.value=false;return 'search';}
+      if(penalEditorOpen.value){closePenalEditor();return 'penal-editor';}
       if(showLogin.value){showLogin.value=false;return 'login';}
       if(pdoc.value){pdoc.value=null;return 'print';}
       if(lightboxSrc.value){lightboxSrc.value=null;return 'image';}
@@ -1112,7 +1187,7 @@ const app=createApp({
     watch(tab,t=>{if(cfg.collections[t]&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
-    return{penal,preparedImport,importRunning,importMessage,validatePreparedImport,readPreparedImport,runPreparedImport,chargeData,RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+    return{penalCategory,penalClass,penalSort,penalCollapsed,penalCategories,penalClasses,penalGroups,penalAmount,penalClassStyle,resetPenalFilters,penalEditorOpen,penalEditorSearch,penalEditorCategory,penalDraft,penalDirty,penalSaving,penalEditorError,penalEditorMessage,penalEditorItems,openPenalEditor,closePenalEditor,selectPenalDraft,newPenalDraft,resetPenalDraft,savePenalDraft,deletePenalDraft,trapPenalFocus,penal,preparedImport,importRunning,importMessage,validatePreparedImport,readPreparedImport,runPreparedImport,chargeData,RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
       zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,
