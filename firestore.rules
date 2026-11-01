@@ -104,7 +104,9 @@ service cloud.firestore {
               && (!exists(parent()) || get(parent()).data.get('auditId', '') != event))
             || (!existsAfter(parent()) && existsAfter(trash()) && edit(getAfter(trash()).data.col)
               && getAfter(trash()).data.auditId == event && request.resource.data.action == 'trashed'));
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if top() && exists(trash()) && get(trash()).data.get('purging', false)
+          && !exists(parent());
       }
     }
     match /trash/{id} {
@@ -119,10 +121,17 @@ service cloud.firestore {
         && request.resource.data.deletedAt == request.time
         && request.resource.data.keys().hasOnly(['col','record','deletedAt','deletedBy','deletedUid','auditId'])
         && existsAfter(/databases/$(db)/documents/records/$(id)/history/$(request.resource.data.auditId));
-      allow update: if false;
-      allow delete: if edit(resource.data.col) && !resource.data.get('purging', false)
+      allow update: if top()
+        && !exists(/databases/$(db)/documents/records/$(id))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['purging','purgeUid','purgeStartedAt'])
+        && request.resource.data.purging == true
+        && request.resource.data.purgeUid == request.auth.uid
+        && request.resource.data.purgeStartedAt == request.time;
+      allow delete: if (top() && resource.data.get('purging', false)
+          && !exists(/databases/$(db)/documents/records/$(id)))
+        || (edit(resource.data.col) && !resource.data.get('purging', false)
         && existsAfter(/databases/$(db)/documents/records/$(id))
-        && getAfter(/databases/$(db)/documents/records/$(id)).data.version == resource.data.record.get('version', 0) + 1;
+        && getAfter(/databases/$(db)/documents/records/$(id)).data.version == resource.data.record.get('version', 0) + 1);
     }
   }
 }

@@ -50,4 +50,24 @@ st,res=call('POST',':commit',{'writes':[trashWrite,write('records/new-warrant/hi
 restored={**approved,'version':4,'auditId':'restoreevent','updatedAt':100}
 log.update(version=4,action='restored')
 st,res=call('POST',':commit',{'writes':[write('records/new-warrant',restored),{'delete':ROOT+'trash/new-warrant'},write('records/new-warrant/history/restoreevent',log,True)]},admin);expect(st,res,200,'restore approved warrant with complete history')
+st,res=call('DELETE','/records/new-warrant/history/event1',auth=admin);expect(st,res,403,'cannot delete history from an active record')
+trash={'col':'warrants','record':restored,'deletedBy':'admin','deletedUid':'admin','auditId':'trash-for-permanent'}
+trashWrite=write('trash/new-warrant',trash);trashWrite['updateTransforms']=[{'fieldPath':'deletedAt','setToServerValue':'REQUEST_TIME'}]
+log.update(version=4,action='trashed')
+st,res=call('POST',':commit',{'writes':[trashWrite,write('records/new-warrant/history/trash-for-permanent',log,True),{'delete':ROOT+'records/new-warrant'}]},admin);expect(st,res,200,'prepare trash item for permanent deletion')
+st,res=call('DELETE','/trash/new-warrant',auth=agent);expect(st,res,403,'ordinary detective cannot permanently delete trash')
+st,res=call('DELETE','/trash/new-warrant',auth=admin);expect(st,res,403,'permanent deletion requires a lock')
+st,tr=call('GET','/trash/new-warrant',auth=admin)
+def lock(actor,auth):
+ fields_={**tr['fields'],'purging':val(True),'purgeUid':val(actor)}
+ return call('POST',':commit',{'writes':[{'update':{'name':ROOT+'trash/new-warrant','fields':fields_},'updateTransforms':[{'fieldPath':'purgeStartedAt','setToServerValue':'REQUEST_TIME'}]}]},auth)
+st,res=lock('agent',agent);expect(st,res,403,'ordinary detective cannot take a purge lock')
+st,res=lock('admin',admin);expect(st,res,200,'director takes permanent deletion lock')
+lockedRestore={**restored,'version':5,'auditId':'locked-restore'};log.update(version=5,action='restored')
+st,res=call('POST',':commit',{'writes':[write('records/new-warrant',lockedRestore),{'delete':ROOT+'trash/new-warrant'},write('records/new-warrant/history/locked-restore',log,True)]},admin);expect(st,res,403,'cannot restore during permanent deletion')
+st,res=call('DELETE','/records/new-warrant/history/event1',auth=agent);expect(st,res,403,'ordinary detective cannot delete history')
+st,entries=call('GET','/records/new-warrant/history',auth=admin);expect(st,entries,200,'director reads history for cleanup')
+st,res=call('POST',':commit',{'writes':[{'delete':entry['name']} for entry in entries.get('documents',[])]},admin);expect(st,res,200,'director batch deletes all history entries')
+st,res=call('DELETE','/trash/new-warrant',auth=admin);expect(st,res,200,'director permanently removes locked trash record')
+st,res=call('GET','/records/new-warrant/history');expect(st,res,200,'verify orphan history cleanup');assert not res.get('documents')
 print('ALL RULE SCENARIOS PASSED')
