@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
-<script src="case-workspace.js"></script>
+<script src="case-workspace.js?v=timeline-2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
@@ -1261,6 +1261,7 @@ const app=createApp({
       if(pdoc.value){pdoc.value=null;return 'print';}
       if(lightboxSrc.value){lightboxSrc.value=null;return 'image';}
       if(zoom.value){await closeZoom();return 'photo';}
+      if(caseWorkspace.value?.dismissOverlay?.())return 'case-entry-preview';
       if(rec.value){await closeRec();return 'record';}
       if(mobileNavOpen.value){mobileNavOpen.value=false;return 'navigation';}
       if(tab.value==='map'&&map){map.closePopup();return 'map';}
@@ -1284,6 +1285,7 @@ const app=createApp({
 });
 
 app.component('case-workspace',createCaseWorkspaceComponent({norm,clean,renderText}));
+app.component('investigation-timeline',createCaseTimelineComponent());
 
 app.component('record-selector',{
   props:{modelValue:{default:''},records:{type:Array,default:()=>[]},disabled:Boolean,error:String},emits:['update:modelValue'],data(){return {open:false,search:''};},

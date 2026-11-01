@@ -190,3 +190,18 @@ Permanent case deletion includes its entry documents and their histories, with
 retry-safe cleanup. Manual service-account cleanup follows the same cascade.
 Print entry prints one selected entry; printing the case prints its overview.
 New external script case-workspace.js must be served beside index.html.
+
+CASE EVENT TIMELINE AND QUICK ENTRY
+Timeline contains dated Investigation Log updates only. It reads eventDate and
+never falls back to createdAt/updatedAt. New entries start without an event date;
+select the event day and optionally its time to place the saved log on Timeline.
+Clearing that date removes it from Timeline while retaining the log and audit.
+Creation metadata remains automatic/immutable and is displayed in Full preview.
+Existing saved event dates are retained. Timeline offers month selection, event
+order, horizontal scrolling, filters and direct entry previews; Overview shows
+recent events. Undated updates can be found with the Log date filter.
+Header shortcuts create logs/tasks from any section. The log editor initially
+shows title, event date/time and findings, with related details in a disclosure.
+Save & close / Save & add another and Ctrl/Cmd+Enter support quick updates.
+Preview displays complete notes and separate event/recording dates. Escape closes
+the preview before closing its parent case. Entry list cards stay compact.
