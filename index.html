@@ -182,16 +182,16 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
               <button v-if="level('penal')==='edit'" @click="addPenal" class="btn">+ Add charge</button>
               <label v-if="level('penal')==='edit'" class="btn !bg-amber-600 cursor-pointer">Import Excel<input type="file" accept=".xlsx,.xls,.csv" @change="importPenal" class="hidden"></label></div>
           </div>
-          <p v-if="level('penal')==='edit'" class="text-sm font-mono text-slate-500">Import columns: Category, Title, Fine, Jail. Changes save automatically.</p>
+          <p v-if="level('penal')==='edit'" class="text-sm font-mono text-slate-500">Import columns: Category, Title, Fine, Jail. Changes save automatically. Prepared Google Drive imports are available in Administration → Tools.</p>
           <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
             <div v-for="p in penalList" :key="p.id" class="hud p-5 space-y-3 font-mono text-sm">
               <template v-if="level('penal')==='edit'">
-                <input v-model="p.category" @change="savePenal(p)" placeholder="Category" class="inp"><input v-model="p.title" @change="savePenal(p)" placeholder="Charge" class="inp">
+                <div class="flex gap-2"><input v-model="p.code" @change="savePenal(p)" placeholder="Code" aria-label="Penal code" class="inp"><input v-model="p.classification" @change="savePenal(p)" placeholder="Classification" class="inp"></div><input v-model="p.bail" @change="savePenal(p)" placeholder="Bail" class="inp"><textarea v-model="p.description" @change="savePenal(p)" placeholder="Description (English)" class="inp" rows="3"></textarea><textarea v-model="p.descriptionEl" @change="savePenal(p)" placeholder="Περιγραφή (Ελληνικά)" class="inp" rows="3"></textarea><input v-model="p.category" @change="savePenal(p)" placeholder="Category" class="inp"><input v-model="p.title" @change="savePenal(p)" placeholder="Charge" class="inp">
                 <div class="flex gap-2 items-center"><input v-model.number="p.fine" @change="savePenal(p)" type="number" class="inp" placeholder="Fine $"><input v-model.number="p.jail" @change="savePenal(p)" type="number" class="inp" placeholder="Jail (months)"><button @click="delPenal(p)" class="del px-3 py-2">✕</button></div>
               </template>
               <template v-else>
                 <span class="text-xs text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 uppercase font-bold">{{ p.category }}</span>
-                <h3 class="text-base font-bold text-white">{{ p.title }}</h3>
+                <p v-if="p.code||p.classification" class="text-xs text-slate-400">{{ p.code }} · {{ p.classification }}</p><h3 class="text-base font-bold text-white">{{ p.title }}</h3><p v-if="p.descriptionEl" class="text-slate-300 whitespace-pre-wrap">{{ p.descriptionEl }}</p><details v-if="p.description"><summary class="text-tc cursor-pointer">English description</summary><p class="mt-2 whitespace-pre-wrap">{{ p.description }}</p></details><p v-if="p.bail" class="text-xs text-slate-400">Bail: {{ p.bail }}</p>
                 <div class="flex justify-between pt-3 border-t border-purple-950"><span class="text-emerald-400 font-bold">${{ Number(p.fine||0).toLocaleString() }}</span><span class="text-red-400 font-bold">{{ p.jail||0 }} Months</span></div>
               </template>
             </div>
@@ -392,6 +392,16 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
 
           <!-- Tools -->
           <div v-if="atab==='tools'" class="hud p-6 space-y-4 font-mono text-sm">
+            <section class="space-y-3 border-b border-purple-950 pb-5">
+              <h3 class="text-white font-bold text-base">Import Charges &amp; Case Files</h3>
+              <p class="text-slate-400">Choose the prepared JSON file. Existing records and items in Trash are skipped. No records are replaced. Original Drive documents remain linked with their photographs.</p>
+              <input type="file" accept=".json,application/json" @change="readPreparedImport" :disabled="importRunning" class="inp" aria-label="Prepared import file">
+              <template v-if="preparedImport"><p class="text-tc">{{ preparedImport.charges.length }} charges · {{ preparedImport.cases.length }} Case Files</p>
+                <details><summary class="cursor-pointer">Review Case Files</summary><ul class="mt-3 space-y-1"><li v-for="item in preparedImport.cases" :key="item.sourceId">{{ item.fileNo||'No file number in source' }} · {{ item.title }}<span v-if="item.sourceKind==='template'" class="text-amber-300"> · Empty template</span></li></ul></details>
+                <button @click="runPreparedImport" :disabled="importRunning" class="btn !bg-emerald-700">{{ importRunning?'Importing…':'Import missing records' }}</button>
+              </template>
+              <p role="status" class="text-amber-300 whitespace-pre-wrap">{{ importMessage }}</p>
+            </section>
             <button @click="indexAll" :disabled="mBusy" class="btn !bg-purple-600 text-base py-3 px-6">Prepare visual search cache ({{ allPhotos.length }} photos)</button><p class="text-tc font-bold">{{ mStatus }}</p>
           </div>
         </div>
@@ -727,7 +737,7 @@ const app=createApp({
     const permKeys=computed(()=>[...Object.keys(cfg.collections),'penal','evidence','matcher']);
     const permLabel=k=>cfg.collections[k]?cfg.collections[k].label:({penal:'Penal Code',evidence:'Evidence',matcher:'Matcher'})[k];
 
-    const CASE_STATUSES=['Open','Under Investigation','Pending Review','Closed'];
+    const CASE_STATUSES=['Not recorded','Open','Under Investigation','Pending Review','Closed'];
     const saveStates=reactive({}),statusFilter=ref(''),leadFilter=ref(''),sortOrder=ref('newest'),globalOpen=ref(false),globalQuery=ref(''),comparison=ref(null);
     const historyOpen=ref(false),historyRows=ref([]),historyError=ref(''),historyBusy=ref(false),trashRows=ref([]),trashError=ref('');
     let historyUnsub=null,trashUnsubs=[];
@@ -740,7 +750,7 @@ const app=createApp({
     const nav=t=>'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-title tracking-wider transition '+(tab.value===t?'bg-purple-600/30 text-white border border-purple-500/50 font-bold shadow-lg shadow-purple-900/10':'text-slate-400 hover:bg-purple-900/30 hover:text-slate-200');
     const subFields=c=>c.fields.slice(1).filter(f=>f.t!=='a'&&f.t!=='c').slice(0,2);
     const rowsFor=v=>Math.min(40,Math.max(8,String(v||'').split('\n').length+2));
-    const recTitle=r=>{const c=cfg.collections[r.col];if(r.col==='warrants')return (r.targets||[]).map(id=>recs[id]?.fullName||id).concat(r.otherTargets?[r.otherTargets]:[]).join(', ')||r.citizenName||r.citizenId||'Draft warrant';return(c&&c.fields.length&&r[c.fields[0].k])||'(untitled)';};
+    const recTitle=r=>{const c=cfg.collections[r.col];if(r.col==='warrants')return (r.targets||[]).map(id=>recs[id]?.fullName||id).concat(r.otherTargets?[r.otherTargets]:[]).join(', ')||r.citizenName||r.citizenId||'Draft warrant';return(c&&c.fields.length&&r[c.fields[0].k])||r.title||'(untitled)';};
     const officerMatch=(value,officerUid)=>{
       if(officerUid){const byId=accounts.value.find(a=>a.id===officerUid);if(byId)return byId;}
       const labelled=accounts.value.filter(a=>norm(a.name+' · '+a.badge)===norm(value));if(labelled.length===1)return labelled[0];
@@ -754,7 +764,7 @@ const app=createApp({
       if(f.t==='s')return v?citizenLabel(v):'-';
       if(f.t==='k'){const linked=recs[v];return linked?`${linked.fileNo||'—'} · ${linked.title||recTitle(linked)}`:(v?'Unavailable case ('+v+')':'-');}
       if(f.t==='r')return v||'Unconfirmed';
-      if(f.t==='o')return v?String(v)+(officerBadge(it,f.k)?' · Badge: '+officerBadge(it,f.k):''):'-';
+      if(['o','u'].includes(f.t))return v?String(v)+(officerBadge(it,f.k)?' · Badge: '+officerBadge(it,f.k):''):'-';
       return v||'-';};
     const itemsOf=k=>Object.values(recs).filter(r=>r.col===k).sort((a,b)=>(b.ts||0)-(a.ts||0));
     const listItems=computed(()=>{const c=col.value;if(!c)return[];const s=norm(q.value);
@@ -765,7 +775,7 @@ const app=createApp({
         if(sortOrder.value.startsWith('detective-')){const first=String(a.lead||'').trim(),second=String(b.lead||'').trim();if(!first&&second)return 1;if(first&&!second)return -1;const comparison=first.localeCompare(second,undefined,{sensitivity:'base',numeric:true});if(comparison)return sortOrder.value==='detective-desc'?-comparison:comparison;}
         const time=(b.ts||0)-(a.ts||0);return (sortOrder.value==='oldest'?-time:time)||String(a.id).localeCompare(String(b.id));
       });});
-    const penalList=computed(()=>{const s=norm(q.value);return s?penal.value.filter(p=>norm(p.title+p.category).includes(s)):penal.value;});
+    const penalList=computed(()=>{const s=norm(q.value);return s?penal.value.filter(p=>norm([p.code,p.title,p.category,p.classification,p.description,p.descriptionEl,p.bail].join(' ')).includes(s)):penal.value;});
     const tplCols=computed(()=>Object.entries(cfg.collections).filter(([k,c])=>c.fields.some(f=>f.t==='a')));
     const tplFor=k=>cfg.templates[k]||[];
     const fmt=t=>t?(typeof t.toDate==='function'?t.toDate():new Date(t)).toLocaleString('en-GB',{timeZone:'Europe/Athens'}):'';
@@ -872,7 +882,7 @@ const app=createApp({
       for(const section of citizenSections.value)for(const record of section.items){if(seen.has(record.id))continue;seen.add(record.id);const eventTime=record.col==='interrogations'&&record.date?Date.parse(record.date):0;out.push({id:record.id,record,label:section.label,title:recTitle(record),time:Number.isFinite(eventTime)&&eventTime>0?eventTime:Number(record.ts)||0});}
       return out.sort((a,b)=>b.time-a.time||a.id.localeCompare(b.id));
     });
-    const assignLead=(record,key,name)=>{record[key]=name;const matches=accounts.value.filter(a=>a.name===name);record[key+'Uid']=matches.length===1?matches[0].id:'';};
+    const assignLead=(record,key,name)=>{record[key]=name;const matches=accounts.value.filter(a=>a.name===name);record[key+'Uid']=matches.length===1?matches[0].id:'';record[key+'Badge']=matches.length===1?(matches[0].badge||''):'';};
     const myAssignments=computed(()=>!user.value||level('cases')==='none'?[]:itemsOf('cases').filter(r=>norm(r.status||'Open')!=='closed'&&assignedToMe(r)));
     const globalResults=computed(()=>{
       const query=norm(globalQuery.value);if(query.length<2)return [];const results=[];
@@ -917,12 +927,13 @@ const app=createApp({
       return ()=>{if(previousRef&&previousLock?.exists&&previousLock.data().recordId===id)tx.delete(previousRef);if(nextRef)tx.set(nextRef,{recordId:id,col:data.col,value:identityValue(data)});};
     };
     const saveQueues=new Map();
-    const saveRaw=o=>{const prior=saveQueues.get(o.id)||Promise.resolve();const task=prior.catch(()=>{}).then(()=>writeRecord(o)).catch(e=>{saveStates[o.id]={phase:'error',error:e.message};throw e;});saveQueues.set(o.id,task);task.finally(()=>{if(saveQueues.get(o.id)===task)saveQueues.delete(o.id);}).catch(()=>{});return task;};
-    const writeRecord=async o=>{
+    const saveRaw=(o,createOnly=false)=>{const prior=saveQueues.get(o.id)||Promise.resolve();const task=prior.catch(()=>{}).then(()=>writeRecord(o,createOnly)).catch(e=>{saveStates[o.id]={phase:'error',error:e.message};throw e;});saveQueues.set(o.id,task);task.finally(()=>{if(saveQueues.get(o.id)===task)saveQueues.delete(o.id);}).catch(()=>{});return task;};
+    const writeRecord=async(o,createOnly=false)=>{
       if(level(o.col)!=='edit'||!user.value)throw Error('No edit permission.');
       if(identityField(o.col)&&recordLoads[o.col]!=='ready')throw Error('Registry is still loading. Wait for it to finish before saving.');const data=clean(o);if(identityField(data.col))data[identityField(data.col)]=String(data[identityField(data.col)]||'');const duplicate=duplicateOf(data);if(duplicate)throw Error('Duplicate '+identityField(data.col)+': '+recTitle(duplicate));data.uniqueKey=identityKey(data);if(data.col==='warrants'){if(data.workflow&&data.workflow.status!=='Draft')data.legacyWorkflow=data.workflow;data.workflow={status:'Draft'};}const expected=data.version||0,ref=fdb.collection('records').doc(o.id),actor={id:user.value.id,name:user.value.name},auditId=uid();saveStates[o.id]={phase:'saving'};
       try{const result=await fdb.runTransaction(async tx=>{
         const snap=await tx.get(ref),before=snap.exists?snap.data():{};
+        if(createOnly&&snap.exists)throw Error('Import skipped: record already exists.');
         if(!snap.exists&&expected>0)throw Error('Record was deleted. Close this form.');if(snap.exists&&(before.version||0)!==expected)throw Error('Record changed elsewhere. Close and reopen it.');
         const changes=recordChanges(before,data);if(snap.exists&&!Object.keys(changes).length&&(before.uniqueKey||'')===data.uniqueKey)return {version:expected,auditId:before.auditId||''};
         const updateIdentity=await lockIdentity(tx,before,data,o.id);const v=expected+1;updateIdentity();tx.set(ref,{...data,version:v,auditId,updatedAt:Date.now()});tx.set(ref.collection('history').doc(auditId),{actorUid:actor.id,actorName:actor.name,at:firebase.firestore.FieldValue.serverTimestamp(),version:v,action:snap.exists?'updated':'created',changes});return {version:v,auditId};
@@ -996,11 +1007,43 @@ const app=createApp({
       pdoc.value={transcript:o.col==='interrogations'?{label:c.fields.find(f=>f.k==='transcript')?.l||'Transcript',text:o.transcript||'No transcript recorded.'}:null,profile:o.col==='citizens'?{url:citizenPhoto(o),name:o.fullName||'',citizenId:o.citizenId||''}:null,title:o.col==='warrants'?'DRAFT WARRANT':c.label+': '+recTitle(o),kind:o.col==='warrants'?'Draft Warrant Request':'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>f.name),photos:o.gallery||[],sigs};
     };
 
-    const savePenal=p=>fdb.collection('penal').doc(p.id).set(clean({category:p.category||'General',title:p.title||'',fine:Number(p.fine)||0,jail:Number(p.jail)||0})).catch(fail);
+    const chargeData=p=>({category:String(p.category||'General'),title:String(p.title||''),fine:Number(p.fine)||0,jail:Number(p.jail)||0,code:String(p.code||''),classification:String(p.classification||''),bail:String(p.bail||''),description:String(p.description||''),descriptionEl:String(p.descriptionEl||'')});
+    const savePenal=p=>fdb.collection('penal').doc(p.id).set(chargeData(p),{merge:true}).catch(fail);
     const addPenal=()=>fdb.collection('penal').add({category:'General',title:'New charge',fine:0,jail:0}).catch(fail);
     const delPenal=p=>{if(confirm('Delete this charge?'))fdb.collection('penal').doc(p.id).delete().catch(fail);};
     const num=v=>Number(String(v??'').replace(/[^0-9.\-]/g,''))||0;
     const importPenal=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const r=new FileReader();r.onload=async ev=>{try{const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);if(!rows.length)return alert('No rows found.');if(!confirm('Replace the whole schedule with '+rows.length+' imported charges?'))return;const old=await fdb.collection('penal').get();let b=fdb.batch(),n=0;const flush=async()=>{await b.commit();b=fdb.batch();n=0;};for(const d of old.docs){b.delete(d.ref);if(++n>=400)await flush();}for(const x of rows){b.set(fdb.collection('penal').doc(),{category:String(x.Category||x.category||'General'),title:String(x.Title||x.title||x.Offense||'Charge'),fine:num(x.Fine??x.fine),jail:num(x.Jail??x.jail)});if(++n>=400)await flush();}await b.commit();}catch(err){fail(err);}};r.readAsArrayBuffer(f);};
+
+    const preparedImport=ref(null),importRunning=ref(false),importMessage=ref('');
+    const validatePreparedImport=input=>{
+      if(!input||input.format!=='cid-drive-import-v1'||!Array.isArray(input.charges)||!Array.isArray(input.cases))throw Error('Invalid prepared import file.');
+      if(input.charges.length>1000||input.cases.length>200)throw Error('Import file is too large.');
+      const str=(v,max)=>{if(typeof v!=='string'||v.length>max)throw Error('Invalid import text.');return v;};
+      const ids=new Set(),charges=input.charges.map(p=>{if(!p||!/^PC-\d+$/.test(p.code)||!p.title||typeof p.fine!=='number'||!Number.isFinite(p.fine)||typeof p.jail!=='number'||!Number.isFinite(p.jail))throw Error('Invalid charge.');if(ids.has(p.code))throw Error('Duplicate charge code in file.');ids.add(p.code);for(const k of ['category','title','classification','bail','description','descriptionEl'])str(p[k]||'',5000);return chargeData(p);});
+      const cases=input.cases.map(o=>{if(!o||!/^[-_A-Za-z0-9]{10,150}$/.test(o.sourceId)||ids.has(o.sourceId))throw Error('Invalid or duplicate Drive source ID.');ids.add(o.sourceId);if(o.sourceUrl!=='https://docs.google.com/document/d/'+o.sourceId+'/edit')throw Error('Invalid source URL.');return {sourceId:o.sourceId,sourceUrl:o.sourceUrl,title:str(o.title,500),fileNo:str(o.fileNo||'',200),lead:str(o.lead||'',300),leadBadge:str(o.leadBadge||'',100),summary:str(o.summary,150000),sourceKind:['template','reference','report'].includes(o.sourceKind)?o.sourceKind:'report',sourceCreatedAt:str(o.sourceCreatedAt||'',100),sourceModifiedAt:str(o.sourceModifiedAt||'',100)};});
+      return {charges,cases};
+    };
+    const readPreparedImport=async e=>{if(importRunning.value)return;const file=e.target.files?.[0];e.target.value='';preparedImport.value=null;importMessage.value='';if(!file)return;try{if(file.size>5000000)throw Error('Import file exceeds 5 MB.');preparedImport.value=validatePreparedImport(JSON.parse(await file.text()));importMessage.value='Ready to import. Review the list, then import missing records.';}catch(err){importMessage.value=err.message;}};
+    const runPreparedImport=async()=>{
+      if(importRunning.value||!preparedImport.value)return;
+      if(!isAdmin.value||level('cases')!=='edit'||level('penal')!=='edit'){importMessage.value='Administrator access and edit permission for Case Files and Penal Code are required.';return;}
+      importRunning.value=true;const result={charges:0,cases:0,skipped:0,errors:[]};
+      try{
+        // Read existing records before any mutation. Preserve live records and Trash.
+        const [caseSnap,chargeSnap,trashSnap]=await Promise.all([fdb.collection('records').where('col','==','cases').get(),fdb.collection('penal').get(),fdb.collection('trash').get()]);
+        const existingCases=caseSnap.docs.map(d=>({...d.data(),id:d.id})).filter(d=>d.col==='cases'),existingCharges=chargeSnap.docs.map(d=>({...d.data(),id:d.id})),trashed=trashSnap.docs.map(d=>({...d.data(),id:d.id}));
+        const caseMatch=o=>existingCases.some(d=>d.id==='drive_'+o.sourceId||d.sourceId===o.sourceId||(o.fileNo&&norm(d.fileNo)===norm(o.fileNo)))||trashed.some(d=>d.id==='drive_'+o.sourceId||d.record?.sourceId===o.sourceId||(d.col==='cases'&&o.fileNo&&norm(d.record?.fileNo)===norm(o.fileNo)));
+        for(const p of preparedImport.value.charges){
+          if(existingCharges.some(d=>norm(d.code)===norm(p.code)||norm(d.title)===norm(p.title))){result.skipped++;continue;}
+          try{const ref=fdb.collection('penal').doc('sheet_'+p.code);const added=await fdb.runTransaction(async tx=>{const snap=await tx.get(ref);if(snap.exists)return false;tx.set(ref,{...p,source:'Google Sheets Penal Code'});return true;});if(added){result.charges++;existingCharges.push(p);}else result.skipped++;}catch(err){result.errors.push(p.code+': '+err.message);}
+        }
+        for(const o of preparedImport.value.cases){
+          if(caseMatch(o)){result.skipped++;continue;}
+          try{const record={...o,id:'drive_'+o.sourceId,col:'cases',status:'Not recorded',gallery:[],links:[],files:[{id:'drive_source_'+o.sourceId,name:'Original Drive document — '+o.title,url:o.sourceUrl,type:'link',size:0,date:Date.now(),by:user.value.name}],by:user.value.name,ts:Date.parse(o.sourceCreatedAt)||Date.now()};const person=officerMatch(o.lead);if(person){record.leadUid=person.id;if(!record.leadBadge)record.leadBadge=person.badge||'';}await saveRaw(record,true);recs[record.id]=record;existingCases.push(record);result.cases++;}catch(err){result.errors.push((o.fileNo||o.title)+': '+err.message);}
+        }
+        importMessage.value='Imported '+result.charges+' charges and '+result.cases+' Case Files. Skipped '+result.skipped+' existing records.'+(result.errors.length?'\n'+result.errors.length+' failed; retry safely to continue.\n'+result.errors.join('\n'):'');
+      }catch(err){importMessage.value='Import stopped: '+err.message+' Retry safely to continue.';}finally{importRunning.value=false;}
+    };
 
     const addTpl=()=>{if(!nt.name.trim()||!nt.body.trim())return;(cfg.templates[nt.key]||(cfg.templates[nt.key]=[])).push({name:nt.name.trim(),body:nt.body});nt.name=nt.body='';};
     const delTpl=(k,i)=>{if(confirm('Delete template?'))cfg.templates[k].splice(i,1);};
@@ -1069,7 +1112,7 @@ const app=createApp({
     watch(tab,t=>{if(cfg.collections[t]&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
-    return{RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+    return{penal,preparedImport,importRunning,importMessage,validatePreparedImport,readPreparedImport,runPreparedImport,chargeData,RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,attach,detach,
       zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,

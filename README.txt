@@ -118,3 +118,15 @@ normalized uniqueness, ταυτόχρονες διπλές εγγραφές κα
 Αφαίρεση agent δεν διαγράφει Firebase Authentication account.
 Import Penal Code δεν έχει συνολικό rollback: κράτησε αντίγραφο πριν εισαγωγή.
 Πηγή/αξιοπιστία είναι καταγραφή χρήστη και δεν αποδεικνύουν αυτομάτως ένα στοιχείο.
+
+PREPARED GOOGLE DRIVE IMPORTS
+Administration > Tools > Import Charges & Case Files accepts a prepared
+cid-drive-import-v1 JSON file. Review it and choose Import missing records.
+This adds charges and audited Case Files without replacing existing records.
+Matching charge codes/titles, case source IDs/file numbers and Trash items
+are skipped. Repeating the import safely resumes after individual failures.
+Cases retain full source text, manual file numbers, detective/badge snapshots,
+and a link to the original Google Doc, where embedded photos remain available.
+Empty templates and missing file numbers are preserved. Investigative status
+is initially Not recorded. Original Drive files and sharing are unchanged.
+Keep import bundles private; do not commit case data into the public repository.
