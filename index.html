@@ -63,7 +63,34 @@ select[multiple].inp:disabled{height:auto;overflow:hidden;}
 input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translateX(16px)}
 .rich-text{overflow-wrap:anywhere;line-height:1.7}.rich-text p{margin:.35rem 0;white-space:pre-wrap}.rich-text strong{font-weight:700}.rich-text em{font-style:italic}.rich-text u{text-decoration:underline}.rich-text h3{font-size:1.15em;font-weight:700;margin:.8rem 0 .35rem}.rich-text ul{list-style:disc;padding-left:1.5rem;margin:.5rem 0}.rich-text ol{list-style:decimal;padding-left:1.5rem;margin:.5rem 0}.rich-text blockquote{border-left:3px solid currentColor;padding-left:1rem;margin:.7rem 0;opacity:.85}.rich-text a{text-decoration:underline}.format-btn{padding:.3rem .6rem;border:1px solid #3b2459;border-radius:.4rem;color:#e9d5ff;min-width:2rem}.format-btn:hover{background:#3b2459}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#2b1a40;border-radius:9px}
-@page{size:A4;margin:12mm 12mm 16mm;@top-left{content:none}@top-center{content:none}@top-right{content:none}@bottom-left{content:none}@bottom-center{content:counter(page) " / " counter(pages);font-family:Arial,sans-serif;font-size:9pt;color:#555}@bottom-right{content:none}}
+/* Approved formal print layout. Shading is retained when printing to PDF. */
+.sheet{width:210mm;max-width:100%;padding:16mm!important;color:#181818;counter-reset:print-section;font-family:Arial,Helvetica,sans-serif!important;font-size:10.5pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet .print-header{border-bottom:3px double #242424;padding:0 0 18pt;margin-bottom:14pt;break-inside:avoid;gap:22pt}
+.sheet .print-header>img{width:64pt;height:64pt}
+.sheet .print-header>div{flex:1}
+.sheet .print-header h1{font-size:16pt;line-height:1.25;letter-spacing:0;font-weight:700;color:#111}
+.sheet .print-header p{font-size:10pt;letter-spacing:.025em;margin:8pt 0 0;color:#222}
+.sheet .print-reference{display:flex;justify-content:space-between;gap:16pt;font-size:8pt;font-weight:700;text-transform:uppercase;margin-bottom:14pt;break-inside:avoid}
+.sheet .print-title{font-size:18pt;line-height:1.3;font-weight:700;text-align:center;text-transform:uppercase;margin:0 0 24pt;overflow-wrap:anywhere;break-after:avoid}
+.sheet .print-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14pt 22pt;background:#f1f3f5;border:0;border-radius:3pt;padding:14pt 16pt;margin:0 0 24pt;break-inside:avoid}
+.sheet .print-meta dt{font-size:8pt;color:#555;text-transform:uppercase;font-weight:700;margin-bottom:4pt}
+.sheet .print-meta dd{font-size:10pt;font-weight:600;white-space:pre-line;overflow-wrap:anywhere;margin:0}
+.sheet .print-section{margin:0 0 20pt}
+.sheet .print-section-title{font-size:9pt;font-weight:700;text-transform:uppercase;color:#222;letter-spacing:0;border-bottom:.5pt solid #bbb;padding:0 0 6pt;margin:0 0 10pt;break-after:avoid}
+.sheet .print-section-title::before{counter-increment:print-section;content:counter(print-section) '.  '}
+.sheet .print-section>.rich-text{border:0;padding:0;margin:0;font-size:10.5pt;line-height:1.6;color:#181818}
+.sheet .print-section>p{font-size:10.5pt;line-height:1.5;color:#181818}
+.sheet .print-recipients{padding:12pt 0;border-top:.5pt solid #aaa;border-bottom:.5pt solid #aaa;margin-bottom:24pt;break-inside:avoid}
+.sheet .print-recipients p{margin:0 0 5pt}.sheet .print-recipients p:last-child{margin-bottom:0}
+.sheet .print-signatures{margin-top:36pt;padding-top:16pt;border-top:.5pt solid #bbb;break-inside:avoid}
+.sheet .print-signature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:30pt}
+.sheet .print-signature-grid.single-signature{grid-template-columns:minmax(0,1fr);max-width:55%;margin:0 auto}
+.sheet .signature-name{font:italic 18pt Arial,Helvetica,sans-serif;color:#202020;min-height:32pt;display:flex;align-items:flex-end;justify-content:center;margin-bottom:7pt;overflow-wrap:anywhere}
+.sheet .signature-role{border-top:.5pt solid #888;padding-top:6pt;font-size:9pt;font-weight:700;color:#222}
+.sheet .signature-badge{display:block;font-size:8pt;color:#666;margin-top:3pt;font-weight:400}
+.sheet .print-footer{display:flex;justify-content:space-between;gap:16pt;margin-top:30pt;padding-top:10pt;border-top:.5pt solid #ccc;font-size:8pt;color:#666;break-inside:avoid}
+@media print{.sheet{width:auto;box-shadow:none!important;margin:0!important}.sheet .print-header h1{font-size:16pt!important}.sheet .print-meta{background:#f1f3f5!important}}
+@page{size:A4;margin:16mm 16mm 18mm;@top-left{content:none}@top-center{content:none}@top-right{content:none}@bottom-left{content:none}@bottom-center{content:counter(page) " / " counter(pages);font-family:Arial,sans-serif;font-size:9pt;color:#555}@bottom-right{content:none}}
 @media print{#app,.noprint{display:none!important}body{background:#fff!important;font-size:12px!important;}#pdoc{position:static!important;background:#fff!important;padding:0!important;overflow:visible!important}.sheet{max-width:none!important;padding:0!important}}
 </style>
 </head>
@@ -664,38 +691,39 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
   <div v-if="pdoc.caseSourceId" class="noprint max-w-4xl mx-auto mb-4 p-3 rounded-xl border border-purple-900 bg-panel"><label class="flex items-center gap-3 text-sm text-slate-200"><input type="checkbox" :checked="pdoc.attachmentsIncluded" @change="togglePrintAttachments($event.target.checked)">Include all attached records, investigation entries, photos and file links</label><p class="text-xs text-slate-500 mt-2">External PDF / Drive documents are listed with their full links; their pages are printed from the original file.</p><p v-if="pdoc.attachmentsIncluded" class="text-xs text-cyan-400 mt-2">{{ pdoc.attachments.length }} attached records / entries included.</p></div>
   <div class="noprint max-w-4xl mx-auto flex gap-4 mb-6 justify-end"><button @click="printNow" :disabled="printBusy" class="btn text-base py-3 px-6"><i class="fa-solid fa-print mr-2"></i> Print / Save as PDF</button><button @click="pdoc=null" class="btn !bg-red-900 !text-white text-base py-3 px-6">✕ Close</button></div>
   <div v-for="(printDoc,printIndex) in [pdoc,...(pdoc.attachments||[])]" :key="printIndex" :style="{breakBefore:printIndex?'page':'auto'}" class="sheet bg-white text-slate-900 max-w-4xl mx-auto p-12 text-[13px] leading-relaxed shadow-2xl" style="margin-bottom:2rem;font-family:Arial,Helvetica,sans-serif">
-    <header class="flex items-center justify-center gap-5 border-b-4 border-slate-900 pb-6 mb-8" style="break-inside:avoid">
+    <header class="print-header flex items-center justify-center gap-5" style="break-inside:avoid">
       <img :src="LOGO" class="h-24 w-24 object-contain shrink-0" onerror="this.style.display='none'">
       <div class="text-center min-w-0">
         <h1 class="text-2xl md:text-3xl font-black uppercase tracking-widest text-slate-900">Criminal Investigation Division</h1>
         <p class="font-bold text-slate-700 text-base mt-2 uppercase tracking-wider">Unified Police Department</p>
-        <p v-if="printDoc.kind" class="font-bold text-red-700 uppercase mt-3 text-base tracking-widest">{{ printDoc.kind }}</p>
+
       </div>
     </header>
-    <h2 class="text-xl font-bold uppercase mb-6 text-slate-900 text-center">{{ printDoc.title }}</h2>
-    <section v-if="printDoc.routing" aria-label="Request recipients" class="mb-8 border-y border-slate-300 py-4 text-sm text-slate-900" style="break-inside:avoid"><p><strong>ΠΡΟΣ:</strong> {{ printDoc.routing.to }}</p><p class="mt-2"><strong>CC:</strong> {{ printDoc.routing.cc }}</p></section>
+    <div class="print-reference"><span>{{ printDoc.kind || printDoc.category }}</span><span v-if="printDoc.reference">{{ printDoc.reference }}</span></div>
+    <h2 class="print-title">{{ printDoc.title }}</h2>
+    <section v-if="printDoc.routing" aria-label="Request recipients" class="print-recipients" style="break-inside:avoid"><p><strong>ΠΡΟΣ:</strong> {{ printDoc.routing.to }}</p><p class="mt-2"><strong>CC:</strong> {{ printDoc.routing.cc }}</p></section>
     <div v-if="printDoc.profile" class="flex gap-6 items-center mb-8 p-5 border-2 border-slate-300 rounded-lg" style="break-inside:avoid"><img v-if="printDoc.profile.url" :src="printDoc.profile.url" :alt="printDoc.profile.name" class="w-28 h-36 object-contain bg-white border border-slate-400 rounded"><div><p class="text-xs text-slate-500 uppercase tracking-wider">Citizen identification</p><p v-if="printDoc.profile.name" class="text-xl font-bold text-slate-900 mt-2">{{ printDoc.profile.name }}</p><p v-if="printDoc.profile.citizenId" class="font-mono text-sm text-slate-700 mt-2">Citizen ID: {{ printDoc.profile.citizenId }}</p></div></div>
     <table v-if="printDoc.head" class="w-full text-[13px] border-collapse mb-8"><thead><tr><th v-for="h in printDoc.head" :key="h" class="border-2 border-slate-800 bg-slate-100 p-2 text-left font-bold">{{ h }}</th></tr></thead>
       <tbody><tr v-for="(r,i) in printDoc.table" :key="i"><td v-for="(c,j) in r" :key="j" class="border border-slate-400 p-2 align-top">{{ c }}</td></tr></tbody></table>
-    <div v-for="(r,rowIndex) in (printDoc.rows||[])" :key="rowIndex" class="mb-5"><p class="text-xs font-bold uppercase text-slate-500 tracking-wider mb-1">{{ r[0] }}</p><div v-if="r[2]" class="rich-text text-sm border-l-4 border-slate-300 pl-4 py-1 ml-1 text-slate-800" v-html="renderText(r[1])"></div><p v-else class="whitespace-pre-line text-sm text-slate-900 font-medium">{{ r[1] }}</p></div>
-    <div v-if="(printDoc.links||[]).length" class="mb-6 mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-3 pb-1 text-slate-900">Attached records</p><p v-for="l in printDoc.links" :key="l" class="mb-1 text-sm">• {{ l }}</p></div>
-    <div v-if="(printDoc.files||[]).length" class="mb-6 mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-3 pb-1 text-slate-900">Files on record</p><p v-for="l in printDoc.files" :key="l" class="mb-1 text-sm text-blue-700 underline break-all">• {{ l }}</p></div>
-    <section v-if="(printDoc.properties||[]).length" class="mt-8"><h3 class="font-bold uppercase border-b-2 border-slate-800 mb-4 pb-1">Properties</h3><article v-for="(property,i) in printDoc.properties" :key="property.id||i" class="mb-6"><h4 v-if="hasPrintValue(property.name)" class="font-bold">{{ property.name }}</h4><p v-if="hasPrintValue(property.street)" class="text-sm mb-3">{{ property.street }}</p><div v-if="property.photos.length" class="grid grid-cols-2 gap-4"><figure v-for="(photo,j) in property.photos" :key="photo.id||j" class="border border-slate-300 p-2" style="break-inside:avoid"><img :src="photo.url" class="w-full h-64 object-contain" style="object-fit:contain;object-position:center"><figcaption v-if="hasPrintValue(photo.title)" class="text-xs mt-2">{{ photo.title }}</figcaption></figure></div></article></section>
-    <div v-if="(printDoc.photos||[]).length" class="mt-8"><p class="font-bold uppercase border-b-2 border-slate-800 mb-4 pb-1 text-slate-900">Photographic evidence</p>
+    <dl v-if="(printDoc.metaRows||[]).length" class="print-meta" aria-label="Report details"><div v-for="(row,index) in printDoc.metaRows" :key="index"><dt>{{ row[0] }}</dt><dd>{{ row[1] }}</dd></div></dl>
+    <div v-for="(r,rowIndex) in (printDoc.bodyRows||printDoc.rows||[])" :key="rowIndex" class="print-section"><h3 class="print-section-title">{{ r[0] }}</h3><div v-if="r[2]" class="rich-text" v-html="renderText(r[1])"></div><p v-else class="whitespace-pre-line">{{ r[1] }}</p></div>
+    <div v-if="(printDoc.links||[]).length||(printDoc.citizenRows||[]).length" class="print-section"><h3 class="print-section-title">Attached records</h3><p v-for="(row,index) in printDoc.citizenRows||[]" :key="'citizen-'+index" class="mb-2"><strong>{{ row[0] }}:</strong> {{ row[1] }}</p><p v-for="(l,index) in printDoc.links||[]" :key="'link-'+index" class="mb-1">{{ l }}</p></div>
+    <div v-if="(printDoc.files||[]).length" class="mb-6 mt-8"><p class="print-section-title">Files on record</p><p v-for="l in printDoc.files" :key="l" class="mb-1 text-sm text-blue-700 underline break-all">• {{ l }}</p></div>
+    <section v-if="(printDoc.properties||[]).length" class="mt-8"><h3 class="print-section-title">Properties</h3><article v-for="(property,i) in printDoc.properties" :key="property.id||i" class="mb-6"><h4 v-if="hasPrintValue(property.name)" class="font-bold">{{ property.name }}</h4><p v-if="hasPrintValue(property.street)" class="text-sm mb-3">{{ property.street }}</p><div v-if="property.photos.length" class="grid grid-cols-2 gap-4"><figure v-for="(photo,j) in property.photos" :key="photo.id||j" class="border border-slate-300 p-2" style="break-inside:avoid"><img :src="photo.url" class="w-full h-64 object-contain" style="object-fit:contain;object-position:center"><figcaption v-if="hasPrintValue(photo.title)" class="text-xs mt-2">{{ photo.title }}</figcaption></figure></div></article></section>
+    <div v-if="(printDoc.photos||[]).length" class="mt-8"><p class="print-section-title">Photographic evidence</p>
       <div class="grid grid-cols-2 gap-6"><div v-for="p in printDoc.photos" :key="p.id" style="break-inside:avoid" class="border border-slate-300 p-2 bg-slate-50"><img :src="p.url" class="w-full h-64 object-contain bg-white mb-2" style="object-fit:contain;object-position:center"><p v-if="hasPrintValue(p.title)" class="text-xs font-bold text-slate-900">{{ p.title }}</p><p v-if="[p.reliability,p.source,p.sourceDate].some(hasPrintValue)" class="text-[10px] text-slate-600">{{ [p.reliability,hasPrintValue(p.source)?'Source: '+p.source:'',p.sourceDate].filter(hasPrintValue).join(' · ') }}</p><p v-if="[p.taken,p.place].some(hasPrintValue)" class="text-[10px] text-slate-600 mt-1">{{ [p.taken,p.place].filter(hasPrintValue).join(' · ') }}</p><div v-if="hasPrintValue(p.desc)" class="rich-text text-xs text-slate-600 mt-2" v-html="renderText(p.desc)"></div></div></div></div>
     
-    <section v-if="printDoc.transcript" class="mt-8 pt-5 border-t-2 border-slate-800"><h3 class="font-bold uppercase text-slate-900 mb-4">{{ printDoc.transcript.label }}</h3><div class="rich-text text-sm text-slate-900" v-html="renderText(printDoc.transcript.text)"></div></section>
+    <section v-if="printDoc.transcript" class="mt-8 pt-5 border-t-2 border-slate-800"><h3 class="print-section-title">{{ printDoc.transcript.label }}</h3><div class="rich-text text-sm text-slate-900" v-html="renderText(printDoc.transcript.text)"></div></section>
     <!-- Real Signatures Design -->
-    <div v-if="printDoc.sigs.length" class="mt-20 pt-6 border-t-2 border-slate-900 text-sm text-slate-900 font-bold">
-        <div class="grid grid-cols-2 gap-8">
-            <div v-for="(sig,signatureIndex) in printDoc.sigs" :key="signatureIndex" class="min-w-0 text-center">
-                <div class="font-signature text-[1.8rem] leading-tight text-blue-900 mb-2 min-h-12 break-words flex items-end justify-center">{{ sig.name }}</div>
-                <div class="border-t-2 border-slate-400 pt-1.5 text-xs text-slate-700">{{ sig.title }}<span v-if="sig.badge"> · {{ sig.badge }}</span></div>
-            </div>
+    <div v-if="printDoc.sigs.length" class="print-signatures">
+      <div class="print-signature-grid" :class="{'single-signature':printDoc.sigs.length===1}">
+        <div v-for="(sig,signatureIndex) in printDoc.sigs" :key="signatureIndex" class="min-w-0 text-center">
+          <div class="signature-name">{{ sig.name }}</div>
+          <div class="signature-role">{{ sig.title }}<span v-if="sig.badge" class="signature-badge">Badge {{ sig.badge }}</span></div>
         </div>
-        <span class="block text-right mt-6 text-slate-400 text-[10px] font-mono tracking-widest">CONFIDENTIAL — U.P.D. C.I.D.</span>
+      </div>
     </div>
-    <footer class="mt-8 pt-3 border-t border-slate-200 text-center text-xs text-slate-500 font-mono">{{ printDoc.ts }}</footer>
+    <footer class="print-footer"><span>CONFIDENTIAL</span><span>{{ printDoc.ts }}</span></footer>
   </div>
 </div>
 </teleport>
@@ -1229,14 +1257,31 @@ const app=createApp({
       }
       const selected=directorRotation.shift(),person=candidates.find(a=>identity(a)===selected);lastDirector=selected;
       try{localStorage.setItem('cid-last-print-director',selected);}catch(e){}
-      return {name:person.name,title:person.rank,badge:person.badge||''};
+      return {uid:person.id||'',name:person.name,title:person.rank,badge:person.badge||''};
     };
     const makeSignatures=o=>{
-      const primary=user.value?{name:user.value.name,title:user.value.rank,badge:user.value.badge||''}:{name:'',title:'Authorized U.P.D. Detective',badge:''};
-      return [primary,directorSignature('')];
+      const primary=user.value?{uid:user.value.id||'',name:user.value.name,title:user.value.rank,badge:user.value.badge||''}:{name:'',title:'Authorized U.P.D. Detective',badge:''};
+      const automatic=directorSignature('');
+      const same=primary.uid&&automatic.uid?primary.uid===automatic.uid:primary.name&&automatic.name&&norm(primary.name)===norm(automatic.name)&&(!primary.badge||!automatic.badge||primary.badge===automatic.badge);
+      return same?[primary]:[primary,automatic];
     };
     const hasPrintValue=value=>{if(value===null||value===undefined)return false;if(typeof value==='string')return value.trim().length>0;if(typeof value==='number')return Number.isFinite(value);if(typeof value==='boolean')return true;if(Array.isArray(value))return value.some(hasPrintValue);if(typeof value==='object')return Object.values(value).some(hasPrintValue);return false;};
     const documentDetails=o=>fieldsForRecord(o).filter(f=>!['title','docType','description','isPublic'].includes(f.k)&&hasPrintValue(o[f.k])).map(f=>({key:f.k,label:f.l,value:shown(o,f),rich:f.t==='a'}));
+    const preparePrintLayout=(doc,source)=>{
+      const schema=cfg.collections[source.col]?.fields||[],report=['cases','reports'].includes(source.col);
+      const labels=keys=>new Set(schema.filter(field=>keys.includes(field.k)).map(field=>field.l));
+      const metaLabels=labels(['lead','status','caseType']);
+      if(isWorkspaceEntry(source))['Lead Detective','Status','Entry type','Event date & time'].forEach(label=>metaLabels.add(label));
+      const citizenLabels=new Set(report?schema.filter(field=>['c','s'].includes(field.t)).map(field=>field.l):[]);
+      if(report&&isWorkspaceEntry(source))citizenLabels.add('Related citizens');
+      const duplicateLabels=labels(['cases','organizations','documents','reports'].includes(source.col)?['title','name','fileNo']:['fileNo']);
+      doc.metaRows=(doc.rows||[]).filter(row=>metaLabels.has(row[0]));
+      doc.citizenRows=(doc.rows||[]).filter(row=>citizenLabels.has(row[0]));
+      doc.bodyRows=(doc.rows||[]).filter(row=>!metaLabels.has(row[0])&&!citizenLabels.has(row[0])&&!duplicateLabels.has(row[0]));
+      doc.reference=source.fileNo||source.reportNo||'';
+      doc.category=source.col==='warrants'?'Warrant request':source.col==='cases'?'Investigative report':cfg.collections[source.col]?.label||'';
+      return doc;
+    };
     const printRecord=(o,includeAttachments=false)=>{
       if(o.col==='directives')return;
       if(o.col==='warrants'&&!Array.isArray(o.targets))o={...o,targets:hasPrintValue(o.targets)?[String(o.targets)]:[]};
@@ -1247,7 +1292,8 @@ const app=createApp({
       if(o.col==='warrants'&&!(o.targets||[]).some(hasPrintValue)&&[o.citizenName,o.citizenId].some(hasPrintValue))rows.push(['Legacy target',[o.citizenName,o.citizenId].filter(hasPrintValue).join(' · '),false]);
       const now=new Date();const ts=now.getDate().toString().padStart(2,'0')+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear()+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
       const sigs=makeSignatures(o).filter(sig=>hasPrintValue(sig.name)),profileUrl=o.col==='citizens'&&citizenPhoto(o)!==DEFAULT_AVATAR?citizenPhoto(o):'';
-      pdoc.value={sourceRecordId:o.id,routing:o.col==='warrants'?{to:"Department of Justice (DOJ) - District Attorney's Office",cc:'Judges'}:null,transcript:o.col==='interrogations'&&hasPrintValue(o.transcript)?{label:c.fields.find(f=>f.k==='transcript')?.l||'Transcript',text:o.transcript}:null,profile:o.col==='citizens'&&[profileUrl,o.fullName,o.citizenId].some(hasPrintValue)?{url:profileUrl,name:hasPrintValue(o.fullName)?o.fullName:'',citizenId:hasPrintValue(o.citizenId)?o.citizenId:''}:null,title:o.col==='warrants'?'DRAFT WARRANT':c.label+': '+recTitle(o),kind:o.col==='warrants'?'Draft Warrant Request':'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+recTitle(l.rec)),files:(o.files||[]).map(f=>[...new Set([f.name,f.url].filter(hasPrintValue).map(value=>String(value).trim()))].join(' — ')).filter(hasPrintValue),photos:(o.gallery||[]).filter(p=>hasPrintValue(p.url)),properties:o.col==='citizens'?propertiesOf(o,true).map(p=>({id:p.id,name:p.name,street:p.street,photos:(p.gallery||[]).filter(photo=>hasPrintValue(photo.url)).map(photo=>({...photo}))})):[],sigs};
+      pdoc.value={sourceRecordId:o.id,routing:o.col==='warrants'?{to:"Department of Justice (DOJ) - District Attorney's Office",cc:'Judges'}:null,transcript:o.col==='interrogations'&&hasPrintValue(o.transcript)?{label:c.fields.find(f=>f.k==='transcript')?.l||'Transcript',text:o.transcript}:null,profile:o.col==='citizens'&&[profileUrl,o.fullName,o.citizenId].some(hasPrintValue)?{url:profileUrl,name:hasPrintValue(o.fullName)?o.fullName:'',citizenId:hasPrintValue(o.citizenId)?o.citizenId:''}:null,title:o.col==='warrants'?'Warrant Request':['cases','organizations'].includes(o.col)?recordName(o):c.label+': '+recTitle(o),kind:'',ts,rows,links:linkedFor(o).map(l=>cfg.collections[l.rec.col].label+': '+(l.rec.col==='citizens'?citizenLabel(l.rec.id):recTitle(l.rec))),files:(o.files||[]).map(f=>[...new Set([f.name,f.url].filter(hasPrintValue).map(value=>String(value).trim()))].join(' — ')).filter(hasPrintValue),photos:(o.gallery||[]).filter(p=>hasPrintValue(p.url)),properties:o.col==='citizens'?propertiesOf(o,true).map(p=>({id:p.id,name:p.name,street:p.street,photos:(p.gallery||[]).filter(photo=>hasPrintValue(photo.url)).map(photo=>({...photo}))})):[],sigs};
+      preparePrintLayout(pdoc.value,o);
       if(o.col==='cases'){
         const bundle={...pdoc.value,caseSourceId:o.id,attachmentsIncluded:!!includeAttachments,attachments:[]};
         if(includeAttachments){
@@ -1269,7 +1315,7 @@ const app=createApp({
     };
 
     const togglePrintAttachments=enabled=>{const source=recs[pdoc.value?.caseSourceId];if(source)printRecord(source,enabled);};
-    const printCaseEntry=(entry,parentOverride=null)=>{const parent=parentOverride||rec.value?.obj;if(!parent||entry.workspaceParentId!==parent.id)return;printRecord(parent);const rows=[['Case File',[parent.fileNo,parent.title].filter(hasPrintValue).join(' · ')],['Lead Detective',parent.lead],['Entry type',entry.workspaceKind],['Title',entry.title],['Event date & time',entry.eventDate],['Status',entry.status],['Related citizens',(entry.peopleLabels||[]).join(', ')],['Organisation',entry.organizationLabel],['Role',entry.role],['Assigned detective',entry.assigneeLabel],['Due date',entry.dueDate],['Reliability',entry.reliability],['Source / reference',entry.source],['Notes / findings',entry.body,true],['Recorded by',entry.createdBy],['Recorded at',entry.createdAt?fmt(entry.createdAt):''],['Last updated by',entry.version>1?entry.updatedBy:''],['Last updated at',entry.version>1?fmt(entry.updatedAt):'']].filter(row=>hasPrintValue(row[1]));pdoc.value={...pdoc.value,title:entry.title,sourceRecordId:entry.id,caseSourceId:null,attachmentsIncluded:false,attachments:[],kind:'Investigation entry',rows,profile:null,transcript:null,photos:(entry.gallery||[]).filter(p=>hasPrintValue(p.url)),files:hasPrintValue(entry.url)?[entry.url]:[],links:(entry.relatedRecords||[]).map(id=>recs[id]).filter(r=>r&&level(r.col)!=='none').map(r=>(cfg.collections[r.col]?.label||r.col)+': '+recTitle(r))};};
+    const printCaseEntry=(entry,parentOverride=null)=>{const parent=parentOverride||rec.value?.obj;if(!parent||entry.workspaceParentId!==parent.id)return;printRecord(parent);const rows=[['Case File',[parent.fileNo,parent.title].filter(hasPrintValue).join(' · ')],['Lead Detective',parent.lead],['Entry type',entry.workspaceKind],['Title',entry.title],['Event date & time',entry.eventDate],['Status',entry.status],['Related citizens',(entry.peopleLabels||[]).join(', ')],['Organisation',entry.organizationLabel],['Role',entry.role],['Assigned detective',entry.assigneeLabel],['Due date',entry.dueDate],['Reliability',entry.reliability],['Source / reference',entry.source],['Notes / findings',entry.body,true],['Recorded by',entry.createdBy],['Recorded at',entry.createdAt?fmt(entry.createdAt):''],['Last updated by',entry.version>1?entry.updatedBy:''],['Last updated at',entry.version>1?fmt(entry.updatedAt):'']].filter(row=>hasPrintValue(row[1]));pdoc.value={...pdoc.value,title:entry.title,sourceRecordId:entry.id,caseSourceId:null,attachmentsIncluded:false,attachments:[],kind:'Investigation entry',rows,profile:null,transcript:null,photos:(entry.gallery||[]).filter(p=>hasPrintValue(p.url)),files:hasPrintValue(entry.url)?[entry.url]:[],links:(entry.relatedRecords||[]).map(id=>recs[id]).filter(r=>r&&level(r.col)!=='none').map(r=>(cfg.collections[r.col]?.label||r.col)+': '+recTitle(r))};preparePrintLayout(pdoc.value,{...entry,fileNo:parent.fileNo});};
 
     const chargeData=p=>({category:String(p.category||'General'),title:String(p.title||''),fine:Number(p.fine)||0,jail:Number(p.jail)||0,code:String(p.code||''),classification:String(p.classification||''),bail:String(p.bail||''),description:String(p.description||''),descriptionEl:String(p.descriptionEl||'')});
     const savePenal=p=>fdb.collection('penal').doc(p.id).set(chargeData(p),{merge:true}).catch(fail);
