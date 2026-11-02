@@ -247,5 +247,16 @@ const renamedSchema=vm.runInContext("normalizeConfig({collections:{custom:{label
 assert.equal(renamedSchema.collections.custom.label,'Detective reports');assert.equal(renamedSchema.collections.custom.fields[0].l,'Assigned Detective');assert.equal(renamedSchema.collections.custom.fields[0].k,'agentUid');
 assert(!/Agent Access|Select Agent|Authorized U\.P\.D\. Agent/.test(html));
 console.log('PASS: detective terminology in interface and legacy configuration labels preserves stored field keys.');
+// PDF imports preserve existing cases, append one audited report and support safe retry.
+const pdfExisting={id:'pdf-existing-case',col:'cases',fileNo:'PDF-EXISTING',title:'Keep title',summary:'Keep original narrative',status:'Closed',lead:'Original lead',gallery:[{url:'https://example.com/keep.jpg'}],files:[],links:[]};await state.saveTarget(pdfExisting);const pdfVersion=pdfExisting.version;
+const pdfReport={sourceId:'a'.repeat(64),sourceFileName:'Final sample.pdf',sourceUrl:'',title:'PDF report',fileNo:'PDF-EXISTING',summary:'Final report body',lead:'PDF lead',leadBadge:'450'};
+const pdfPayload={format:'cid-pdf-import-v1',charges:[],cases:[pdfReport]};
+assert.throws(()=>state.validatePreparedImport({...pdfPayload,cases:[{...pdfReport,sourceUrl:'https://example.com/not-an-upload.pdf'}]}));
+assert.throws(()=>state.validatePreparedImport({...pdfPayload,cases:[{...pdfReport,sourceId:'invalid'}]}));
+state.preparedImport.value=state.validatePreparedImport(pdfPayload);await state.runPreparedImport();const pdfAppended=database.get('records/pdf-existing-case');assert(pdfAppended.summary.startsWith('Keep original narrative'));assert(pdfAppended.summary.includes('Final report body'));assert.equal(pdfAppended.title,'Keep title');assert.equal(pdfAppended.lead,'Original lead');assert.equal(pdfAppended.status,'Closed');assert.equal(pdfAppended.gallery[0].url,'https://example.com/keep.jpg');assert.equal(pdfAppended.pdfImports.length,1);assert.equal(pdfAppended.version,pdfVersion+1);assert(state.importMessage.value.includes('Appended 1'));
+await state.runPreparedImport();assert.equal(database.get('records/pdf-existing-case').version,pdfVersion+1);assert(state.importMessage.value.includes('Skipped 1'));
+state.preparedImport.value=state.validatePreparedImport({...pdfPayload,cases:[{...pdfReport,sourceId:'b'.repeat(64),fileNo:'',title:'Unnumbered PDF'}]});await state.runPreparedImport();const pdfNew=database.get('records/pdf_'+'b'.repeat(64));assert(pdfNew);assert.equal(pdfNew.fileNo,'');assert.equal(pdfNew.leadBadge,'450');assert.equal(pdfNew.files.length,0);assert(pdfNew.pdfImports[0].attachmentsPending);assert.equal(pdfNew.caseType,'Standard');
+await state.delRec(state.itemsOf('cases').find(o=>o.id===pdfNew.id));await state.runPreparedImport();assert(!database.has('records/'+pdfNew.id));assert(state.importMessage.value.includes('Skipped 1'));
+console.log('PASS: PDF imports validate content, append without replacing case fields, preserve badges and empty file numbers, audit changes, skip Trash and do not repeat appended content.');
 console.log('Expected handled errors:',errors.length);
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -426,7 +426,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           <div v-if="atab==='tools'" class="hud p-6 space-y-4 font-mono text-sm">
             <section class="space-y-3 border-b border-purple-950 pb-5">
               <h3 class="text-white font-bold text-base">Import Charges &amp; Case Files</h3>
-              <p class="text-slate-400">Choose the prepared JSON file. Existing records and items in Trash are skipped. No records are replaced. Original Drive documents remain linked with their photographs.</p>
+              <p class="text-slate-400">Choose the prepared JSON file. Drive duplicates and items in Trash are skipped. PDF reports with an existing file number are appended to that case without replacing its content. PDF photos and original files need hosted links before they appear here.</p>
               <input type="file" accept=".json,application/json" @change="readPreparedImport" :disabled="importRunning" class="inp" aria-label="Prepared import file">
               <template v-if="preparedImport"><p class="text-tc">{{ preparedImport.charges.length }} charges · {{ preparedImport.cases.length }} Case Files</p>
                 <details><summary class="cursor-pointer">Review Case Files</summary><ul class="mt-3 space-y-1"><li v-for="item in preparedImport.cases" :key="item.sourceId">{{ item.fileNo||'No file number in source' }} · {{ item.title }}<span v-if="item.sourceKind==='template'" class="text-amber-300"> · Empty template</span></li></ul></details>
@@ -1302,18 +1302,20 @@ const app=createApp({
 
     const preparedImport=ref(null),importRunning=ref(false),importMessage=ref('');
     const validatePreparedImport=input=>{
-      if(!input||input.format!=='cid-drive-import-v1'||!Array.isArray(input.charges)||!Array.isArray(input.cases))throw Error('Invalid prepared import file.');
+      if(!input||!['cid-drive-import-v1','cid-pdf-import-v1'].includes(input.format)||!Array.isArray(input.charges)||!Array.isArray(input.cases))throw Error('Invalid prepared import file.');
       if(input.charges.length>1000||input.cases.length>200)throw Error('Import file is too large.');
       const str=(v,max)=>{if(typeof v!=='string'||v.length>max)throw Error('Invalid import text.');return v;};
       const ids=new Set(),charges=input.charges.map(p=>{if(!p||!/^PC-\d+$/.test(p.code)||!p.title||typeof p.fine!=='number'||!Number.isFinite(p.fine)||typeof p.jail!=='number'||!Number.isFinite(p.jail))throw Error('Invalid charge.');if(ids.has(p.code))throw Error('Duplicate charge code in file.');ids.add(p.code);for(const k of ['category','title','classification','bail','description','descriptionEl'])str(p[k]||'',5000);return chargeData(p);});
-      const cases=input.cases.map(o=>{if(!o||!/^[-_A-Za-z0-9]{10,150}$/.test(o.sourceId)||ids.has(o.sourceId))throw Error('Invalid or duplicate Drive source ID.');ids.add(o.sourceId);if(o.sourceUrl!=='https://docs.google.com/document/d/'+o.sourceId+'/edit')throw Error('Invalid source URL.');return {sourceId:o.sourceId,sourceUrl:o.sourceUrl,title:str(o.title,500),fileNo:str(o.fileNo||'',200),lead:str(o.lead||'',300),leadBadge:str(o.leadBadge||'',100),summary:str(o.summary,150000),sourceKind:['template','reference','report'].includes(o.sourceKind)?o.sourceKind:'report',sourceCreatedAt:str(o.sourceCreatedAt||'',100),sourceModifiedAt:str(o.sourceModifiedAt||'',100)};});
+      const pdf=input.format==='cid-pdf-import-v1';
+      if(pdf&&input.charges.length)throw Error('PDF import cannot contain charges.');
+      const cases=input.cases.map(o=>{if(!o||!(pdf?/^[a-f0-9]{64}$/:/^[-_A-Za-z0-9]{10,150}$/).test(o.sourceId)||ids.has(o.sourceId))throw Error('Invalid or duplicate Drive source ID.');ids.add(o.sourceId);if(pdf?!!o.sourceUrl:o.sourceUrl!=='https://docs.google.com/document/d/'+o.sourceId+'/edit')throw Error('Invalid source URL.');return {sourceType:pdf?'pdf':'drive',sourceFileName:pdf?str(o.sourceFileName,500):'',sourceId:o.sourceId,sourceUrl:o.sourceUrl,title:str(o.title,500),fileNo:str(o.fileNo||'',200),lead:str(o.lead||'',300),leadBadge:str(o.leadBadge||'',100),summary:str(o.summary,150000),sourceKind:['template','reference','report'].includes(o.sourceKind)?o.sourceKind:'report',sourceCreatedAt:str(o.sourceCreatedAt||'',100),sourceModifiedAt:str(o.sourceModifiedAt||'',100)};});
       return {charges,cases};
     };
     const readPreparedImport=async e=>{if(importRunning.value)return;const file=e.target.files?.[0];e.target.value='';preparedImport.value=null;importMessage.value='';if(!file)return;try{if(file.size>5000000)throw Error('Import file exceeds 5 MB.');preparedImport.value=validatePreparedImport(JSON.parse(await file.text()));importMessage.value='Ready to import. Review the list, then import missing records.';}catch(err){importMessage.value=err.message;}};
     const runPreparedImport=async()=>{
       if(importRunning.value||!preparedImport.value)return;
       if(!isAdmin.value||level('cases')!=='edit'||level('penal')!=='edit'){importMessage.value='Administrator access and edit permission for Case Files and Penal Code are required.';return;}
-      importRunning.value=true;const result={charges:0,cases:0,skipped:0,errors:[]};
+      importRunning.value=true;const result={charges:0,cases:0,appended:0,skipped:0,errors:[]};
       try{
         // Read existing records before any mutation. Preserve live records and Trash.
         const [caseSnap,chargeSnap,trashSnap]=await Promise.all([fdb.collection('records').where('col','==','cases').get(),fdb.collection('penal').get(),fdb.collection('trash').get()]);
@@ -1324,10 +1326,20 @@ const app=createApp({
           try{const ref=fdb.collection('penal').doc('sheet_'+p.code);const added=await fdb.runTransaction(async tx=>{const snap=await tx.get(ref);if(snap.exists)return false;tx.set(ref,{...p,source:'Google Sheets Penal Code'});return true;});if(added){result.charges++;existingCharges.push(p);}else result.skipped++;}catch(err){result.errors.push(p.code+': '+err.message);}
         }
         for(const o of preparedImport.value.cases){
-          if(caseMatch(o)){result.skipped++;continue;}
-          try{const record={...o,id:'drive_'+o.sourceId,col:'cases',status:'Not recorded',gallery:[],links:[],files:[{id:'drive_source_'+o.sourceId,name:'Original Drive document — '+o.title,url:o.sourceUrl,type:'link',size:0,date:Date.now(),by:user.value.name}],by:user.value.name,ts:Date.parse(o.sourceCreatedAt)||Date.now()};const person=officerMatch(o.lead);if(person){record.leadUid=person.id;if(!record.leadBadge)record.leadBadge=person.badge||'';}await saveRaw(record,true);recs[record.id]=record;existingCases.push(record);result.cases++;}catch(err){result.errors.push((o.fileNo||o.title)+': '+err.message);}
+          const pdf=o.sourceType==='pdf',recordId=(pdf?'pdf_':'drive_')+o.sourceId;
+          if(pdf){
+            const prior=existingCases.find(d=>d.id===recordId||d.sourceId===o.sourceId||(d.pdfImports||[]).some(entry=>entry.sourceId===o.sourceId));
+            if(prior||trashed.some(d=>d.id===recordId||d.record?.sourceId===o.sourceId||(d.record?.pdfImports||[]).some(entry=>entry.sourceId===o.sourceId)||(d.col==='cases'&&o.fileNo&&norm(d.record?.fileNo)===norm(o.fileNo)))){result.skipped++;continue;}
+            const matches=o.fileNo?existingCases.filter(d=>norm(d.fileNo)===norm(o.fileNo)&&!isWorkspaceEntry(d)):[];
+            if(matches.length>1){result.errors.push(o.fileNo+': multiple existing cases share this file number; review before retry.');continue;}
+            if(matches.length===1){
+              try{const before=matches[0],updated={...before,summary:[before.summary,'## Imported PDF report - '+o.sourceFileName,o.summary].filter(Boolean).join('\n\n'),pdfImports:[...(before.pdfImports||[]),{sourceId:o.sourceId,sourceFileName:o.sourceFileName,lead:o.lead,leadBadge:o.leadBadge,importedAt:Date.now(),importedBy:user.value.name,attachmentsPending:true}]};await saveRaw(updated);recs[updated.id]=updated;Object.assign(before,updated);result.appended++;}catch(err){result.errors.push((o.fileNo||o.title)+': '+err.message);}
+              continue;
+            }
+          }else if(caseMatch(o)){result.skipped++;continue;}
+          try{const record={...o,id:recordId,col:'cases',status:'Not recorded',caseType:'Standard',gallery:[],links:[],files:pdf?[]:[{id:'drive_source_'+o.sourceId,name:'Original Drive document — '+o.title,url:o.sourceUrl,type:'link',size:0,date:Date.now(),by:user.value.name}],by:user.value.name,ts:Date.parse(o.sourceCreatedAt)||Date.now()};if(pdf)record.pdfImports=[{sourceId:o.sourceId,sourceFileName:o.sourceFileName,importedAt:Date.now(),importedBy:user.value.name,attachmentsPending:true}];const person=officerMatch(o.lead);if(person){record.leadUid=person.id;if(!record.leadBadge)record.leadBadge=person.badge||'';}await saveRaw(record,true);recs[record.id]=record;existingCases.push(record);result.cases++;}catch(err){result.errors.push((o.fileNo||o.title)+': '+err.message);}
         }
-        importMessage.value='Imported '+result.charges+' charges and '+result.cases+' Case Files. Skipped '+result.skipped+' existing records.'+(result.errors.length?'\n'+result.errors.length+' failed; retry safely to continue.\n'+result.errors.join('\n'):'');
+        importMessage.value='Imported '+result.charges+' charges and '+result.cases+' Case Files. Skipped '+result.skipped+' existing records.'+(result.appended?' Appended '+result.appended+' PDF reports to existing Case Files.':'')+(preparedImport.value.cases.some(o=>o.sourceType==='pdf')?' PDF images and original attachments still require hosted links.':'')+(result.errors.length?'\n'+result.errors.length+' failed; retry safely to continue.\n'+result.errors.join('\n'):'');
       }catch(err){importMessage.value='Import stopped: '+err.message+' Retry safely to continue.';}finally{importRunning.value=false;}
     };
 
