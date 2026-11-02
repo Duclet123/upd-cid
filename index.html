@@ -268,7 +268,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           <div class="hud p-6 md:p-8 flex flex-wrap items-center justify-between gap-4">
             <div><h2 class="text-xl font-title font-bold text-emerald-400 uppercase">Photographic Evidence</h2><p class="text-sm text-slate-400 font-mono mt-1">Every photo uploaded anywhere in the system, with its details. {{ evidenceList.length }} photos.</p></div>
             <div class="flex flex-wrap gap-3 w-full md:w-auto">
-              <input v-model="q" placeholder="Search title, notes, place, agent..." class="inp !w-full md:!w-72">
+              <input v-model="q" placeholder="Search title, notes, place, detective..." class="inp !w-full md:!w-72">
               <select v-model="evSrc" class="inp !w-full md:!w-56"><option value="">All sources</option><option v-for="(c,k) in cfg.collections" :key="k" :value="k">{{ c.label }}</option><option value="_map">Map locations</option></select></div>
           </div>
           <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -413,12 +413,12 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           <div v-if="atab==='registries'" class="space-y-6 font-mono text-sm">
             <div class="hud p-6 md:p-8 space-y-4"><h3 class="text-base font-title font-bold text-white uppercase">Create New Registry</h3>
               <div class="grid md:grid-cols-3 gap-4"><input v-model="nr.label" placeholder="Registry name" class="inp"><input v-model="nr.fields" placeholder="Fields: Name, Address, Notes:a, Active:b" class="inp"><button @click="addRegistry" class="btn !bg-emerald-600">Create</button></div>
-              <p class="text-slate-500 text-xs">:a = long text (enables templates), :b = checkbox, :u = select agent, :c = multiple citizens, :s = single citizen, :o = roster/manual officer.</p></div>
+              <p class="text-slate-500 text-xs">:a = long text (enables templates), :b = checkbox, :u = select detective, :c = multiple citizens, :s = single citizen, :o = roster/manual officer.</p></div>
             <div v-for="(c,k) in cfg.collections" :key="k" class="hud p-6 space-y-3">
               <div class="flex flex-wrap gap-4 items-center"><input v-model="c.label" class="inp !w-64 font-bold"><input v-model="c.icon" class="inp !w-64" title="Font Awesome classes"><span class="flex-1"></span>
                 <button v-if="!c.builtin" @click="delRegistry(k)" class="del py-3">Delete registry</button><span v-else class="text-slate-600 uppercase tracking-widest text-xs">built-in module</span></div>
               <div v-for="(f,i) in c.fields" :key="f.k" class="flex flex-wrap gap-2 items-center bg-bg p-2 rounded-lg border border-purple-950">
-                <span class="text-slate-600 w-6 text-center font-bold">{{ i+1 }}</span><input v-model="f.l" class="inp !w-48"><select v-model="f.t" class="inp !w-48"><option value="t">Short text</option><option value="a">Long text</option><option value="b">Checkbox</option><option value="u">Select Agent</option><option value="c">Multiple citizens</option><option value="s">Single citizen</option><option value="o">Roster / manual officer</option><option value="k">Case File</option><option value="r">Reliability</option><option value="d">Date</option></select>
+                <span class="text-slate-600 w-6 text-center font-bold">{{ i+1 }}</span><input v-model="f.l" class="inp !w-48"><select v-model="f.t" class="inp !w-48"><option value="t">Short text</option><option value="a">Long text</option><option value="b">Checkbox</option><option value="u">Select Detective</option><option value="c">Multiple citizens</option><option value="s">Single citizen</option><option value="o">Roster / manual officer</option><option value="k">Case File</option><option value="r">Reliability</option><option value="d">Date</option></select>
                 <button @click="moveField(c,i,-1)" class="btn !py-2 !bg-slate-700">↑</button><button @click="moveField(c,i,1)" class="btn !py-2 !bg-slate-700">↓</button><button @click="delField(c,i)" class="del !py-2">✕</button></div>
               <button @click="addField(c)" class="btn !bg-slate-700 mt-2">+ Add field</button>
             </div>
@@ -518,7 +518,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
   <div class="hud p-6 md:p-8 max-w-sm w-full space-y-5 font-mono text-sm border border-purple-500/30 shadow-[0_0_50px_rgba(147,51,234,0.15)]">
     <div class="text-center space-y-2 mb-6">
         <img :src="LOGO" class="w-16 h-16 mx-auto mb-4 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" onerror="this.style.display='none'">
-        <h3 class="text-xl font-title font-bold text-white uppercase tracking-widest">Agent Access</h3>
+        <h3 class="text-xl font-title font-bold text-white uppercase tracking-widest">Detective Access</h3>
         <p class="text-tc text-xs">U.P.D. C.I.D. Secure Terminal</p>
     </div>
     
@@ -595,7 +595,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           <label v-else-if="f.t==='b'" class="flex items-center gap-3 mt-1 cursor-pointer w-max" :class="recMode==='edit'?'p-3 border border-purple-950 rounded-xl bg-panel':''"><input type="checkbox" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="w-5 h-5 accent-tc"><span :class="recMode==='edit'?'text-white':'text-tc font-bold'">{{ rec.obj[f.k]?'Yes':'No' }}</span></label>
           
           <select v-else-if="f.t==='u'" v-model="rec.obj[f.k]" @change="assignLead(rec.obj,f.k,$event.target.value)" :disabled="recMode!=='edit'||!canEditRec" class="inp">
-             <option value="">-- Select Agent --</option>
+             <option value="">-- Select Detective --</option>
              <option v-if="rec.obj[f.k]&&!accounts.some(a=>a.name===rec.obj[f.k])" :value="rec.obj[f.k]">{{ rec.obj[f.k] }} (previous assignment)</option>
              <option v-for="a in accounts" :key="a.id" :value="a.name">{{ a.name }} · {{ a.badge }}</option>
           </select>
@@ -819,6 +819,11 @@ const renderText=value=>{
   flushParagraph();flushList();flushQuote();return html||'<p>—</p>';
 };
 const DEFAULT_AVATAR='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="200" viewBox="0 0 160 200"><rect width="160" height="200" fill="#140c1f"/><circle cx="80" cy="70" r="30" fill="#a855f7"/><path d="M25 185v-25a55 55 0 01110 0v25" fill="#a855f7"/></svg>');
+// Normalize legacy display labels without changing stored keys or assignments.
+const detectiveLabel=value=>String(value??'').replace(/\bagents?\b/gi,word=>{
+  const replacement=word.toLowerCase()==='agents'?'detectives':'detective';
+  return word===word.toUpperCase()?replacement.toUpperCase():word[0]===word[0].toUpperCase()?replacement[0].toUpperCase()+replacement.slice(1):replacement;
+});
 const normalizeConfig=data=>{
   const defaults=defCfg(),out={perms:data.perms||{},templates:data.templates||defaults.templates,collections:{...defaults.collections,...(data.collections||{})}};
   const warrant=out.collections.warrants;warrant.label='Draft Warrants';
@@ -837,6 +842,10 @@ const normalizeConfig=data=>{
   for(const key of ['cases','organizations','interrogations','reports']){upsert(key,F('infoReliability','Information reliability','r'));if(!['cases','organizations'].includes(key))upsert(key,F('infoSource','Source / reference'));upsert(key,F('infoDate','Information date','d'));}
   upsert('interrogations',F('officer','Interviewing officer','o'));upsert('interrogations',F('subjectCitizen','Citizen','s'));
   upsert('interrogations',F('videoUrl','Recording link'));upsert('interrogations',F('transcript','Transcript','a'));
+  for(const collection of Object.values(out.collections)){
+    collection.label=detectiveLabel(collection.label);
+    collection.fields=collection.fields.map(field=>({...field,l:detectiveLabel(field.l)}));
+  }
   return out;
 };
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=()=>rej(new Error('load'));i.src=src;});
@@ -960,10 +969,10 @@ const app=createApp({
     const rosterData=a=>({name:a.name||'',badge:a.badge||'',rank:a.rank||'',photo:a.photo||''});
     const syncRoster=async()=>{try{const snap=await fdb.collection('users').get();const batches=[];let batch=fdb.batch(),n=0;for(const d of snap.docs){batch.set(fdb.collection('roster').doc(d.id),rosterData(d.data()));if(++n===400){batches.push(batch.commit());batch=fdb.batch();n=0;}}if(n)batches.push(batch.commit());await Promise.all(batches);}catch(e){fail(e);}};
     const saveAcc=async a=>{if(!isAdmin.value)return;try{const b=fdb.batch();b.update(fdb.collection('users').doc(a.id),rosterData(a));b.set(fdb.collection('roster').doc(a.id),rosterData(a));await b.commit();}catch(e){fail(e);}};
-    const pwInfo=()=>alert('Firebase Client limits changing another user\'s password directly. To change an Agent\'s password, they must login and use "Change My Password", or you must delete and reissue their credentials.');
+    const pwInfo=()=>alert('Firebase Client limits changing another user\'s password directly. To change an Detective\'s password, they must login and use "Change My Password", or you must delete and reissue their credentials.');
     const changePw=async()=>{const old=prompt('Current password:');if(!old)return;const nw=prompt('New password (min 6 characters):');if(!nw||nw.length<6)return;
       try{const u=fauth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,old));await u.updatePassword(nw);alert('Password changed successfully.');}catch(e){fail(e);}};
-    const delAcc=a=>{if(a.id===user.value.id)return alert('You cannot remove yourself.');if(confirm('Remove this agent\'s access?')){const b=fdb.batch();b.delete(fdb.collection('users').doc(a.id));b.delete(fdb.collection('roster').doc(a.id));b.commit().catch(fail);}};
+    const delAcc=a=>{if(a.id===user.value.id)return alert('You cannot remove yourself.');if(confirm('Remove this detective\'s access?')){const b=fdb.batch();b.delete(fdb.collection('users').doc(a.id));b.delete(fdb.collection('roster').doc(a.id));b.commit().catch(fail);}};
 
     const listenRecords=()=>{
       unsubs.forEach(f=>f());unsubs=[];Object.keys(recs).forEach(k=>delete recs[k]);
@@ -1002,7 +1011,7 @@ const app=createApp({
       if(profUnsub){profUnsub();profUnsub=null;}
       if(!u){clearTimeout(watch.r);clearTimeout(watch.t);if(adminAccountsUnsub){adminAccountsUnsub();adminAccountsUnsub=null;}if(historyUnsub){historyUnsub();historyUnsub=null;}trashUnsubs.forEach(f=>f());trashUnsubs=[];trashRows.value=[];historyRows.value=[];historyOpen.value=false;comparison.value=null;globalOpen.value=false;globalQuery.value='';user.value=null;rec.value=zoom.value=pdoc.value=null;mResults.value=[];mImg.value='';mStatus.value='';accounts.value=[];tab.value='dashboard';listenRecords();fdb.collection('roster').get().then(x=>{if(!user.value)accounts.value=x.docs.map(d=>({...d.data(),id:d.id}));}).catch(fail);return;}
       profUnsub=fdb.collection('users').doc(u.uid).onSnapshot(async s=>{
-        if(!s.exists){loginError.value='This login has no agent profile.';showLogin.value=true;await fauth.signOut();return;}
+        if(!s.exists){loginError.value='This login has no detective profile.';showLogin.value=true;await fauth.signOut();return;}
         const was=!!user.value,d=s.data();user.value={id:u.uid,username:d.username,name:d.name||d.username,badge:d.badge,rank:d.rank,photo:d.photo||''};
         if(!was){listenRecords();} if(isAdmin.value){loadAdminAccounts();syncRoster();}
       },fail);
@@ -1224,7 +1233,7 @@ const app=createApp({
       return {name:person.name,title:person.rank,badge:person.badge||''};
     };
     const makeSignatures=o=>{
-      const primary=user.value?{name:user.value.name,title:user.value.rank,badge:user.value.badge||''}:{name:'',title:'Authorized U.P.D. Agent',badge:''};
+      const primary=user.value?{name:user.value.name,title:user.value.rank,badge:user.value.badge||''}:{name:'',title:'Authorized U.P.D. Detective',badge:''};
       return [primary,directorSignature('')];
     };
     const hasPrintValue=value=>{if(value===null||value===undefined)return false;if(typeof value==='string')return value.trim().length>0;if(typeof value==='number')return Number.isFinite(value);if(typeof value==='boolean')return true;if(Array.isArray(value))return value.some(hasPrintValue);if(typeof value==='object')return Object.values(value).some(hasPrintValue);return false;};

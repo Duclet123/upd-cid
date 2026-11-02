@@ -115,7 +115,7 @@ normalized uniqueness, ταυτόχρονες διπλές εγγραφές κα
 δοκιμή με τις πραγματικές GTA εικόνες στο hosting.
 
 ΥΠΑΡΧΟΝΤΕΣ ΠΕΡΙΟΡΙΣΜΟΙ
-Αφαίρεση agent δεν διαγράφει Firebase Authentication account.
+Αφαίρεση detective δεν διαγράφει Firebase Authentication account.
 Import Penal Code δεν έχει συνολικό rollback: κράτησε αντίγραφο πριν εισαγωγή.
 Πηγή/αξιοπιστία είναι καταγραφή χρήστη και δεν αποδεικνύουν αυτομάτως ένα στοιχείο.
 
