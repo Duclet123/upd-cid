@@ -146,13 +146,11 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           </div>
 
           <!-- QUICK STATS -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div v-if="user && level('warrants')!=='none'" class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Draft Warrants</p><p class="text-3xl font-mono font-bold text-red-400 mt-2">{{ itemsOf('warrants').length }}</p></div>
-            <template v-if="user">
-              <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Registered Citizens</p><p class="text-3xl font-mono font-bold text-tc mt-2">{{ itemsOf('citizens').length }}</p></div>
-              <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Registered Firearms</p><p class="text-3xl font-mono font-bold text-amber-400 mt-2">{{ itemsOf('weapons').length }}</p></div>
-              <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Active Case Files</p><p class="text-3xl font-mono font-bold text-emerald-400 mt-2">{{ itemsOf('cases').length }}</p></div>
-            </template>
+          <div v-if="user" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Registered Citizens</p><p class="text-3xl font-mono font-bold text-tc mt-2">{{ itemsOf('citizens').length }}</p></div>
+            <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Registered Firearms</p><p class="text-3xl font-mono font-bold text-amber-400 mt-2">{{ itemsOf('weapons').length }}</p></div>
+            <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Case Files</p><p class="text-3xl font-mono font-bold text-emerald-400 mt-2">{{ itemsOf('cases').length }}</p></div>
+            <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Organisations</p><p class="text-3xl font-mono font-bold text-sky-400 mt-2">{{ itemsOf('organizations').length }}</p></div>
           </div>
 
           <section v-if="user&&level('cases')!=='none'" class="hud p-6 space-y-4"><div class="flex items-center justify-between gap-3"><h3 class="text-lg font-title font-bold text-white">Assigned to you <span class="text-tc">({{ myAssignments.length }})</span></h3><button @click="go('cases');leadFilter='__mine__'" class="btn !bg-slate-700 text-xs">View cases</button></div><p v-if="!myAssignments.length" class="text-sm text-slate-400">No active case files assigned to you.</p><button v-for="item in myAssignments.slice(0,8)" :key="item.id" @click="openRec(item)" class="w-full text-left flex justify-between gap-3 bg-bg p-3 border border-purple-950 rounded-xl"><span class="text-white">{{ item.fileNo }} · {{ item.title||'Untitled case' }}</span><span class="text-xs text-amber-300">{{ item.status||'Open' }}</span></button></section>
