@@ -1,0 +1,32 @@
+name: Discord encrypted backup
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Preview reads/counts the snapshot; send uploads encrypted backup parts to Discord'
+        type: choice
+        options:
+          - preview
+          - send
+        default: preview
+permissions:
+  contents: read
+concurrency:
+  group: cid-discord-backup
+  cancel-in-progress: false
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Export read-only Firestore snapshot and optionally send encrypted files
+        env:
+          FIREBASE_BACKUP_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_BACKUP_SERVICE_ACCOUNT }}
+          DISCORD_BACKUP_WEBHOOK_URL: ${{ secrets.DISCORD_BACKUP_WEBHOOK_URL }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          BACKUP_MODE: ${{ inputs.mode }}
+        run: node scripts/discord-backup.mjs

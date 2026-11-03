@@ -205,3 +205,6 @@ shows title, event date/time and findings, with related details in a disclosure.
 Save & close / Save & add another and Ctrl/Cmd+Enter support quick updates.
 Preview displays complete notes and separate event/recording dates. Escape closes
 the preview before closing its parent case. Entry list cards stay compact.
+
+Discord backup (χειροκίνητο preview/send, κρυπτογραφημένα αρχεία): δες DISCORD-BACKUP.md.
+Απαιτεί GitHub Secrets· δεν έχει ενεργοποιηθεί ωράριο ή αυτόματη διαγραφή αντιγράφων.

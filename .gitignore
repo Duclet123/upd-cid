@@ -4,3 +4,7 @@ node_modules/
 *service-account*.json
 firebase-debug.log
 firestore-debug.log
+
+*.cidbackup*
+*.manifest.json
+recovered*.json

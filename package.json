@@ -2,8 +2,9 @@
   "name": "upd-cid-terminal",
   "private": true,
   "scripts": {
-    "test": "node tests/templates.test.cjs && node tests/terminal.test.cjs && node --test tests/cleanup.test.mjs && node tests/organisation-timeline.test.cjs",
-    "trash:preview": "node scripts/empty-trash.mjs"
+    "test": "node tests/templates.test.cjs && node tests/terminal.test.cjs && node --test tests/cleanup.test.mjs && node tests/organisation-timeline.test.cjs && node --test tests/discord-backup.test.mjs",
+    "trash:preview": "node scripts/empty-trash.mjs",
+    "backup:preview": "node scripts/discord-backup.mjs"
   },
   "devDependencies": {
     "vue": "3.4.21"
