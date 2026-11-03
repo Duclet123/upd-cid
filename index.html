@@ -354,16 +354,17 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <div v-if="mImg" class="pt-4 border-t border-purple-950 flex flex-col md:flex-row gap-6 items-start">
                <img :src="mImg" class="max-h-64 rounded-2xl border-2 border-tc shadow-[0_0_15px_rgba(168,85,247,0.4)]">
                <div class="space-y-4">
-                  <button @click="runMatch" :disabled="mBusy" class="btn !bg-emerald-600 text-base py-3 px-8">{{ mBusy?'Analysing Subject...':'Initiate Database Search' }}</button>
+                  <button @click="runMatch" :disabled="mBusy" class="btn !bg-emerald-600 text-base py-3 px-8">{{ mBusy?'Comparing images…':'Search database' }}</button><button v-if="mBusy" @click="cancelMatch" class="record-action danger">Stop</button>
                   <p class="text-tc font-bold text-base">{{ mStatus }}</p>
-                  <p class="text-slate-500 text-xs">Database photos: {{ allPhotos.length }} · Local query photos are not uploaded.</p>
+                  <p class="text-slate-500 text-xs">Database photos: {{ uniqueEvidencePhotos.length }} · Local query photos are not uploaded.</p>
                </div>
             </div>
           </div>
           
+          <details v-if="mUnavailable.length" class="hud p-4 space-y-3"><summary class="cursor-pointer text-amber-300 text-sm">{{ mUnavailable.length }} images could not be analysed</summary><p class="text-xs text-slate-400">Some hosts allow an image preview but block reading its pixels. These images were unavailable for comparison; they are not confirmed non-matches.</p><div v-for="item in mUnavailable.slice(0,20)" :key="item.key||item.p.url" class="flex flex-wrap items-center justify-between gap-3 border-t border-purple-950 pt-3"><p class="text-xs text-slate-300">{{ item.name }}</p><div class="flex gap-2"><a :href="item.p.url" target="_blank" rel="noopener noreferrer" class="record-action">Open image</a><button type="button" @click="openOwner(item)" class="record-action">Open record</button></div></div></details>
           <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <div v-for="r in mResults" :key="r.p.id" class="hud p-5 flex gap-4 font-mono text-sm">
-              <img :src="r.p.url" class="w-32 h-32 object-cover rounded-xl cursor-pointer bg-black border border-slate-700" @click="openZoom(r.obj,r.i,false,r.owner)">
+            <div v-for="r in mResults" :key="r.key||r.p.url" class="hud p-5 flex gap-4 font-mono text-sm">
+              <img :src="r.p.url" class="w-32 h-32 object-cover rounded-xl cursor-pointer bg-black border border-slate-700" @click="openEvidencePhoto(r)">
               <div class="flex-1 space-y-1.5 flex flex-col justify-center">
                 <p class="text-white font-bold text-base">{{ r.name }}</p><p class="text-slate-400 text-xs">{{ r.srcLabel }}</p>
                 <p class="font-bold text-base" :class="r.score>=70?'text-emerald-400':r.score>=40?'text-amber-400':'text-slate-300'">Visual score: {{ r.score }} / 100</p>
@@ -491,7 +492,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
               </template>
               <p role="status" class="text-amber-300 whitespace-pre-wrap">{{ importMessage }}</p>
             </section>
-            <button @click="indexAll" :disabled="mBusy" class="btn !bg-purple-600 text-base py-3 px-6">Prepare visual search cache ({{ allPhotos.length }} photos)</button><p class="text-tc font-bold">{{ mStatus }}</p>
+            <button @click="indexAll" :disabled="mBusy" class="btn !bg-purple-600 text-base py-3 px-6">Prepare visual search cache ({{ uniqueEvidencePhotos.length }} photos)</button><p class="text-tc font-bold">{{ mStatus }}</p>
           </div>
         </div>
 
@@ -944,21 +945,27 @@ const normalizeConfig=data=>{
   }
   return out;
 };
-const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=()=>rej(new Error('load'));i.src=src;});
+const matcherTimeout=(promise,ms,label)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(label)),ms);timer?.unref?.();Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value);},error=>{clearTimeout(timer);reject(error);});});
+const loadImg=src=>matcherTimeout(new Promise((resolve,reject)=>{const image=new Image();image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>reject(Error('Image could not be read. The link may be unavailable or block CORS.'));image.src=src;}),8000,'Image loading timed out.');
 const toEmail=u=>u.trim().toLowerCase()+'@upd.internal';
 const toBlob=f=>new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);c.toBlob(b=>res(b),'image/jpeg',.82);};im.onerror=()=>res(null);im.src=fr.result;};fr.onerror=()=>res(null);fr.readAsDataURL(f);});
 const delStored=()=>{}; // External files are never deleted by this terminal.
 
 let modelsReady=null;
 const embeddings=new Map();
-const loadModels=()=>modelsReady||(modelsReady=(async()=>{await tf.ready();return mobilenet.load({version:2,alpha:1.0});})().catch(e=>{modelsReady=null;throw e;}));
+const loadModels=()=>modelsReady||(modelsReady=matcherTimeout((async()=>{if(typeof tf==='undefined'||typeof mobilenet==='undefined')throw Error('Advanced image model is unavailable.');await tf.ready();return mobilenet.load({version:2,alpha:1.0});})(),12000,'Advanced image model timed out.').catch(error=>{modelsReady=null;throw error;}));
 const cosine=(a,b)=>{let dot=0,aa=0,bb=0;for(let i=0;i<a.length;i++){dot+=a[i]*b[i];aa+=a[i]*a[i];bb+=b[i]*b[i];}return aa&&bb?Math.max(0,Math.min(1,dot/Math.sqrt(aa*bb))):0;};
 async function imageEmbedding(url){
   if(embeddings.has(url))return embeddings.get(url);
   const model=await loadModels(),image=await loadImg(url),tensor=model.infer(image,true);
-  try{const vector=Array.from(await tensor.data());if(embeddings.size>=500)embeddings.delete(embeddings.keys().next().value);embeddings.set(url,vector);return vector;}finally{tensor.dispose();}
+  try{const vector=Array.from(await matcherTimeout(tensor.data(),8000,'Image analysis timed out.'));if(!/^data:/i.test(url)){if(embeddings.size>=500)embeddings.delete(embeddings.keys().next().value);embeddings.set(url,vector);}return vector;}finally{tensor.dispose();}
 }
-async function indexPhoto(p){await imageEmbedding(p.url);}
+const visualDescriptors=new Map();
+function describeMatcherPixels(data,width,height){const pixels=new Float32Array(data.length/4*3);let target=0;for(let index=0;index<data.length;index+=4){const alpha=data[index+3]/255;for(let channel=0;channel<3;channel++)pixels[target++]=(data[index+channel]*alpha+255*(1-alpha))/255;}return {pixels,aspect:width/height};}
+function matcherVisualScore(a,b){if(!a?.pixels?.length||a.pixels.length!==b?.pixels?.length)return 0;let squared=0;for(let index=0;index<a.pixels.length;index++)squared+=(a.pixels[index]-b.pixels[index])**2;const distance=Math.sqrt(squared/a.pixels.length),shape=Math.min(1,Math.abs(Math.log((a.aspect||1)/(b.aspect||1))));return Math.max(0,Math.min(100,Math.round(100*(1-distance*1.6)*(1-shape*.2))));}
+async function imageVisualDescriptor(url){if(visualDescriptors.has(url))return visualDescriptors.get(url);const image=await loadImg(url),canvas=document.createElement('canvas');canvas.width=canvas.height=32;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw Error('Image comparison is unavailable in this browser.');context.drawImage(image,0,0,32,32);let pixels;try{pixels=context.getImageData(0,0,32,32).data;}catch(error){throw Error('Image host blocks pixel access (CORS).');}const descriptor=describeMatcherPixels(pixels,image.naturalWidth||image.width||32,image.naturalHeight||image.height||32);if(!/^data:/i.test(url)){if(visualDescriptors.size>=500)visualDescriptors.delete(visualDescriptors.keys().next().value);visualDescriptors.set(url,descriptor);}return descriptor;}
+async function indexPhoto(photo){return imageVisualDescriptor(photo.url);}
+
 
 const app=createApp({
   setup(){
@@ -972,7 +979,7 @@ const app=createApp({
     const citizenVehicleDrafts=ref([]);
     const galleryPickerOpen=ref(false),galleryPickerSearch=ref('');
     const rec=ref(null),recErr=ref(''),recMode=ref('preview'),gal=ref(null),zoom=ref(null),zs=ref(1),pdoc=ref(null),lightboxSrc=ref(null),lkCol=ref(''),lkId=ref(''),lkSearch=ref(''),evSrc=ref('');
-    const mImg=ref(''),mUrlInput=ref(''),mBusy=ref(false),mStatus=ref(''),mResults=ref([]);
+    const mImg=ref(''),mUrlInput=ref(''),mBusy=ref(false),mStatus=ref(''),mResults=ref([]),mUnavailable=ref([]);let matcherRun=0;
     const msOpen=ref(true),msq=ref(''),mOpen=reactive({gang:true,service:false,job:false,asset:false}),layerOn=reactive({gang:true,service:true,job:true,asset:true});
     let map=null,groups={},markers={},unsubs=[],profUnsub=null,accUnsub=null,remote=false,lastCfg='';
     let configQueue=Promise.resolve();
@@ -1110,7 +1117,7 @@ const app=createApp({
         recs[id]=incoming;
       });},e=>{recordLoads[key]='error';fail(e);})));
     };
-    watch(()=>JSON.stringify([user.value?.rank,Object.keys(cfg.collections),cfg.perms]),()=>{if(rec.value&&level(rec.value.obj.col)==='none'){clearTimeout(watch.r);rec.value=null;}if(cfg.collections[tab.value]&&level(tab.value)==='none')go('dashboard');if(!isAdmin.value&&adminAccountsUnsub){adminAccountsUnsub();adminAccountsUnsub=null;}mResults.value=[];comparison.value=null;if(historyUnsub){historyUnsub();historyUnsub=null;}historyOpen.value=false;historyRows.value=[];trashUnsubs.forEach(f=>f());trashUnsubs=[];trashRows.value=[];if(configured)listenRecords();if(tab.value==='trash')loadTrash();});
+    watch(()=>JSON.stringify([user.value?.rank,Object.keys(cfg.collections),cfg.perms]),()=>{if(rec.value&&level(rec.value.obj.col)==='none'){clearTimeout(watch.r);rec.value=null;}if(cfg.collections[tab.value]&&level(tab.value)==='none')go('dashboard');if(!isAdmin.value&&adminAccountsUnsub){adminAccountsUnsub();adminAccountsUnsub=null;}matcherRun++;mBusy.value=false;mResults.value=[];mUnavailable.value=[];comparison.value=null;if(historyUnsub){historyUnsub();historyUnsub=null;}historyOpen.value=false;historyRows.value=[];trashUnsubs.forEach(f=>f());trashUnsubs=[];trashRows.value=[];if(configured)listenRecords();if(tab.value==='trash')loadTrash();});
 
     const startPublic=()=>{
       fdb.collection('config').doc('main').onSnapshot(s=>{
@@ -1134,7 +1141,7 @@ const app=createApp({
     watch(()=>JSON.stringify(cfg),s=>{if(remote||!isAdmin.value||s===lastCfg)return;configSaveState.phase='pending';configSaveState.error='';clearTimeout(watch.t);watch.t=setTimeout(saveConfig,700);});
     const setUser=u=>{
       if(profUnsub){profUnsub();profUnsub=null;}
-      if(!u){clearTimeout(watch.r);clearTimeout(watch.t);if(adminAccountsUnsub){adminAccountsUnsub();adminAccountsUnsub=null;}if(historyUnsub){historyUnsub();historyUnsub=null;}trashUnsubs.forEach(f=>f());trashUnsubs=[];trashRows.value=[];historyRows.value=[];historyOpen.value=false;comparison.value=null;globalOpen.value=false;globalQuery.value='';user.value=null;rec.value=zoom.value=pdoc.value=null;mResults.value=[];mImg.value='';mStatus.value='';accounts.value=[];tab.value='dashboard';listenRecords();fdb.collection('roster').get().then(x=>{if(!user.value)accounts.value=x.docs.map(d=>({...d.data(),id:d.id}));}).catch(fail);return;}
+      if(!u){clearTimeout(watch.r);clearTimeout(watch.t);if(adminAccountsUnsub){adminAccountsUnsub();adminAccountsUnsub=null;}if(historyUnsub){historyUnsub();historyUnsub=null;}trashUnsubs.forEach(f=>f());trashUnsubs=[];trashRows.value=[];historyRows.value=[];historyOpen.value=false;comparison.value=null;globalOpen.value=false;globalQuery.value='';user.value=null;rec.value=zoom.value=pdoc.value=null;mResults.value=[];mUnavailable.value=[];mImg.value='';mStatus.value='';accounts.value=[];tab.value='dashboard';listenRecords();fdb.collection('roster').get().then(x=>{if(!user.value)accounts.value=x.docs.map(d=>({...d.data(),id:d.id}));}).catch(fail);return;}
       profUnsub=fdb.collection('users').doc(u.uid).onSnapshot(async s=>{
         if(!s.exists){loginError.value='This login has no detective profile.';showLogin.value=true;await fauth.signOut();return;}
         const was=!!user.value,d=s.data();user.value={id:u.uid,username:d.username,name:d.name||d.username,badge:d.badge,rank:d.rank,photo:d.photo||''};
@@ -1604,26 +1611,34 @@ const app=createApp({
     window.__openImg=s=>{lightboxSrc.value=s;};
     window.__addAt=(x,y)=>{if(!isAdmin.value)return;nl.x=+x;nl.y=+y;tab.value='admin';atab.value='map';};
 
-    const mFile=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const b=await toBlob(f);if(!b)return;const fr=new FileReader();fr.onload=()=>mImg.value=fr.result;fr.readAsDataURL(b);mResults.value=[];mStatus.value='';};
-    const mLink=()=>{const u=mUrlInput.value.trim();if(!/^https?:\/\//i.test(u))return;mImg.value=u;mUrlInput.value='';mResults.value=[];mStatus.value='';};
+    const cancelMatch=()=>{matcherRun++;mBusy.value=false;mStatus.value='Search stopped. Current results are retained.';};
+    const mFile=async event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;if(file.type&&!file.type.startsWith('image/')){showError('Choose an image file.');return;}cancelMatch();try{const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('Could not read the selected image.'));reader.readAsDataURL(file);});mImg.value=data;mResults.value=[];mUnavailable.value=[];mStatus.value='Image ready. Search the database.';}catch(error){mStatus.value=error.message;fail(error);}};
+    const mLink=()=>{const value=mUrlInput.value.trim(),source=recordingSource(value);if(!source){showError('Use a valid direct http(s) image link.');return;}cancelMatch();mImg.value=value;mUrlInput.value='';mResults.value=[];mUnavailable.value=[];mStatus.value='Image ready. Search the database.';};
     const runMatch=async()=>{
       if(mBusy.value||!mImg.value||level('matcher')==='none')return;
-      mBusy.value=true;mResults.value=[];const session=user.value?.id;
+      const loading=Object.keys(cfg.collections).some(key=>level(key)!=='none'&&['loading','error'].includes(recordLoads[key]));if(loading){mStatus.value='Registries are still loading or failed to load. Wait before searching.';showError(mStatus.value);return;}
+      const run=++matcherRun,session=user.value?.id,queryURL=mImg.value,photos=[...uniqueEvidencePhotos.value],results=new Map();mBusy.value=true;mResults.value=[];mUnavailable.value=[];
+      const active=()=>run===matcherRun&&user.value?.id===session&&level('matcher')!=='none';
+      const publish=()=>{if(active())mResults.value=[...results.values()].sort((a,b)=>b.score-a.score||Number(b.exact)-Number(a.exact)).slice(0,40);};
+      const resultFor=(entry,score,detail,exact=false)=>{if(!active()||!Number.isFinite(score))return;const key=photoURLKey(entry.p.url),previous=results.get(key);if(!previous||score>=previous.score)results.set(key,{...entry,score,detail,exact});publish();};
+      const work=async(items,worker,concurrency=3)=>{let cursor=0;await Promise.all(Array.from({length:Math.min(concurrency,items.length)},async()=>{while(active()&&cursor<items.length){const entry=items[cursor++];await worker(entry);}}));};
       try{
-        mStatus.value='Loading visual similarity model...';const query=await imageEmbedding(mImg.value);
-        const photos=[...uniqueEvidencePhotos.value];let skipped=0,n=0;const results=[];
-        for(const e of photos){
-          if(user.value?.id!==session)return;
-          mStatus.value=`Comparing ${++n}/${photos.length}...`;
-          try{const vector=await imageEmbedding(e.p.url),score=Math.round(cosine(query,vector)*100);results.push({...e,score,detail:'Universal visual similarity score / 100'});}catch(err){skipped++;}
-          await new Promise(resolve=>setTimeout(resolve,0));
-        }
-        if(user.value?.id!==session)return;
-        mResults.value=results.sort((a,b)=>b.score-a.score).slice(0,40);
-        mStatus.value=`${results.length} photos compared. ${skipped} unavailable (broken link / CORS). Results rank visual resemblance, not identity probability.`;
-      }catch(e){mStatus.value='Cannot analyse image: '+e.message+'. Use a direct image URL that permits CORS.';}finally{mBusy.value=false;}
+        if(!photos.length){mStatus.value='No accessible database photos are loaded yet.';return;}
+        for(const entry of photos)if(photoURLKey(entry.p.url)===photoURLKey(queryURL))resultFor(entry,100,'Same image link',true);
+        if(results.size===photos.length){mStatus.value='Same image found in the database.';return;}
+        mStatus.value=results.size?'Same image link found. Comparing the remaining photos…':'Reading the query image…';
+        let query;try{query=await imageVisualDescriptor(queryURL);}catch(error){if(active()){mStatus.value=results.size?'Same image link found. Other comparisons could not run: '+error.message:'Cannot read the query image: '+error.message;showError(mStatus.value);}return;}
+        if(!active())return;
+        // Basic visual results are shown immediately while the advanced model loads independently.
+        const advancedQuery=imageEmbedding(queryURL).then(vector=>({vector})).catch(error=>({error}));let compared=0;
+        const candidates=photos.filter(entry=>!results.get(photoURLKey(entry.p.url))?.exact);
+        await work(candidates,async entry=>{try{const descriptor=await imageVisualDescriptor(entry.p.url);resultFor(entry,matcherVisualScore(query,descriptor),'Pixel appearance similarity / 100');}catch(error){}if(active())mStatus.value='Visual comparison '+(++compared)+' / '+candidates.length+' · '+results.size+' results';});
+        if(!active())return;mStatus.value='Improving visual ranking. Basic results are available.';const advanced=await advancedQuery;if(!active())return;
+        if(advanced.vector){let analysed=0;await work(candidates,async entry=>{try{const vector=await imageEmbedding(entry.p.url),score=Math.round(cosine(advanced.vector,vector)*100);resultFor(entry,Math.min(99,Math.round(score*.95)),'Advanced visual similarity / 100');}catch(error){}if(active())mStatus.value='Advanced comparison '+(++analysed)+' / '+candidates.length+' · '+results.size+' results';},2);}
+        if(active()){mUnavailable.value=photos.filter(entry=>!results.has(photoURLKey(entry.p.url)));const unavailable=mUnavailable.value.length;mStatus.value=results.size+' photos compared. '+unavailable+' could not be read'+(unavailable?' (unavailable link / CORS)':'')+'. '+(advanced.error?'Basic visual comparison used; the advanced model could not load. ':'')+'Scores rank image resemblance, not identity probability.';if(!results.size)showError('No database images could be read for comparison. Check their direct links and CORS permissions.');}
+      }catch(error){if(active()){mStatus.value='Image search failed: '+error.message;fail(error);}}finally{if(run===matcherRun)mBusy.value=false;}
     };
-    const indexAll=async()=>{if(mBusy.value)return;mBusy.value=true;let n=0,failed=0;try{for(const e of allPhotos.value){try{await indexPhoto(e.p);n++;}catch(e){failed++;}}mStatus.value=`Cached ${n} photos for this browser session; ${failed} unavailable.`;}catch(e){fail(e);}finally{mBusy.value=false;}};
+    const indexAll=async()=>{if(mBusy.value)return;const run=++matcherRun;mBusy.value=true;let cached=0,failed=0;try{for(const entry of uniqueEvidencePhotos.value){if(run!==matcherRun)return;try{await indexPhoto(entry.p);cached++;}catch(error){failed++;}if(run!==matcherRun)return;mStatus.value='Preparing images: '+cached+' ready, '+failed+' unavailable';}mStatus.value='Prepared '+cached+' unique photos; '+failed+' unavailable.';}finally{if(run===matcherRun)mBusy.value=false;}};
 
     const closeZoom=async()=>{document.activeElement?.blur?.();await nextTick();zoom.value=null;};
     const dismissTop=async()=>{
@@ -1654,10 +1669,10 @@ const app=createApp({
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
     return{photoLocations,uniqueEvidencePhotos,openEvidencePhoto,openPhotoLocation,historyValue,formatDate,changeZoomPhoto,photoInfoState,showError,closeErrorToast,galleryPickerOpen,galleryPickerSearch,galleryChoices,selectGalleryPhoto,rememberRegistry,saveConfig,configSaveState,printOfficer,printPhotos,openRegistryPhoto,changePhotoZoom,citizenVehicleDrafts,addCitizenVehicle,removeCitizenVehicle,retryCitizenVehicles,requestTypeLabel,cardCategory,cardStatus,cardStatusClass,cardCode,cardSummary,cardFields,emptyTrash,recordName,documentDetails,togglePrintAttachments,deleteCaseEntry,citizenProperties,addCitizenProperty,removeCitizenProperty,isLongCase,isWorkspaceEntry,wideRecord,caseWorkspace,caseWorkspaceTab,caseEntries,caseLinkChoices,caseRelatedRecords,saveCaseEntry,loadCaseEntryHistory,openCaseRelated,printCaseEntry,hasPrintValue,recordingSource,interrogationRecordings,recordFormSections,scrollCitizenTimeline,fieldsForRecord,penalCategory,penalClass,penalSort,penalCollapsed,penalCategories,penalClasses,penalGroups,penalAmount,penalClassStyle,resetPenalFilters,penalEditorOpen,penalEditorSearch,penalEditorCategory,penalDraft,penalDirty,penalSaving,penalEditorError,penalEditorMessage,penalEditorItems,openPenalEditor,closePenalEditor,selectPenalDraft,newPenalDraft,resetPenalDraft,savePenalDraft,deletePenalDraft,trapPenalFocus,penal,preparedImport,importRunning,importMessage,validatePreparedImport,readPreparedImport,runPreparedImport,chargeData,RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
-      mImg,mUrlInput,mBusy,mStatus,mResults,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
+      mImg,mUrlInput,mBusy,mStatus,mResults,mUnavailable,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,lkSearch,attach,detach,
       zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,
-      addTpl,delTpl,addRegistry,delRegistry,addField,delField,moveField,saveLoc,addLoc,delLoc,fixMap,flyTo,mFile,mLink,runMatch,indexAll};
+      addTpl,delTpl,addRegistry,delRegistry,addField,delField,moveField,saveLoc,addLoc,delLoc,fixMap,flyTo,mFile,mLink,runMatch,cancelMatch,indexAll};
   }
 });
 
