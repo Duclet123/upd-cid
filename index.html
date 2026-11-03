@@ -761,13 +761,21 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
       </div>
       <aside v-if="!zoom.profileOnly" class="photo-editor-panel" aria-label="Photo details editor">
         <div class="photo-editor-fields">
-          <div class="photo-editor-field"><label for="photo-info-title">Title</label><input id="photo-info-title" v-model="zp.title" @change="persistZoom" :disabled="!zoom.edit" placeholder="Photo title" class="inp"></div>
-          <div class="photo-editor-field"><label for="photo-info-caption">Caption</label><textarea id="photo-info-caption" v-model="zp.caption" @change="persistZoom" :disabled="!zoom.edit" rows="2" placeholder="Caption shown with the photo" class="inp"></textarea></div>
-          <div class="photo-editor-field"><p id="photo-info-notes-label">Notes</p><text-editor v-model="zp.desc" @change="persistZoom" :disabled="!zoom.edit" :rows="5" aria-labelledby="photo-info-notes-label"></text-editor></div>
-          <div class="photo-editor-field-pair"><div class="photo-editor-field"><label for="photo-info-taken">Date taken</label><date-input id="photo-info-taken" v-model="zp.taken" @change="persistZoom" :disabled="!zoom.edit" class="inp"></date-input></div><div class="photo-editor-field"><label for="photo-info-location">Location</label><input id="photo-info-location" v-model="zp.place" @change="persistZoom" :disabled="!zoom.edit" placeholder="Photo location" class="inp"></div></div>
+          <div class="photo-editor-field">
+            <p>Photo link</p>
+            <div class="flex items-center gap-2 min-w-0">
+              <a v-if="recordingSource(zp.url)" :href="zp.url" target="_blank" rel="noopener noreferrer" class="min-w-0 flex-1 break-all text-xs text-tc hover:underline">{{ zp.url }}</a>
+              <span v-else class="min-w-0 flex-1 break-all text-xs text-slate-400">{{ zp.url }}</span>
+              <button v-if="zoom.edit" type="button" @click="editPhotoLink" :disabled="photoLinkBusy||photoInfoState.phase==='saving'" class="record-icon shrink-0" title="Edit photo link" aria-label="Edit photo link"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+            </div>
+          </div>
+          <div class="photo-editor-field"><label for="photo-info-title">Title</label><input id="photo-info-title" v-model="zp.title" @change="persistZoom" :disabled="!zoom.edit||photoLinkBusy" placeholder="Photo title" class="inp"></div>
+          <div class="photo-editor-field"><label for="photo-info-caption">Caption</label><textarea id="photo-info-caption" v-model="zp.caption" @change="persistZoom" :disabled="!zoom.edit||photoLinkBusy" rows="2" placeholder="Caption shown with the photo" class="inp"></textarea></div>
+          <div class="photo-editor-field"><p id="photo-info-notes-label">Notes</p><text-editor v-model="zp.desc" @change="persistZoom" :disabled="!zoom.edit||photoLinkBusy" :rows="5" aria-labelledby="photo-info-notes-label"></text-editor></div>
+          <div class="photo-editor-field-pair"><div class="photo-editor-field"><label for="photo-info-taken">Date taken</label><date-input id="photo-info-taken" v-model="zp.taken" @change="persistZoom" :disabled="!zoom.edit||photoLinkBusy" class="inp"></date-input></div><div class="photo-editor-field"><label for="photo-info-location">Location</label><input id="photo-info-location" v-model="zp.place" @change="persistZoom" :disabled="!zoom.edit||photoLinkBusy" placeholder="Photo location" class="inp"></div></div>
           <section v-if="photoLocations.length" class="border-t border-purple-950 pt-4 space-y-2" aria-label="Photo attachment locations"><p class="text-[11px] font-bold text-purple-300">Attached in · {{ photoLocations.length }}</p><button v-for="location in photoLocations" :key="location.key" type="button" @click="openPhotoLocation(location)" class="w-full text-left rounded-lg border border-purple-950 bg-bg p-3 hover:border-purple-500"><span class="block text-[10px] text-slate-500">{{ location.srcLabel }} · {{ location.kinds.join(', ') }}</span><span class="block text-xs text-slate-200 mt-1 break-words">{{ location.name }} <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-purple-400" aria-hidden="true"></i></span></button></section>
         </div>
-        <footer v-if="zoom.edit" class="photo-editor-footer"><div class="photo-editor-footer-actions"><button type="button" @click="persistZoom" :disabled="photoInfoState.phase==='saving'" class="record-action save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>{{ photoInfoState.phase==='saving'?'Saving…':'Save info' }}</button><button v-if="!zoom.noDelete" type="button" @click="delPhoto" class="record-icon danger" title="Delete photo" aria-label="Delete photo"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button></div><p v-if="photoInfoState.message" role="status" class="photo-editor-status" :class="{error:photoInfoState.phase==='error'}">{{ photoInfoState.message }}</p></footer>
+        <footer v-if="zoom.edit" class="photo-editor-footer"><div class="photo-editor-footer-actions"><button type="button" @click="persistZoom" :disabled="photoLinkBusy||photoInfoState.phase==='saving'" class="record-action save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>{{ photoInfoState.phase==='saving'?'Saving…':'Save info' }}</button><button v-if="!zoom.noDelete" type="button" @click="delPhoto" class="record-icon danger" title="Delete photo" aria-label="Delete photo"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button></div><p v-if="photoInfoState.message" role="status" class="photo-editor-status" :class="{error:photoInfoState.phase==='error'}">{{ photoInfoState.message }}</p></footer>
       </aside>
     </div>
   </div>
@@ -1467,6 +1475,7 @@ const app=createApp({
     const attach=()=>{if(!lkId.value||!rec.value||!canEditRec.value||recMode.value!=='edit'||!lkChoices.value.some(r=>r.id===lkId.value))return;const o=rec.value.obj;(o.links||(o.links=[])).push({c:lkCol.value,id:lkId.value});lkId.value='';};
     const detach=l=>{if(l.caseOwner){if(level(l.caseOwner.col)!=='edit')return alert('No edit permission for the interrogation.');l.caseOwner.caseId='';if(l.caseOwner!==rec.value.obj)saveRaw(l.caseOwner).catch(fail);return;}const o=l.mine?rec.value.obj:l.rec;if(level(o.col)!=='edit')return alert('No edit permission on the linked record.');o.links=(o.links||[]).filter(x=>x.id!==(l.mine?l.rec.id:rec.value.obj.id));if(!l.mine&&level(o.col)==='edit')saveRaw(o).catch(fail);};
 
+    const photoLinkBusy=ref(false);
     const photoInfoState=reactive({phase:'idle',message:'',url:''});let photoInfoQueue=Promise.resolve(),photoInfoRequest=0;
     const zp=computed(()=>zoom.value?zoom.value.obj.gallery[zoom.value.i]:null);
 
@@ -1481,7 +1490,7 @@ const app=createApp({
     const PHOTO_INFO_FIELDS=['title','caption','desc','taken','place'];
     const photoCopies=(owner,url)=>{const matches=[];const add=photo=>{if(photo&&String(photo.url||'').trim()===url)matches.push(photo);};(owner.gallery||[]).forEach(add);if(owner.col==='citizens')propertiesOf(owner).forEach(property=>(property.gallery||[]).forEach(add));(owner.files||[]).forEach(file=>{if(attachmentPreviewSource(file)?.kind==='image')add(file);});if(standalonePhotoSources(owner).some(item=>photoURLKey(item.url)===url)){const metadata=(Array.isArray(owner.photoMetadata)?owner.photoMetadata:[]).find(item=>photoURLKey(item.url)===url);matches.push(metadata||{url});}return matches;};
     const persistZoom=()=>{
-      const z=zoom.value,photo=zp.value;if(!z?.edit||!photo?.url)return Promise.resolve(false);
+      const z=zoom.value,photo=zp.value;if(photoLinkBusy.value||!z?.edit||!photo?.url)return Promise.resolve(false);
       const url=String(photo.url).trim(),info=Object.fromEntries(PHOTO_INFO_FIELDS.map(key=>[key,photo[key]??'']));
       const source=z.owner||allPhotos.value.find(item=>item.obj===z.obj)?.owner||z.obj,actorId=user.value?.id,requestId=++photoInfoRequest;
       Object.assign(photoInfoState,{phase:'saving',message:'Saving photo information…',url});
@@ -1505,7 +1514,56 @@ const app=createApp({
         return true;
       }).catch(error=>{if(photoInfoState.url===url&&requestId===photoInfoRequest)Object.assign(photoInfoState,{phase:'error',message:error.message});fail(error);return false;});photoInfoQueue=task;return task;
     };
-    const delPhoto=()=>{const z=zoom.value;if(!z?.edit||z.noDelete||!confirm('Delete this photo?'))return;delStored(z.obj.gallery[z.i].url);z.obj.gallery.splice(z.i,1);saveTarget(z.owner||z.obj);if(!z.obj.gallery.length)zoom.value=null;else z.i=Math.min(z.i,z.obj.gallery.length-1);};
+    const editPhotoLink=async()=>{
+      const z=zoom.value,photo=zp.value;
+      if(photoLinkBusy.value||!z?.edit||!photo||!user.value||photoInfoState.phase==='saving')return;
+      const owner=z.owner||z.obj;
+      if(owner.col?level(owner.col)!=='edit':!isAdmin.value)return;
+      const oldUrl=photo.url,input=prompt('Photo link (https://…)',oldUrl);
+      if(input===null||input.trim()===oldUrl)return;
+      const url=input.trim();
+      if(!recordingSource(url)){showError('Enter a valid HTTP or HTTPS photo link.');return;}
+      const draft=clean(owner),source=z.linkSource;
+      const propertyIndex=z.obj===owner||source?-1:(owner.properties||[]).indexOf(z.obj);
+      let changes;
+      if(source?.field){
+        const current=standalonePhotoSources(owner).find(item=>item.field===source.field);
+        if(!current||current.url!==oldUrl){showError('This photo link changed. Reopen the photo.');return;}
+        changes={[source.field]:url};
+        const photoMetadata=Array.isArray(owner.photoMetadata)?owner.photoMetadata:[];
+        const metadata=photoMetadata.find(item=>item.url===oldUrl);
+        if(metadata&&!photoMetadata.some(item=>item.url===url)){
+          changes.photoMetadata=[...draft.photoMetadata,{...clean(metadata),url}];
+        }
+      }else{
+        const container=source?draft.files:propertyIndex>=0?draft.properties[propertyIndex].gallery:draft.gallery;
+        const index=source?source.fileIndex:z.i;
+        if(container?.[index]?.url!==oldUrl){showError('This photo link changed. Reopen the photo.');return;}
+        container[index].url=url;
+        if(source&&!String(container[index].type||'').startsWith('image/'))container[index].type='image/*';
+        changes=source?{files:draft.files}:propertyIndex>=0?{properties:draft.properties}:{gallery:draft.gallery};
+      }
+      Object.assign(draft,changes);
+      const requestId=++photoInfoRequest;
+      photoLinkBusy.value=true;
+      Object.assign(photoInfoState,{phase:'saving',message:'Saving photo link…',url:oldUrl});
+      try{
+        if(owner.id&&!(rec.value?.isNew&&rec.value.obj.id===owner.id)){
+          if(owner.col)await saveRaw(draft);
+          else await fdb.collection('map').doc(owner.id).set({...draft,mapAlignment:MAP_ALIGNMENT.version});
+        }
+        // Keep the open viewer attached to the original photo/property object.
+        if(source)Object.assign(owner,changes);
+        photo.url=url;
+        if(owner.col&&draft.version!==undefined){owner.version=draft.version;owner.auditId=draft.auditId;owner.uniqueKey=draft.uniqueKey;}
+        if(owner.col&&owner.id&&!(rec.value?.isNew&&rec.value.obj.id===owner.id))recs[owner.id]=owner;
+        if(requestId===photoInfoRequest)Object.assign(photoInfoState,{phase:'saved',message:'Photo link updated.',url});
+      }catch(error){
+        if(requestId===photoInfoRequest)Object.assign(photoInfoState,{phase:'error',message:error.message});
+        fail(error);
+      }finally{photoLinkBusy.value=false;}
+    };
+    const delPhoto=()=>{const z=zoom.value;if(photoLinkBusy.value||!z?.edit||z.noDelete||!confirm('Delete this photo?'))return;delStored(z.obj.gallery[z.i].url);z.obj.gallery.splice(z.i,1);saveTarget(z.owner||z.obj);if(!z.obj.gallery.length)zoom.value=null;else z.i=Math.min(z.i,z.obj.gallery.length-1);};
 
     const photoURLKey=value=>String(value||'').trim();
     const standalonePhotoSources=owner=>{const out=[];for(const field of ['profilePhoto','photo','photoUrl','imageUrl','image']){const url=photoURLKey(owner[field]);if(/^(https?:\/\/|images\/)/i.test(url)&&url!==DEFAULT_AVATAR)out.push({field,url,kind:field==='profilePhoto'||owner.col==='citizens'&&field==='photo'?'Profile photo':'Photo'});}if(owner.mediaType==='image'&&/^(https?:\/\/|images\/)/i.test(owner.url||''))out.push({field:'url',url:owner.url,kind:'Evidence photo'});if(!owner.col&&owner.img){const url=/^https?:\/\//i.test(owner.img)?owner.img:'images/'+owner.img;out.push({field:'img',url,kind:'Location photo'});}return out;};
@@ -1525,7 +1583,10 @@ const app=createApp({
     const uniqueEvidencePhotos=computed(()=>{const grouped=new Map();for(const item of allPhotos.value){const key=photoURLKey(item.p.url);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(item);}return [...grouped].map(([key,occurrences])=>{const ordered=[...occurrences].sort((a,b)=>Number(photoEditable(b))-Number(photoEditable(a))||Number(a.kind!=='Gallery'&&a.kind!=='Property photo')-Number(b.kind!=='Gallery'&&b.kind!=='Property photo'));return {...ordered[0],key,occurrences,locations:photoLocationsFor(occurrences),sourceLabels:[...new Set(occurrences.map(item=>item.srcLabel))].join(', ')};});});
     const evidenceList=computed(()=>{const search=norm(q.value),time=value=>typeof value==='number'?value:Date.parse(cidISODate(value)||value)||0;return uniqueEvidencePhotos.value.filter(photo=>(!evSrc.value||photo.occurrences.some(item=>item.src===evSrc.value))&&(!search||photo.occurrences.some(item=>norm([item.p.title,item.p.caption,item.p.desc,item.p.place,item.p.by,item.p.taken,item.name,item.srcLabel].join(' ')).includes(search)))).sort((a,b)=>time(b.p.date)-time(a.p.date));});
     const photoLocations=computed(()=>{const url=photoURLKey(zp.value?.url);return url?photoLocationsFor(allPhotos.value.filter(item=>photoURLKey(item.p.url)===url)):[];});
-    const openEvidencePhoto=entry=>{if(!entry)return;const current=entry.occurrences?.find(item=>photoEditable(item)&&(item.kind==='Gallery'||item.kind==='Property photo'))||entry.occurrences?.find(photoEditable)||entry.occurrences?.[0]||entry;const gallery=current.kind==='Gallery'||current.kind==='Property photo';openZoom(gallery?current.obj:{gallery:[current.p]},gallery?current.i:0,photoEditable(current),current.owner||current.obj);if(!gallery)zoom.value.noDelete=true;};
+    const openEvidencePhoto=entry=>{if(!entry)return;const current=entry.occurrences?.find(item=>photoEditable(item)&&(item.kind==='Gallery'||item.kind==='Property photo'))||entry.occurrences?.find(photoEditable)||entry.occurrences?.[0]||entry;const gallery=current.kind==='Gallery'||current.kind==='Property photo';openZoom(gallery?current.obj:{gallery:[current.p]},gallery?current.i:0,photoEditable(current),current.owner||current.obj);if(!gallery){
+      zoom.value.noDelete=true;
+      zoom.value.linkSource=current.standalone?{field:standalonePhotoSources(current.obj).find(source=>current.p.id===current.obj.id+':'+source.field)?.field}:{fileIndex:current.i};
+    }};
     const openPhotoLocation=async location=>{if(!location)return;const owner=location.src==='_map'?mapLocs.value.find(item=>item.id===location.owner.id):recs[location.owner.id];if(!owner||location.src!=='_map'&&level(owner.col)==='none')return;await closeZoom();if(rec.value){await closeRec();if(rec.value)return;}if(location.src==='_map'){go('map');nextTick(()=>flyTo(owner));}else{go(owner.col);openRec(owner);}};
     const galleryChoices=computed(()=>{const current=rec.value?.obj;if(!current)return [];const query=norm(galleryPickerSearch.value);const seen=new Set((current.gallery||[]).map(p=>p.url));return allPhotos.value.filter(item=>{const url=item.p?.url;if(!url||seen.has(url))return false;if(query&&!norm([item.name,item.srcLabel,item.p.title,item.p.desc].join(' ')).includes(query))return false;seen.add(url);return true;});});
     const selectGalleryPhoto=item=>{const current=rec.value?.obj;if(!current||recMode.value!=='edit'||!canEditRec.value)return false;if(!allPhotos.value.some(candidate=>candidate.obj===item.obj&&candidate.p===item.p))return false;if((current.gallery||[]).some(p=>p.url===item.p.url))return false;const photo={...clean(item.p),id:uid(),copiedFromRecordId:item.owner?.id||item.obj.id||'',copiedBy:user.value?.name||''};if(!Array.isArray(current.gallery))current.gallery=[];current.gallery.push(photo);saveTarget(current);return true;};
@@ -1780,7 +1841,7 @@ const app=createApp({
     return{recentRecords,notificationsOpen,notifications,notificationTitle,openNotification,markNotificationRead,markNotificationsRead,historyRestore,restoreBusy,restoreError,canRestoreField,prepareHistoryRestore,restoreHistoryField,publicHomepageStats,homepageCount,organisationEvents,organisationCitizens,myTasks,taskOverdue,taskParentLabel,openTask,photoLocations,uniqueEvidencePhotos,openEvidencePhoto,openPhotoLocation,historyValue,formatDate,changeZoomPhoto,photoInfoState,showError,closeErrorToast,galleryPickerOpen,galleryPickerSearch,galleryChoices,selectGalleryPhoto,rememberRegistry,saveConfig,configSaveState,printOfficer,printPhotos,openRegistryPhoto,changePhotoZoom,citizenVehicleDrafts,addCitizenVehicle,removeCitizenVehicle,retryCitizenVehicles,requestTypeLabel,cardCategory,cardStatus,cardStatusClass,cardCode,cardSummary,cardFields,emptyTrash,recordName,documentDetails,togglePrintAttachments,deleteCaseEntry,citizenProperties,addCitizenProperty,removeCitizenProperty,isLongCase,isWorkspaceEntry,wideRecord,caseWorkspace,caseWorkspaceTab,caseEntries,caseLinkChoices,caseRelatedRecords,saveCaseEntry,loadCaseEntryHistory,openCaseRelated,printCaseEntry,hasPrintValue,recordingSource,interrogationRecordings,recordFormSections,scrollCitizenTimeline,fieldsForRecord,penalCategory,penalClass,penalSort,penalCollapsed,penalCategories,penalClasses,penalGroups,penalAmount,penalClassStyle,resetPenalFilters,penalEditorOpen,penalEditorSearch,penalEditorCategory,penalDraft,penalDirty,penalSaving,penalEditorError,penalEditorMessage,penalEditorItems,openPenalEditor,closePenalEditor,selectPenalDraft,newPenalDraft,resetPenalDraft,savePenalDraft,deletePenalDraft,trapPenalFocus,penal,preparedImport,importRunning,importMessage,validatePreparedImport,readPreparedImport,runPreparedImport,chargeData,RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mBusy,mStatus,mResults,mUnavailable,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,lkSearch,attach,detach,
-      zp,openZoom,persistZoom,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,
+      zp,openZoom,persistZoom,editPhotoLink,photoLinkBusy,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,
       addTpl,delTpl,addRegistry,delRegistry,addField,delField,moveField,saveLoc,addLoc,delLoc,fixMap,flyTo,mFile,mLink,runMatch,cancelMatch,indexAll};
   }
 });
