@@ -214,10 +214,10 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
 
           <!-- QUICK STATS -->
           <div class="grid grid-cols-2 gap-4" :class="user?'md:grid-cols-4':''">
-            <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Registered Citizens</p><p class="text-3xl font-mono font-bold text-tc mt-2">{{ homepageCount('citizens') }}</p></div>
+            <div v-if="user" class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Registered Citizens</p><p class="text-3xl font-mono font-bold text-tc mt-2">{{ itemsOf('citizens').length }}</p></div>
             <div v-if="user" class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Registered Firearms</p><p class="text-3xl font-mono font-bold text-amber-400 mt-2">{{ itemsOf('weapons').length }}</p></div>
             <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Case Files</p><p class="text-3xl font-mono font-bold text-emerald-400 mt-2">{{ homepageCount('cases') }}</p></div>
-            <div v-if="user" class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Organisations</p><p class="text-3xl font-mono font-bold text-sky-400 mt-2">{{ itemsOf('organizations').length }}</p></div>
+            <div class="hud p-5 text-center"><p class="text-[11px] font-mono text-purple-400 uppercase">Organisations</p><p class="text-3xl font-mono font-bold text-sky-400 mt-2">{{ homepageCount('organizations') }}</p></div>
           </div>
 
           <p v-if="!user" class="text-xs text-slate-500">{{ publicHomepageStats.updatedAt?'Public totals updated '+fmt(publicHomepageStats.updatedAt):'Public totals will appear after the next Director / Assistant Director sync.' }}</p>
@@ -1126,9 +1126,9 @@ const app=createApp({
     const publicHomepageStats=ref({}),statsServerReady=reactive({});
     const homepageCount=key=>user.value&&level(key)!=='none'&&recordLoads[key]==='ready'?itemsOf(key).length:Number.isSafeInteger(publicHomepageStats.value[key])?publicHomepageStats.value[key]:'—';
     let statsTimer=null,statsWriting=false;
-    watch(()=>[isAdmin.value,recordLoads.citizens,recordLoads.cases,statsServerReady.citizens,statsServerReady.cases,itemsOf('citizens').length,itemsOf('cases').length],()=>{
-      clearTimeout(statsTimer);if(!isAdmin.value||recordLoads.citizens!=='ready'||recordLoads.cases!=='ready'||!statsServerReady.citizens||!statsServerReady.cases)return;
-      statsTimer=setTimeout(async()=>{if(statsWriting||!isAdmin.value)return;const counts={citizens:itemsOf('citizens').length,cases:itemsOf('cases').length};if(Object.keys(counts).every(k=>publicHomepageStats.value[k]===counts[k]))return;statsWriting=true;try{await fdb.collection('config').doc('publicHomepageStats').set({...counts,updatedAt:Date.now()});}catch(e){console.warn('Public totals sync:',e.message);}finally{statsWriting=false;}},800);statsTimer?.unref?.();
+    watch(()=>[isAdmin.value,recordLoads.organizations,recordLoads.cases,statsServerReady.organizations,statsServerReady.cases,itemsOf('organizations').length,itemsOf('cases').length],()=>{
+      clearTimeout(statsTimer);if(!isAdmin.value||recordLoads.organizations!=='ready'||recordLoads.cases!=='ready'||!statsServerReady.organizations||!statsServerReady.cases)return;
+      statsTimer=setTimeout(async()=>{if(statsWriting||!isAdmin.value)return;const counts={cases:itemsOf('cases').length,organizations:itemsOf('organizations').length};if(Object.keys(counts).every(k=>publicHomepageStats.value[k]===counts[k]))return;statsWriting=true;try{await fdb.collection('config').doc('publicHomepageStats').set({...counts,updatedAt:Date.now()});}catch(e){console.warn('Public totals sync:',e.message);}finally{statsWriting=false;}},800);statsTimer?.unref?.();
     });
     const startPublic=()=>{
       fdb.collection('config').doc('publicHomepageStats').onSnapshot(s=>{publicHomepageStats.value=s.exists?s.data():{};},e=>console.warn('Public totals:',e.message));

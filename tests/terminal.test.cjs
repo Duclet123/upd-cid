@@ -411,7 +411,7 @@ const newTask=await state.saveCaseEntry({workspaceKind:'task',title:'Urgent revi
 const completedTask=await state.saveCaseEntry({...newTask,status:'Done'});assert(completedTask.completedAt);assert.equal(completedTask.completedBy,'Test');assert(!state.myTasks.value.some(t=>t.id===newTask.id));const reopenedTask=await state.saveCaseEntry({...completedTask,status:'Pending'});assert.equal(reopenedTask.completedAt,null);assert.equal(reopenedTask.completedBy,'');
 await assert.rejects(state.saveCaseEntry({...reopenedTask,priority:'Invalid'}),/priority/);await assert.rejects(state.saveCaseEntry({...reopenedTask,dueDate:'2026-02-30'}),/due date/);
 state.openTask(reopenedTask);assert.equal(state.caseWorkspaceTab.value,'task');
-state.user.value=null;await tick();state.publicHomepageStats.value={citizens:42,cases:9};assert.equal(state.homepageCount('citizens'),42);assert.equal(state.homepageCount('cases'),9);assert.equal(state.organisationEvents.value.length,0);assert(!queries.slice(-2).some(q=>q.args[2]==='citizens'||q.args[2]==='cases'));
+state.user.value=null;await tick();state.publicHomepageStats.value={organizations:42,cases:9};assert.equal(state.homepageCount('organizations'),42);assert.equal(state.homepageCount('cases'),9);assert.equal(state.organisationEvents.value.length,0);assert(!queries.slice(-2).some(q=>q.args[2]==='citizens'||q.args[2]==='cases'));
 console.log('PASS: organisation MDT links, task priority/completion/reopening, impossible due date rejection, dashboard task navigation, and public aggregate display without private queries.');
 console.log('Expected handled errors:',errors.length);
 })().catch(e=>{console.error(e);process.exitCode=1});
