@@ -9,6 +9,7 @@ const activityStorage=new Map();
 const ctx={localStorage:{getItem:key=>activityStorage.get(key)||null,setItem:(key,value)=>activityStorage.set(key,value)},console:{info(){},log:console.log,warn(){},error:e=>errors.push(String(e))},window:{innerWidth:1200,addEventListener(){}},document:{getElementById:()=>null,createElement:()=>({})},Image:class{},setTimeout,clearTimeout,setInterval:()=>0,confirm:()=>true,alert(){},prompt(){},Date,Math,Map,Set,JSON,URL,URLSearchParams,Promise,Uint8Array,FileReader:class{},firebase:{initializeApp(){},firestore:()=>fdb,auth:()=>({onAuthStateChanged(){},async signOut(){}})}};
 vm.createContext(ctx);vm.runInContext(fs.readFileSync(process.env.VUE_TEST_RUNTIME||require.resolve('vue/dist/vue.global.prod.js'),'utf8'),ctx);
 vm.runInContext(fs.readFileSync(require('path').join(__dirname,'..','case-workspace.js'),'utf8'),ctx);
+vm.runInContext(fs.readFileSync(require('path').join(__dirname,'..','mdt-screenshot-import.js'),'utf8'),ctx);
 ctx.firebase.firestore.FieldValue={serverTimestamp:()=>Date.now()};
 const actualVue=ctx.Vue;ctx.Vue={...actualVue,onMounted(){},createApp(options){return {component(name,c){components[name]=c},mount(){state=options.setup()}}}};
 const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(x=>x.includes('FIREBASE_CONFIG'));
@@ -457,5 +458,21 @@ state.user.value={id:'other-activity-user',name:'Other Detective',rank:'Director
 console.log('PASS: personal recent references/dedup/account separation, first-visit notification baseline, foreign-update notification and persistent read state, readable reference history, exact string restoration with new audit and unchanged companion fields, protected metadata and concurrent-write rejection.');
 
 console.log('PASS: Director/Assistant Director priority review alerts for cases and organisations, first-visit delivery, per-user acknowledgement, stable review cycles on ordinary edits, fresh alerts on re-submission, no review alerts for detective ranks.');
+// Screenshot drafts route by type, preserve a linked citizen, and never overwrite existing records.
+state.user.value={id:'mdt-tester',name:'MDT Tester',rank:'Director'};await tick();
+const citizenDraft=ctx.parseMdtScreenshot('Citizen Identity\nTEST CITIZEN\nAB12CD34\nPHONE\n001234567\nRelated Incident Reports\nREP-TEST-101');
+const reportDraft=ctx.parseMdtScreenshot('RECORD // REP-TEST-101\nTest statement\nPRIMARY LOCATION\nCapital Blvd\nAUTHORING OFFICER\nTest Officer\nDATE OF REPORT\nNOV 03, 2026\nΕλληνικό κείμενο της κατάθεσης.\nATTACHED CITIZENS\nAB12CD34');
+assert.equal(citizenDraft.col,'citizens');assert.equal(citizenDraft.phone,'001234567');
+assert.equal(reportDraft.eventDate,'2026-11-03');assert.equal(reportDraft.summary,'Ελληνικό κείμενο της κατάθεσης.');
+assert.equal(ctx.mergeMdtScreenshotText('Αρχή\nΚοινή γραμμή','Κοινή γραμμή\nΣυνέχεια'),'Αρχή\nΚοινή γραμμή\nΣυνέχεια');
+assert.equal(await state.saveMdtScreenshotBatch([reportDraft,citizenDraft]),'2 saved · 0 need attention');
+const importedCitizen=state.itemsOf('citizens').find(record=>record.citizenId==='AB12CD34');
+const importedReport=state.itemsOf('reports').find(record=>record.reportNo==='REP-TEST-101');
+assert(importedReport.citizens.includes(importedCitizen.id));
+assert(state.mdtReviewIssues(importedCitizen).includes('Date of birth'));
+assert(!state.mdtReviewIssues(importedCitizen).includes('Unlinked REP-TEST-101'));
+assert.equal(await state.saveMdtScreenshotBatch([reportDraft]),'0 saved · 1 need attention');
+assert.match(reportDraft.error,/already exists/);
+console.log('PASS: screenshot classification, Greek continuation, registry routing, exact ID links, missing fields and duplicate rejection.');
 console.log('Expected handled errors:',errors.length);
 })().catch(e=>{console.error(e);process.exitCode=1});
