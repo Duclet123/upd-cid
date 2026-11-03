@@ -412,6 +412,19 @@ const newTask=await state.saveCaseEntry({workspaceKind:'task',title:'Urgent revi
 const completedTask=await state.saveCaseEntry({...newTask,status:'Done'});assert(completedTask.completedAt);assert.equal(completedTask.completedBy,'Test');assert(!state.myTasks.value.some(t=>t.id===newTask.id));const reopenedTask=await state.saveCaseEntry({...completedTask,status:'Pending'});assert.equal(reopenedTask.completedAt,null);assert.equal(reopenedTask.completedBy,'');
 await assert.rejects(state.saveCaseEntry({...reopenedTask,priority:'Invalid'}),/priority/);await assert.rejects(state.saveCaseEntry({...reopenedTask,dueDate:'2026-02-30'}),/due date/);
 state.openTask(reopenedTask);assert.equal(state.caseWorkspaceTab.value,'task');
+state.newRec('cases');Object.assign(state.rec.value.obj,{title:'Regular investigation',fileNo:'TASK-SHARED'});
+await state.saveNew();
+const simpleCase=state.rec.value.obj;
+assert(!state.isLongCase(simpleCase));
+const sharedTask=await state.saveCaseEntry({workspaceKind:'task',title:'Check the footage',status:'Pending',assigneeUid:''});
+assert.equal(sharedTask.workspaceParentId,simpleCase.id);
+assert(state.myTasks.value.some(task=>task.id===sharedTask.id));
+state.openTask(sharedTask);await tick();
+assert.equal(state.rec.value.obj.id,simpleCase.id);
+assert.equal(state.caseWorkspaceTab.value,'task');
+await state.saveCaseEntry({...sharedTask,status:'Done'});
+assert(!state.myTasks.value.some(task=>task.id===sharedTask.id));
+
 state.user.value=null;await tick();state.publicHomepageStats.value={organizations:42,cases:9};assert.equal(state.homepageCount('organizations'),42);assert.equal(state.homepageCount('cases'),9);assert.equal(state.organisationEvents.value.length,0);assert(!queries.slice(-2).some(q=>q.args[2]==='citizens'||q.args[2]==='cases'));
 console.log('PASS: organisation MDT links, task priority/completion/reopening, impossible due date rejection, dashboard task navigation, and public aggregate display without private queries.');
 // Personal activity and safe field restoration use the actual setup and audited write path.
