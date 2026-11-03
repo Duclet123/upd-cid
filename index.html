@@ -12,7 +12,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
 <script src="case-workspace.js?v=shared-tasks-12"></script>
-<script src="mdt-screenshot-import.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
@@ -329,7 +328,6 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
             <h2 class="text-xl font-title font-bold text-white uppercase"><i :class="col.icon" class="mr-3 text-2xl"></i>{{ col.label }}</h2>
             <div class="flex flex-wrap gap-3 w-full md:w-auto">
               <input v-model="q" placeholder="Search..." class="inp !w-full md:!w-72">
-              <mdt-screenshot-import v-if="['reports','citizens'].includes(tab)&&level(tab)==='edit'" :save-batch="saveMdtScreenshotBatch" :can-edit="canImportMdt"></mdt-screenshot-import>
               <button v-if="level(tab)==='edit'" @click="newRec(tab)" class="btn text-base">+ New {{ tab === 'warrants' ? 'Request' : 'Record' }}</button></div>
           </div>
           <div v-if="tab==='cases'||tab==='organizations'" class="hud p-4 flex flex-wrap gap-3"><select v-model="statusFilter" class="inp !w-auto"><option value="">All statuses</option><option v-for="st in CASE_STATUSES" :key="st">{{ st }}</option></select><select v-model="leadFilter" class="inp !w-auto"><option value="">All lead detectives</option><option v-if="user" value="__mine__">Assigned to me</option><option v-for="name in [...new Set(itemsOf(tab).map(r=>r.lead).filter(Boolean))].sort((a,b)=>a.localeCompare(b))" :key="name">{{ name }}</option></select><select v-model="sortOrder" class="inp !w-auto" aria-label="Sort records"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="detective-asc">Detective A–Z</option><option value="detective-desc">Detective Z–A</option></select><span class="text-xs text-slate-400 self-center">{{ listItems.length }} results</span></div>
@@ -1258,9 +1256,14 @@ const app=createApp({
     const imageFallback=e=>{e.target.onerror=null;e.target.src=DEFAULT_AVATAR;};
     const pickerCitizens=computed(()=>itemsOf('citizens').filter(c=>!citizenSearch.value||norm([c.fullName,c.citizenId].join(' ')).includes(norm(citizenSearch.value))));
     const toggleCitizen=(o,key,id,selected)=>{const current=Array.isArray(o[key])?o[key]:[];o[key]=selected?[...new Set([...current,id])]:current.filter(x=>x!==id);};
+    // Keep the additional fields editable on already imported records.
+    const LEGACY_MDT_FIELDS={
+      reports:[['reportNo','Report ID'],['title','Title'],['eventDate','Date'],['mdtOfficer','Authoring officer'],['mdtLocation','Location'],['summary','Report text',true]],
+      citizens:[['citizenId','Citizen ID'],['fullName','Full name'],['phone','Phone'],['dob','Date of birth'],['gender','Gender'],['notes','Notes',true]]
+    };
     const fieldsForRecord=o=>{const fields=[...cfg.collections[o.col].fields];
       if(o.mdtImported){
-        for(const [key,label,long] of MDT_SCREENSHOT_FIELDS[o.col]||[])fields.push(F(key,label,long?'a':['dob','eventDate'].includes(key)?'d':'t'));
+        for(const [key,label,long] of LEGACY_MDT_FIELDS[o.col]||[])fields.push(F(key,label,long?'a':['dob','eventDate'].includes(key)?'d':'t'));
         fields.push(F('mdtReferences','Source reference IDs'));
       }
       const seen=new Set();return fields.filter(f=>{if(['cases','organizations'].includes(o.col)&&f.k==='infoSource')return false;if(seen.has(f.k))return false;seen.add(f.k);return true;});};
@@ -1479,12 +1482,11 @@ const app=createApp({
     }catch(e){fail(e);if(throwErrors)throw e;return false;}};
     const deleteCaseEntry=async entry=>{const parent=rec.value?.obj;if(!parent||entry.workspaceParentId!==parent.id||!recs[entry.id]||level('cases')!=='edit')throw Error('This entry is unavailable or you do not have edit permission.');const removed=await delRec(recs[entry.id],true);if(!removed&&saveStates[entry.id]?.phase==='error')throw Error(saveStates[entry.id].error||'Delete failed.');return removed;};
     const applyTpl=name=>{const o=rec.value.obj,t=tplFor(o.col).find(x=>x.name===name),f=cfg.collections[o.col].fields.find(f=>f.t==='a');if(t&&f){o[f.k]=t.body;o.template=t.name;}};
-    const canImportMdt=col=>['citizens','reports'].includes(col)&&level(col)==='edit';
     const mdtIds=value=>[...new Set(String(value||'').toUpperCase().split(/[\s,;]+/).filter(Boolean))];
     const mdtIdField=col=>col==='citizens'?'citizenId':'reportNo';
     const mdtReviewIssues=record=>{
       if(!record?.mdtImported)return [];
-      const missing=(MDT_SCREENSHOT_FIELDS[record.col]||[]).filter(([key])=>key!=='notes'&&!String(record[key]||'').trim()).map(([,label])=>label);
+      const missing=(LEGACY_MDT_FIELDS[record.col]||[]).filter(([key])=>key!=='notes'&&!String(record[key]||'').trim()).map(([,label])=>label);
       const linkedRecords=linkedFor(record).map(({rec})=>rec);
       if(record.col==='reports'&&level('citizens')!=='none'){
         for(const id of record.citizens||[])if(recs[id]?.col==='citizens')linkedRecords.push(recs[id]);
@@ -1492,46 +1494,6 @@ const app=createApp({
       const linked=linkedRecords.map(item=>String(item[mdtIdField(item.col)]||'').toUpperCase());
       for(const id of mdtIds(record.mdtReferences))if(!linked.includes(id))missing.push('Unlinked '+id);
       return missing;
-    };
-    const saveMdtScreenshotBatch=async drafts=>{
-      const actor=user.value?.id;
-      let saved=0,failed=0;
-      const ordered=[...drafts].sort((a,b)=>Number(b.col==='citizens')-Number(a.col==='citizens'));
-      for(const draft of ordered){
-        draft.error='';
-        try{
-          if(!actor||user.value?.id!==actor||!canImportMdt(draft.col))throw Error('Edit permission is required.');
-          if(recordLoads[draft.col]!=='ready')throw Error('Wait until the target registry finishes loading.');
-          const key=mdtIdField(draft.col),code=String(draft[key]||'').trim().toUpperCase();
-          const name=String(draft[draft.col==='citizens'?'fullName':'title']||'').trim();
-          if(!/^[A-Z0-9][A-Z0-9-]{2,59}$/.test(code)||!name)throw Error('A valid ID and name or title are required.');
-          if(itemsOf(draft.col).some(item=>String(item[key]||'').trim().toUpperCase()===code))throw Error(code+' already exists. Open its existing registry record to review it.');
-          const record={id:'mdt-'+draft.col+'-'+code,col:draft.col,ts:Date.now(),by:user.value.name,mdtImported:true,mdtReferences:mdtIds(draft.refs).join(', '),gallery:[],files:[],links:[]};
-          for(const [field] of MDT_SCREENSHOT_FIELDS[draft.col]){
-            const value=String(draft[field]||'').trim();
-            if(value.length>40000)throw Error('A field exceeds 40,000 characters. Split or shorten the text.');
-            record[field]=['dob','eventDate'].includes(field)?mdtScreenshotDate(value):value;
-          }
-          record[key]=code;
-          const target=draft.col==='citizens'?'reports':'citizens';
-          const refs=mdtIds(draft.refs);
-          if(level(target)!=='none')for(const item of itemsOf(target)){
-            const id=String(item[mdtIdField(target)]||'').toUpperCase();
-            if(refs.includes(id)||(item.mdtImported&&mdtIds(item.mdtReferences).includes(code)))record.links.push({c:target,id:item.id});
-          }
-          if(draft.col==='reports'){
-            record.citizens=record.links.map(link=>link.id);
-            for(const url of [...new Set(String(draft.photoLinks||'').split(/\r?\n/).map(value=>value.trim()).filter(Boolean))]){
-              if(!recordingSource(url))throw Error('Photo links must use HTTP or HTTPS.');
-              record.gallery.push({id:uid(),url,title:'MDT evidence'});
-            }
-          }
-          await saveRaw(record,true);
-          if(user.value?.id!==actor)throw Error('Session changed. Reopen the registry to verify this record.');
-          recs[record.id]=record;draft.saved=true;draft.reviewed=false;saved++;
-        }catch(error){draft.error=error.message;failed++;}
-      }
-      return saved+' saved · '+failed+' need attention';
     };
     const saveTarget=o=>{if(rec.value&&rec.value.obj===o&&rec.value.isNew)return;clearTimeout(watch.r);if(o.col)return saveRaw(o).catch(fail);else return saveLoc(o);};
     const matched=key=>{const c=rec.value&&rec.value.obj;if(!c)return [];return itemsOf(key).filter(i=>(c.citizenId&&norm(i.ownerCid)===norm(c.citizenId))||(c.fullName&&norm(i.owner)===norm(c.fullName)));};
@@ -1905,7 +1867,7 @@ const app=createApp({
     watch(tab,t=>{if(cfg.collections[t]&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
-    return{canImportMdt,mdtReviewIssues,saveMdtScreenshotBatch,recentRecords,notificationsOpen,notifications,notificationTitle,openNotification,markNotificationRead,markNotificationsRead,historyRestore,restoreBusy,restoreError,canRestoreField,prepareHistoryRestore,restoreHistoryField,publicHomepageStats,homepageCount,organisationEvents,organisationCitizens,myTasks,taskOverdue,taskParentLabel,openTask,photoLocations,uniqueEvidencePhotos,openEvidencePhoto,openPhotoLocation,historyValue,formatDate,changeZoomPhoto,photoInfoState,showError,closeErrorToast,galleryPickerOpen,galleryPickerSearch,galleryChoices,selectGalleryPhoto,rememberRegistry,saveConfig,configSaveState,printOfficer,printPhotos,openRegistryPhoto,changePhotoZoom,citizenVehicleDrafts,addCitizenVehicle,removeCitizenVehicle,retryCitizenVehicles,requestTypeLabel,cardCategory,cardStatus,cardStatusClass,cardCode,cardSummary,cardFields,emptyTrash,recordName,documentDetails,togglePrintAttachments,deleteCaseEntry,citizenProperties,addCitizenProperty,removeCitizenProperty,isLongCase,isWorkspaceEntry,wideRecord,caseWorkspace,caseWorkspaceTab,caseEntries,caseLinkChoices,caseRelatedRecords,saveCaseEntry,loadCaseEntryHistory,openCaseRelated,printCaseEntry,hasPrintValue,recordingSource,interrogationRecordings,recordFormSections,scrollCitizenTimeline,fieldsForRecord,penalCategory,penalClass,penalSort,penalCollapsed,penalCategories,penalClasses,penalGroups,penalAmount,penalClassStyle,resetPenalFilters,penalEditorOpen,penalEditorSearch,penalEditorCategory,penalDraft,penalDirty,penalSaving,penalEditorError,penalEditorMessage,penalEditorItems,openPenalEditor,closePenalEditor,selectPenalDraft,newPenalDraft,resetPenalDraft,savePenalDraft,deletePenalDraft,trapPenalFocus,penal,preparedImport,importRunning,importMessage,validatePreparedImport,readPreparedImport,runPreparedImport,chargeData,RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+    return{mdtReviewIssues,recentRecords,notificationsOpen,notifications,notificationTitle,openNotification,markNotificationRead,markNotificationsRead,historyRestore,restoreBusy,restoreError,canRestoreField,prepareHistoryRestore,restoreHistoryField,publicHomepageStats,homepageCount,organisationEvents,organisationCitizens,myTasks,taskOverdue,taskParentLabel,openTask,photoLocations,uniqueEvidencePhotos,openEvidencePhoto,openPhotoLocation,historyValue,formatDate,changeZoomPhoto,photoInfoState,showError,closeErrorToast,galleryPickerOpen,galleryPickerSearch,galleryChoices,selectGalleryPhoto,rememberRegistry,saveConfig,configSaveState,printOfficer,printPhotos,openRegistryPhoto,changePhotoZoom,citizenVehicleDrafts,addCitizenVehicle,removeCitizenVehicle,retryCitizenVehicles,requestTypeLabel,cardCategory,cardStatus,cardStatusClass,cardCode,cardSummary,cardFields,emptyTrash,recordName,documentDetails,togglePrintAttachments,deleteCaseEntry,citizenProperties,addCitizenProperty,removeCitizenProperty,isLongCase,isWorkspaceEntry,wideRecord,caseWorkspace,caseWorkspaceTab,caseEntries,caseLinkChoices,caseRelatedRecords,saveCaseEntry,loadCaseEntryHistory,openCaseRelated,printCaseEntry,hasPrintValue,recordingSource,interrogationRecordings,recordFormSections,scrollCitizenTimeline,fieldsForRecord,penalCategory,penalClass,penalSort,penalCollapsed,penalCategories,penalClasses,penalGroups,penalAmount,penalClassStyle,resetPenalFilters,penalEditorOpen,penalEditorSearch,penalEditorCategory,penalDraft,penalDirty,penalSaving,penalEditorError,penalEditorMessage,penalEditorItems,openPenalEditor,closePenalEditor,selectPenalDraft,newPenalDraft,resetPenalDraft,savePenalDraft,deletePenalDraft,trapPenalFocus,penal,preparedImport,importRunning,importMessage,validatePreparedImport,readPreparedImport,runPreparedImport,chargeData,RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mBusy,mStatus,mResults,mUnavailable,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,lkSearch,attach,detach,
       zp,openZoom,persistZoom,editPhotoLink,photoLinkBusy,delPhoto,allPhotos,evidenceList,openOwner,printNow,printRecord,savePenal,addPenal,delPenal,importPenal,
@@ -1913,7 +1875,6 @@ const app=createApp({
   }
 });
 
-app.component('mdt-screenshot-import',createMdtScreenshotImport());
 app.component('organisation-timeline',createOrganisationTimelineComponent());
 app.component('case-workspace',createCaseWorkspaceComponent({norm,clean,renderText}));
 app.component('investigation-timeline',createCaseTimelineComponent());
