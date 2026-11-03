@@ -49,7 +49,7 @@ service cloud.firestore {
       return data.col != 'warrants' || data.get('workflow', {}).get('status', 'Draft') == 'Draft';
     }
     function targetRequest(data) {
-      return data.col != 'warrants' || (data.get('targets', []) is list && data.get('targets', []).size() > 0)
+      return data.col != 'warrants' || data.get('requestType', 'Warrant') == 'Authorization' || (data.get('targets', []) is list && data.get('targets', []).size() > 0)
         || (data.get('otherTargets', '') is string && data.get('otherTargets', '').size() > 0);
     }
     function requestUpdate(old, next) { return draftRequest(next); }

@@ -110,3 +110,11 @@ with ThreadPoolExecutor(max_workers=2) as pool:
  assert outcomes==[200,403],outcomes
 print('PASS concurrent duplicate plate attempts allow exactly one winner')
 print('ALL RULE SCENARIOS PASSED')
+
+# Authorization has no target requirement; edit permissions, audit and draft-only workflow still apply.
+for request_type,status,expected in [('Authorization','Draft',200),('Warrant','Draft',403),('Unknown','Draft',403),('Authorization','Approved',403)]:
+ ident='targetless-'+request_type.lower()+'-'+status.lower()
+ payload={'id':ident,'col':'warrants','requestType':request_type,'targets':[],'otherTargets':'','reason':'Described authorization request','workflow':{'status':status},'version':1,'auditId':'created'}
+ audit={'actorUid':'agent','actorName':'agent','version':1,'action':'created','changes':{'reason':{'before':'','after':payload['reason']}}}
+ st,res=call('POST',':commit',{'writes':[write('records/'+ident,payload),write('records/'+ident+'/history/created',audit,True)]},agent)
+ expect(st,res,expected,'targetless '+request_type+' '+status)
