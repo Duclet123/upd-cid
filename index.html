@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
-<script src="case-workspace.js?v=shared-tasks-12"></script>
+<script src="case-workspace.js?v=task-cards-13"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
@@ -63,6 +63,14 @@ select[multiple].inp:disabled{height:auto;overflow:hidden;}
 input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translateX(16px)}
 .rich-text{overflow-wrap:anywhere;line-height:1.7}.rich-text p{margin:.35rem 0;white-space:pre-wrap}.rich-text strong{font-weight:700}.rich-text em{font-style:italic}.rich-text u{text-decoration:underline}.rich-text h3{font-size:1.15em;font-weight:700;margin:.8rem 0 .35rem}.rich-text ul{list-style:disc;padding-left:1.5rem;margin:.5rem 0}.rich-text ol{list-style:decimal;padding-left:1.5rem;margin:.5rem 0}.rich-text blockquote{border-left:3px solid currentColor;padding-left:1rem;margin:.7rem 0;opacity:.85}.rich-text a{text-decoration:underline}.format-btn{padding:.3rem .6rem;border:1px solid #3b2459;border-radius:.4rem;color:#e9d5ff;min-width:2rem}.format-btn:hover{background:#3b2459}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#2b1a40;border-radius:9px}
+.task-card{background:#15101d;border:1px solid #3a2947;border-left:3px solid #8b5cf6;border-radius:12px}
+.task-card[data-overdue=true]{border-left-color:#f87171}
+.task-card[data-status=Done]{border-left-color:#34d399}
+.task-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .55rem;border-radius:999px;background:#292035;color:#ddd6fe;font-size:.72rem;line-height:1.2;font-weight:600}
+.task-badge[data-priority=High],.task-badge[data-priority=Urgent]{background:#422817;color:#fde68a}
+.task-badge[data-status="In Progress"]{background:#163143;color:#bae6fd}
+.task-badge[data-status=Done]{background:#13352e;color:#a7f3d0}
+.task-badge[data-overdue=true]{background:#421d28;color:#fecaca}
 .record-card{min-width:0;display:flex;flex-direction:column;gap:16px;padding:22px;background:#19121f;border:1px solid #3a2947;border-radius:14px;cursor:pointer;transition:border-color .15s,transform .15s}.record-card:hover,.record-card:focus-visible{border-color:#88629e;transform:translateY(-2px);outline:none}.record-card-top{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:10px;font-weight:700;color:#a18fad;text-transform:uppercase}.record-status{font-size:10px;text-transform:none;padding:6px 10px;border-radius:7px;background:#30213d;color:#ceb0ef}.record-status.status-green{background:#13342b;color:#8bd9b4}.record-status.status-amber{background:#3b2d16;color:#e5c381}.record-status.status-muted{background:#292630;color:#b8acbf}.record-card-identity{display:flex;align-items:center;gap:14px}.record-card h3{font-size:19px;line-height:1.3;font-weight:700;color:#f4edf8;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.record-code{font-size:11px;color:#b79dcc;margin-top:7px;overflow-wrap:anywhere}.record-avatar{width:52px;height:58px;object-fit:cover;border-radius:10px;flex-shrink:0;background:#272338}.record-summary{font-size:12px;color:#a99ab4;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.record-card-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}.record-card-meta dt{font-size:9px;color:#96849f;font-weight:700;text-transform:uppercase;margin-bottom:6px}.record-card-meta dd{font-size:12px;color:#d6ccdf;line-height:1.4;overflow-wrap:anywhere}.record-card-footer{display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-top:1px solid #34293f;padding-top:12px;margin-top:auto;color:#a796b5;font-size:11px}.record-card-footer>span{white-space:nowrap}.record-card-footer i{margin-right:4px}.record-card-actions{display:flex;gap:8px;margin-left:auto}.record-icon{width:34px;height:34px;border:0;border-radius:8px;background:#241a2d;color:#d6c1e6;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}.record-icon:hover,.record-icon:focus-visible{background:#3a2549;outline:1px solid #88629e}.record-icon i{margin:0}.record-icon.danger{color:#f19b9b}.record-icon.save{background:#14533d;color:#c6f4df}.record-icon:disabled{opacity:.45;cursor:wait}
 /* Shared record actions across profiles, investigations, documents and viewers. */
 .record-action,.record-icon{box-sizing:border-box;min-height:36px;border:1px solid #453250;border-radius:8px;background:#241a2d;color:#dbc9e7;font:600 12px/1.2 Arial,Helvetica,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;vertical-align:middle;text-decoration:none;transition:background .15s,border-color .15s,color .15s;cursor:pointer}
@@ -230,7 +238,24 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                 <header class="flex justify-between items-center gap-3 flex-wrap"><h3 class="font-bold text-white">My tasks <span class="text-tc">({{ myTasks.length }})</span></h3><span class="text-xs text-slate-400">Due date first</span></header>
                 <div class="space-y-3 overflow-y-auto max-h-80 lg:max-h-none lg:flex-1 lg:min-h-0 pr-1">
                   <p v-if="!myTasks.length" class="text-sm text-slate-400 py-3">No open assigned or shared tasks.</p>
-                  <button v-for="task in myTasks" :key="task.id" @click="openTask(task)" class="w-full text-left bg-bg border border-purple-950 hover:border-purple-600 rounded-xl p-3 space-y-1"><span class="block text-sm text-white break-words">{{ task.title }}</span><span class="block text-xs text-slate-500 break-words">{{ taskParentLabel(task) }}</span><span class="block text-xs" :class="taskOverdue(task)?'text-red-300':'text-slate-400'">{{ task.status||'Pending' }} · {{ task.priority||'Normal' }}<span v-if="!task.assigneeUid"> · Shared</span><span v-if="task.dueDate"> · {{ taskOverdue(task)?'Overdue: ':'Due: ' }}{{ formatDate(task.dueDate) }}</span></span></button>
+                  <button v-for="task in myTasks" :key="task.id" @click="openTask(task)"
+                    class="task-card w-full text-left p-3 space-y-2 hover:border-purple-500 focus-visible:ring-2 focus-visible:ring-purple-400"
+                    :data-overdue="taskOverdue(task)" :data-status="task.status">
+                    <span class="flex flex-wrap items-center gap-2">
+                      <span class="task-badge" :data-status="task.status">{{ task.status||'Pending' }}</span>
+                      <span class="task-badge" :data-priority="task.priority">{{ task.priority||'Normal' }} priority</span>
+                    </span>
+                    <span class="flex items-start justify-between gap-2 text-sm font-bold text-white break-words">
+                      {{ task.title }} <i class="fa-solid fa-chevron-right text-purple-400 mt-1" aria-hidden="true"></i>
+                    </span>
+                    <span class="block text-xs text-slate-400 break-words">{{ taskParentLabel(task) }}</span>
+                    <span class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
+                      <span><i :class="task.assigneeUid?'fa-solid fa-user':'fa-solid fa-users'" aria-hidden="true"></i> {{ task.assigneeUid?'Assigned to you':'Shared' }}</span>
+                      <span v-if="task.dueDate" class="task-badge" :data-overdue="taskOverdue(task)">
+                        <i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ taskOverdue(task)?'Overdue':'Due' }} {{ formatDate(task.dueDate) }}
+                      </span>
+                    </span>
+                  </button>
                 </div>
               </section>
               <section class="hud p-5 flex flex-col gap-3 min-w-0 lg:flex-1 lg:min-h-0" aria-label="Homepage notifications">
