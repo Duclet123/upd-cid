@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
-<script src="case-workspace.js?v=task-requester-14"></script>
+<script src="case-workspace.js?v=task-badges-15"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
@@ -244,6 +244,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                     <span class="flex flex-wrap items-center gap-2">
                       <span class="task-badge" :data-status="task.status">{{ task.status||'Pending' }}</span>
                       <span class="task-badge" :data-priority="task.priority">{{ task.priority||'Normal' }} priority</span>
+                      <span class="task-badge"><i :class="task.assigneeUid?'fa-solid fa-user':'fa-solid fa-users'" aria-hidden="true"></i> {{ task.assigneeUid?'Assigned to you':'Shared with all detectives' }}</span>
                     </span>
                     <span class="flex items-start justify-between gap-2 text-sm font-bold text-white break-words">
                       {{ task.title }} <i class="fa-solid fa-chevron-right text-purple-400 mt-1" aria-hidden="true"></i>
@@ -253,9 +254,8 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                       <i class="fa-solid fa-user-pen text-purple-400 mr-1" aria-hidden="true"></i>
                       Requested by <strong class="text-white">{{ task.createdBy||task.by||'Unknown' }}</strong>
                     </span>
-                    <span class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
-                      <span><i :class="task.assigneeUid?'fa-solid fa-user':'fa-solid fa-users'" aria-hidden="true"></i> {{ task.assigneeUid?'Assigned to you':'Shared' }}</span>
-                      <span v-if="task.dueDate" class="task-badge" :data-overdue="taskOverdue(task)">
+                    <span v-if="task.dueDate" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
+                      <span class="task-badge" :data-overdue="taskOverdue(task)">
                         <i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ taskOverdue(task)?'Overdue':'Due' }} {{ formatDate(task.dueDate) }}
                       </span>
                     </span>
