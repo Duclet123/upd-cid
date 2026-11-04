@@ -1084,7 +1084,7 @@ const app=createApp({
       return all.sort((a,b)=>{
         if(tab.value==='interrogations'){
           const alphabetical=String(recordName(a)).localeCompare(String(recordName(b)),undefined,{sensitivity:'base',numeric:true});
-          if(alphabetical)return alphabetical;
+          if(alphabetical)return -alphabetical;
         }
         if(sortOrder.value.startsWith('detective-')){const first=String(a.lead||'').trim(),second=String(b.lead||'').trim();if(!first&&second)return 1;if(first&&!second)return -1;const comparison=first.localeCompare(second,undefined,{sensitivity:'base',numeric:true});if(comparison)return sortOrder.value==='detective-desc'?-comparison:comparison;}
         const time=(b.ts||0)-(a.ts||0);return (sortOrder.value==='oldest'?-time:time)||String(a.id).localeCompare(String(b.id));
@@ -1334,7 +1334,8 @@ const app=createApp({
       else if(record.col==='citizens'){add('Phone',record.phone);add('Affiliation',record.gang);}
       else if(record.col==='interrogations'){
         add('Information date',formatDate(record.infoDate??record.date));
-        if(record.officer)add('Interviewing officer',[record.officer,officerBadge(record,'officer')].filter(Boolean).join(' · '));
+        const suspect=level('citizens')!=='none'?recs[record.subjectCitizen]:null;
+        add('Suspect',(suspect?.col==='citizens'&&suspect.fullName)||record.suspect);
       }
       else for(const field of subFields(cfg.collections[record.col]))if(!['status','requestType'].includes(field.k))add(field.l,shown(record,field));
       return fields.slice(0,2);
