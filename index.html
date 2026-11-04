@@ -1635,7 +1635,6 @@ const app=createApp({
           if(photoURLKey(source.url)===url)draft[source.field]='';
         }
       }
-      if(!confirm('Detach this photo from '+current.name+'?'))return;
       photoLinkBusy.value=true;
       try{
         if(owner.col)await saveRaw(draft);
