@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
-<script src="case-workspace.js?v=task-cards-13"></script>
+<script src="case-workspace.js?v=task-requester-14"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
@@ -249,6 +249,10 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
                       {{ task.title }} <i class="fa-solid fa-chevron-right text-purple-400 mt-1" aria-hidden="true"></i>
                     </span>
                     <span class="block text-xs text-slate-400 break-words">{{ taskParentLabel(task) }}</span>
+                    <span class="block text-xs text-slate-300 break-words">
+                      <i class="fa-solid fa-user-pen text-purple-400 mr-1" aria-hidden="true"></i>
+                      Requested by <strong class="text-white">{{ task.createdBy||task.by||'Unknown' }}</strong>
+                    </span>
                     <span class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
                       <span><i :class="task.assigneeUid?'fa-solid fa-user':'fa-solid fa-users'" aria-hidden="true"></i> {{ task.assigneeUid?'Assigned to you':'Shared' }}</span>
                       <span v-if="task.dueDate" class="task-badge" :data-overdue="taskOverdue(task)">
