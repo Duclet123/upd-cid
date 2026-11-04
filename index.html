@@ -1082,6 +1082,10 @@ const app=createApp({
       if(!user.value && tab.value==='documents') all=all.filter(d=>d.isPublic);
       if(s)all=all.filter(it=>c.fields.some(f=>f.t!=='c'&&norm(it[f.k]).includes(s)));
       return all.sort((a,b)=>{
+        if(tab.value==='interrogations'){
+          const alphabetical=String(recordName(a)).localeCompare(String(recordName(b)),undefined,{sensitivity:'base',numeric:true});
+          if(alphabetical)return alphabetical;
+        }
         if(sortOrder.value.startsWith('detective-')){const first=String(a.lead||'').trim(),second=String(b.lead||'').trim();if(!first&&second)return 1;if(first&&!second)return -1;const comparison=first.localeCompare(second,undefined,{sensitivity:'base',numeric:true});if(comparison)return sortOrder.value==='detective-desc'?-comparison:comparison;}
         const time=(b.ts||0)-(a.ts||0);return (sortOrder.value==='oldest'?-time:time)||String(a.id).localeCompare(String(b.id));
       });});
