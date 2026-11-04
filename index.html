@@ -1328,6 +1328,10 @@ const app=createApp({
       const fields=[];const add=(label,value)=>{if(hasPrintValue(value))fields.push({label,value});};
       if(['cases','organizations'].includes(record.col)){add('Lead detective',[record.lead,record.leadBadge].filter(Boolean).join(' · '));if(isLongCase(record)){const entries=Object.values(recs).filter(entry=>entry.workspaceParentId===record.id&&!entry.workspaceArchived);add('Investigation log',entries.filter(entry=>entry.workspaceKind==='log').length+' logs · '+entries.filter(entry=>entry.workspaceKind==='task'&&entry.status!=='Done').length+' active tasks');}else if(record.col==='organizations')add('Associated citizens',(Array.isArray(record.members)?record.members.length:0)+' members');else add('Last updated',fmt(record.updatedAt||record.ts));}
       else if(record.col==='citizens'){add('Phone',record.phone);add('Affiliation',record.gang);}
+      else if(record.col==='interrogations'){
+        add('Information date',formatDate(record.infoDate??record.date));
+        if(record.officer)add('Interviewing officer',[record.officer,officerBadge(record,'officer')].filter(Boolean).join(' · '));
+      }
       else for(const field of subFields(cfg.collections[record.col]))if(!['status','requestType'].includes(field.k))add(field.l,shown(record,field));
       return fields.slice(0,2);
     };
