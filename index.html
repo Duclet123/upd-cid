@@ -685,7 +685,7 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           </select>
           
           <div v-else-if="f.t==='c'||f.t==='s'||(rec.obj.col==='warrants'&&f.k==='targets')">
-            <citizen-picker :model-value="rec.obj[f.k]" :multiple="f.t!=='s'" :citizens="itemsOf('citizens')" :disabled="recMode!=='edit'||!canEditRec" :loading="recordLoads.citizens==='loading'" :error="level('citizens')==='none'?'Citizen Registry view permission is required.':recordLoads.citizens==='error'?'Citizen Registry failed to load.':''" :photo="citizenPhoto" @update:model-value="rec.obj[f.k]=$event"></citizen-picker>
+            <citizen-picker :model-value="rec.obj[f.k]" :multiple="f.t!=='s'" :empty-label="rec.obj.col==='interrogations'&&f.k==='subjectCitizen'?'Select suspect…':''" :citizens="itemsOf('citizens')" :disabled="recMode!=='edit'||!canEditRec" :loading="recordLoads.citizens==='loading'" :error="level('citizens')==='none'?'Citizen Registry view permission is required.':recordLoads.citizens==='error'?'Citizen Registry failed to load.':''" :photo="citizenPhoto" @update:model-value="rec.obj[f.k]=$event"></citizen-picker>
           </div>
           <record-selector v-else-if="f.t==='k'" :model-value="rec.obj[f.k]" :records="itemsOf('cases')" :disabled="recMode!=='edit'||!canEditRec" :error="level('cases')==='none'?'Case Files view permission is required.':''" @update:model-value="rec.obj[f.k]=$event"></record-selector>
           <select v-else-if="f.t==='r'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="inp"><option value="">Not specified</option><option v-for="status in RELIABILITY" :key="status">{{ status }}</option></select>
@@ -914,7 +914,7 @@ const defCfg=()=>({
     warrants:COL('Warrants & Authorizations','fa-solid fa-triangle-exclamation text-red-400',[F('targets','Citizen Registry — select one or more','c'),F('otherTargets','Other targets / scope / unidentified persons','a'),F('reason','Reason & request details','a')]),
     cases:COL('Case Files','fa-solid fa-folder-open',[F('fileNo','File Number'),F('title','Case Title'),F('status','Status'),F('lead','Lead Detective','u'),F('summary','Summary of Investigation','a'),F('operationalTimeline','Operational timeline & Methodology','a'),F('recoveredEvidence','Recovered evidence and contraband','a')]),
     organizations:COL('Organisations','fa-solid fa-sitemap text-amber-400',[F('fileNo','File Number'),F('name','Organisation Name'),F('lead','Lead Detective','u'),F('members','Associated citizens','c'),F('notes','Notes & structure','a')]),
-    interrogations:COL('Interrogations','fa-solid fa-comments text-cyan-400',[F('fileNo','Case/File Number'),F('subjectCitizen','Citizen','s'),F('officer','Interviewing officer','o'),F('suspect','Suspect / legacy name'),F('date','Date'),F('transcript','Transcript','a')]),
+    interrogations:COL('Interrogations','fa-solid fa-comments text-cyan-400',[F('fileNo','Case/File Number'),F('subjectCitizen','Suspect','s'),F('officer','Interviewing officer','o'),F('suspect','Suspect name (legacy)'),F('date','Date'),F('transcript','Transcript','a')]),
     documents:COL('Public Documents','fa-solid fa-file-lines text-sky-300',[F('title','Document Title'),F('docType','Type'),F('description','Content','a'),F('isPublic','Visible to Public','b')]),
     directives:COL('Directives & News','fa-solid fa-bullhorn',[F('title','Headline'),F('body','Directive / news','a')]),
     reports:COL('MDT Reports','fa-solid fa-clipboard-list text-emerald-400',[F('title','Report Title'),F('reportNo','Report No.'),F('summary','Summary','a')])
@@ -971,9 +971,10 @@ const normalizeConfig=data=>{
   upsert('organizations',F('status','Status'));upsert('organizations',F('lead','Lead Detective','u'));upsert('organizations',F('members','Associated citizens','c'));
   upsert('interrogations',F('caseId','Related Case File','k'));
   for(const key of ['cases','organizations','interrogations','reports']){upsert(key,F('infoReliability','Information reliability','r'));if(!['cases','organizations'].includes(key))upsert(key,F('infoSource','Source / reference'));upsert(key,F('infoDate','Information date','d'));}
-  upsert('interrogations',F('officer','Interviewing officer','o'));upsert('interrogations',F('subjectCitizen','Citizen','s'));
+  upsert('interrogations',F('officer','Interviewing officer','o'));
   upsert('interrogations',F('videoUrl','Recording link'));upsert('interrogations',F('transcript','Transcript','a'));
   for(const [key,override] of Object.entries(out.registryOverrides)){if(out.collections[key]&&override&&Array.isArray(override.fields)&&override.fields.length)out.collections[key]=clean(override);}
+  upsert('interrogations',F('subjectCitizen','Suspect','s'));
   for(const collection of Object.values(out.collections)){
     collection.label=detectiveLabel(collection.label);
     collection.fields=collection.fields.map(field=>({...field,l:detectiveLabel(field.l)}));
@@ -1267,7 +1268,7 @@ const app=createApp({
         fields.push(F('mdtReferences','Source reference IDs'));
       }
       const seen=new Set();return fields.filter(f=>{if(['cases','organizations'].includes(o.col)&&f.k==='infoSource')return false;if(seen.has(f.k))return false;seen.add(f.k);return true;});};
-    const formFields=computed(()=>{if(!rec.value)return [];const o=rec.value.obj,fields=fieldsForRecord(o),order=!cfg.registryOverrides?.[o.col]&&({citizens:['fullName','citizenId','phone','gang','notes','profilePhoto'],cases:['title','fileNo','caseType','status','lead','summary','operationalTimeline','recoveredEvidence'],organizations:['name','fileNo','status','lead','members','notes'],interrogations:['fileNo','caseId','subjectCitizen','officer','date','infoReliability','infoSource','infoDate','transcript','suspect']})[o.col];return (order?[...fields].sort((a,b)=>(order.includes(a.k)?order.indexOf(a.k):99)-(order.includes(b.k)?order.indexOf(b.k):99)):fields).filter(f=>!(o.col==='citizens'&&recMode.value!=='edit'&&['fullName','citizenId','profilePhoto'].includes(f.k))&&!(o.col==='interrogations'&&recs[o.subjectCitizen]?.col==='citizens'&&f.k==='suspect')&&!(recMode.value!=='edit'&&o.col==='interrogations'&&f.k==='subjectCitizen'&&recs[o.subjectCitizen]?.col!=='citizens')&&!(o.col==='interrogations'&&(f.k==='caseId'||(f.t==='d'&&f.k!=='infoDate')||['date','createdAt','updatedAt','ts','gang','affiliation','affiliations'].includes(f.k)))&&(recMode.value==='edit'||hasPrintValue(o[f.k])));});
+    const formFields=computed(()=>{if(!rec.value)return [];const o=rec.value.obj,fields=fieldsForRecord(o),order=!cfg.registryOverrides?.[o.col]&&({citizens:['fullName','citizenId','phone','gang','notes','profilePhoto'],cases:['title','fileNo','caseType','status','lead','summary','operationalTimeline','recoveredEvidence'],organizations:['name','fileNo','status','lead','members','notes'],interrogations:['fileNo','caseId','subjectCitizen','officer','date','infoReliability','infoSource','infoDate','transcript','suspect']})[o.col];return (order?[...fields].sort((a,b)=>(order.includes(a.k)?order.indexOf(a.k):99)-(order.includes(b.k)?order.indexOf(b.k):99)):fields).filter(f=>!(o.col==='citizens'&&recMode.value!=='edit'&&['fullName','citizenId','profilePhoto'].includes(f.k))&&!(o.col==='interrogations'&&f.k==='suspect'&&(recs[o.subjectCitizen]?.col==='citizens'||!hasPrintValue(o.suspect)))&&!(recMode.value!=='edit'&&o.col==='interrogations'&&f.k==='subjectCitizen'&&recs[o.subjectCitizen]?.col!=='citizens')&&!(o.col==='interrogations'&&(f.k==='caseId'||(f.t==='d'&&f.k!=='infoDate')||['date','createdAt','updatedAt','ts','gang','affiliation','affiliations'].includes(f.k)))&&(recMode.value==='edit'||hasPrintValue(o[f.k])));});
     const canEditRec=computed(()=>!!rec.value&&level(rec.value.obj.col)==='edit');
     const caseWorkspace=ref(null),caseWorkspaceTab=ref('log');
     const organisationData=computed(()=>rec.value?.obj.col==='organizations'?organisationReportTimeline(rec.value.obj,Object.values(recs).filter(r=>level(r.col)!=='none'),cfg.collections):{citizens:[],events:[]});
@@ -1696,7 +1697,7 @@ const app=createApp({
       if(source.col==='interrogations'&&recs[source.subjectCitizen]?.col==='citizens'&&level('citizens')!=='none'){const person=citizenPrintProfile(recs[source.subjectCitizen]);if(hasPrintValue(person.phone)&&!(doc.rows||[]).some(row=>row[0]==='Phone'))doc.rows.push(['Phone',person.phone]);metaLabels.add('Phone');}
       doc.metaRows=(doc.rows||[]).filter(row=>metaLabels.has(row[0]));
       doc.metaPositions={};if(source.col==='interrogations'){
-        const fieldLabel=key=>schema.find(field=>field.k===key)?.l;const slots=[[fieldLabel('subjectCitizen')||'Citizen',1,1],[fieldLabel('suspect')||'Suspect / legacy name',1,1],['Phone',2,1],[fieldLabel('officer')||'Interviewing officer',1,2],[fieldLabel('infoDate')||'Information date',2,2]];
+        const fieldLabel=key=>schema.find(field=>field.k===key)?.l;const slots=[[fieldLabel('subjectCitizen')||'Suspect',1,1],[fieldLabel('suspect')||'Suspect / legacy name',1,1],['Phone',2,1],[fieldLabel('officer')||'Interviewing officer',1,2],[fieldLabel('infoDate')||'Information date',2,2]];
         doc.metaRows=slots.flatMap(([label,column,row])=>{const value=doc.metaRows.find(item=>item[0]===label);if(!value)return [];doc.metaPositions[label]={gridColumn:column,gridRow:row};return [value];});
       }
       doc.citizenRows=(doc.rows||[]).filter(row=>citizenLabels.has(row[0]));
@@ -1944,7 +1945,7 @@ app.component('text-editor',{
 });
 
 app.component('citizen-picker',{
-  props:{modelValue:{default:null},citizens:{type:Array,default:()=>[]},multiple:{type:Boolean,default:true},disabled:Boolean,loading:Boolean,error:String,photo:Function},
+  props:{emptyLabel:String,modelValue:{default:null},citizens:{type:Array,default:()=>[]},multiple:{type:Boolean,default:true},disabled:Boolean,loading:Boolean,error:String,photo:Function},
   emits:['update:modelValue'],data(){return {open:false,search:''};},
   computed:{
     selectedIds(){return this.multiple?(Array.isArray(this.modelValue)?this.modelValue:[]):(this.modelValue?[this.modelValue]:[]);},
@@ -1960,7 +1961,7 @@ app.component('citizen-picker',{
     toggle(){if(this.disabled)return;this.open=!this.open;if(this.open)this.$nextTick(()=>this.$refs.search?.focus());}
   },
   template:`<div class="relative space-y-2" @keydown.esc="escape($event)" @focusout="!$el.contains($event.relatedTarget)&&(open=false)">
-    <button v-if="!disabled" type="button" @click="toggle" :aria-expanded="open" aria-haspopup="listbox" class="inp flex items-center justify-between gap-3 text-left"><span>{{ selected.length?(multiple?selected.length+' citizen(s) selected':selected[0].fullName):'Select citizen'+(multiple?'s':'')+'…' }}</span><i class="fa-solid fa-chevron-down text-tc"></i></button>
+    <button v-if="!disabled" type="button" @click="toggle" :aria-expanded="open" aria-haspopup="listbox" class="inp flex items-center justify-between gap-3 text-left"><span>{{ selected.length?(multiple?selected.length+' citizen(s) selected':selected[0].fullName):(emptyLabel||'Select citizen'+(multiple?'s':'')+'…') }}</span><i class="fa-solid fa-chevron-down text-tc"></i></button>
     <div v-if="selected.length" class="flex flex-wrap gap-2"><span v-for="person in selected" :key="person.id" class="inline-flex gap-2 items-center bg-purple-900/20 border border-purple-800 rounded-lg px-3 py-2 text-xs"><span>{{ person.fullName }} <span class="text-tc">· {{ person.citizenId||'No Citizen ID' }}</span></span><button v-if="!disabled" type="button" @click="remove(person.id)" :aria-label="'Remove '+person.fullName" class="text-red-300">✕</button></span></div>
     <p v-else-if="disabled" class="text-slate-400 text-sm">No citizens selected.</p>
     <p v-if="error" class="text-red-300 text-xs">{{ error }}</p>
