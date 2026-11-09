@@ -425,6 +425,34 @@ assert.equal(state.caseWorkspaceTab.value,'task');
 await state.saveCaseEntry({...sharedTask,status:'Done'});
 assert(!state.myTasks.value.some(task=>task.id===sharedTask.id));
 
+// Search and attachment pickers show titles even when the schema starts with a code.
+state.rec.value=null;state.newRec('cases');Object.assign(state.rec.value.obj,{title:'Harbour investigation',fileNo:'CASE-TITLE-SEARCH'});await state.saveNew();
+const titledCase=state.rec.value.obj;
+state.globalQuery.value='CASE-TITLE-SEARCH';assert.equal(state.globalResults.value.find(r=>r.obj.id===titledCase.id).title,'Harbour investigation');
+assert.equal(state.searchLabel(titledCase),'Harbour investigation · CASE-TITLE-SEARCH');
+assert(state.caseLinkChoices.value.every(r=>r.id!==titledCase.id));
+state.newRec('organizations');state.rec.value.obj.name='Search picker owner';state.lkCol.value='cases';state.lkSearch.value='Harbour investigation';
+assert(state.lkChoices.value.some(r=>r.id===titledCase.id));
+assert(state.caseLinkChoices.value.find(r=>r.id===titledCase.id).label.includes('Harbour investigation'));
+state.lkSearch.value='CASE-TITLE-SEARCH';assert(state.lkChoices.value.some(r=>r.id===titledCase.id));
+
+// Organisation tasks inherit their registry, permissions and lifecycle.
+state.rec.value=null;state.newRec('organizations');Object.assign(state.rec.value.obj,{name:'Task organisation',fileNo:'ORG-TASKS'});await state.saveNew();
+const taskOrg=state.rec.value.obj;
+const orgTask=await state.saveCaseEntry({workspaceKind:'task',title:'Review organisation activity',status:'Pending',priority:'High'});
+assert.equal(orgTask.col,'organizations');assert(state.isWorkspaceEntry(orgTask));
+assert.equal(state.itemsOf('organizations').filter(r=>r.id===orgTask.id).length,0);
+assert(state.caseEntries.value.some(r=>r.id===orgTask.id));assert(state.myTasks.value.some(r=>r.id===orgTask.id));
+assert(state.taskParentLabel(orgTask).includes('Task organisation'));
+state.openTask(orgTask);assert.equal(state.rec.value.obj.id,taskOrg.id);assert.equal(state.caseWorkspaceTab.value,'task');
+await assert.rejects(state.saveCaseEntry({workspaceKind:'log',title:'Wrong kind',body:'No organisation logs'}),/Invalid/);
+await state.saveCaseEntry({...orgTask,status:'Done'});assert(!state.myTasks.value.some(r=>r.id===orgTask.id));
+const activeOrgTask=await state.saveCaseEntry({...orgTask,version:2,status:'Pending'});
+await state.delRec(taskOrg);assert(!state.myTasks.value.some(r=>r.id===orgTask.id));
+await state.permanentDelete({...database.get('trash/'+taskOrg.id),id:taskOrg.id});
+assert(!database.has('records/'+orgTask.id));assert(!database.has('trash/'+orgTask.id));
+console.log('PASS: organisation task storage, dashboard navigation, completion, type validation, parent deletion and permanent child cleanup.');
+
 state.user.value=null;await tick();state.publicHomepageStats.value={organizations:42,cases:9};assert.equal(state.homepageCount('organizations'),42);assert.equal(state.homepageCount('cases'),9);assert.equal(state.organisationEvents.value.length,0);assert(!queries.slice(-2).some(q=>q.args[2]==='citizens'||q.args[2]==='cases'));
 console.log('PASS: organisation MDT links, task priority/completion/reopening, impossible due date rejection, dashboard task navigation, and public aggregate display without private queries.');
 // Personal activity and safe field restoration use the actual setup and audited write path.
