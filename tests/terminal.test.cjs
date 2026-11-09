@@ -430,6 +430,13 @@ state.rec.value=null;state.newRec('cases');Object.assign(state.rec.value.obj,{ti
 const titledCase=state.rec.value.obj;
 state.globalQuery.value='CASE-TITLE-SEARCH';assert.equal(state.globalResults.value.find(r=>r.obj.id===titledCase.id).title,'Harbour investigation');
 assert.equal(state.searchLabel(titledCase),'Harbour investigation · CASE-TITLE-SEARCH');
+const reportFieldsBefore=state.cfg.collections.reports.fields;
+state.cfg.collections.reports.fields=[{k:'reportNo',l:'Report No.',t:'t'},{k:'title',l:'Title',t:'t'}];
+const attachableReport={col:'reports',reportNo:'REP-025',title:'Harbour witness statement'};
+assert.equal(state.recTitle(attachableReport),'REP-025');
+assert.equal(state.searchLabel(attachableReport),'Harbour witness statement · REP-025');
+assert.equal(state.searchLabel({...attachableReport,reportNo:''}),'Harbour witness statement');
+state.cfg.collections.reports.fields=reportFieldsBefore;
 assert(state.caseLinkChoices.value.every(r=>r.id!==titledCase.id));
 state.newRec('organizations');state.rec.value.obj.name='Search picker owner';state.lkCol.value='cases';state.lkSearch.value='Harbour investigation';
 assert(state.lkChoices.value.some(r=>r.id===titledCase.id));
