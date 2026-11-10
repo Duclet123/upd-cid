@@ -502,11 +502,11 @@ for(const summary of ['WPN-1234','XWPN-123','WPN-123-X','No firearm mentioned'])
 assert(state.serialMention({summary:'Serial A+B(7).'}, {serial:'A+B(7)'}));
 state.newRec('reports');Object.assign(state.rec.value.obj,{title:'Serial notification regression',reportNo:'REP-SERIAL',summary:'Recovered WPN-123.'});await state.saveNew();
 const serialReport=state.rec.value.obj;assert.equal(state.weaponReportNotice.value.phase,'matched');assert.equal(state.weaponReportNotice.value.matches[0].weaponId,detectedWeapon.id);
-state.weaponReportNotice.value=null;serialReport.summary='Updated WPN-123';await state.saveTarget(serialReport);assert.equal(state.weaponReportNotice.value,null);
+state.weaponReportNotice.value=null;serialReport.summary='Updated WPN-123';await state.saveTarget(serialReport);assert.equal(state.weaponReportNotice.value.phase,'matched');
 serialReport.summary='No serial';await state.saveTarget(serialReport);assert.equal(state.weaponReportNotice.value,null);
 serialReport.summary='Serial added on edit WPN-123';await state.saveTarget(serialReport);assert.equal(state.weaponReportNotice.value.phase,'matched');
 assert.equal(state.weaponReportNotice.value.matches[0].weaponId,detectedWeapon.id);
-state.weaponReportNotice.value=null;await state.saveTarget(serialReport);assert.equal(state.weaponReportNotice.value,null);
+state.weaponReportNotice.value=null;await state.saveTarget(serialReport);assert.equal(state.weaponReportNotice.value.phase,'matched');state.weaponReportNotice.value=null;
 const serialTransaction=fdb.runTransaction;fdb.runTransaction=async()=>{throw Error('Report save failed')};serialReport.summary='Failed save';
 await state.saveTarget(serialReport);assert.equal(state.weaponReportNotice.value,null);fdb.runTransaction=serialTransaction;serialReport.summary='Serial added on edit WPN-123';
 
@@ -515,7 +515,7 @@ serialReport.summary='Serial removed';await state.saveTarget(serialReport);asser
 state.recordLoads.weapons='loading';state.newRec('reports');Object.assign(state.rec.value.obj,{title:'Deferred serial check',summary:'WPN-123'});await state.saveNew();assert.equal(state.weaponReportNotice.value.phase,'checking');
 state.recordLoads.weapons='ready';await tick();assert.equal(state.weaponReportNotice.value.phase,'matched');
 state.user.value=null;await tick();assert.equal(state.weaponReportNotice.value,null);assert.equal(state.weaponReportReferences.value.length,0);
-console.log('PASS: MDT-only serial notices after creation, exact token/escaped/whitespace matching, no edit alert, reactive weapon references, deferred registry loading and logout privacy.');
+console.log('PASS: MDT-only serial notices after creation, exact token/escaped/whitespace matching, persistent edit/no-op save alerts, reactive weapon references, deferred registry loading and logout privacy.');
 
 console.log('Expected handled errors:',errors.length);
 })().catch(e=>{console.error(e);process.exitCode=1});

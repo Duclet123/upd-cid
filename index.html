@@ -1493,7 +1493,7 @@ const app=createApp({
         const updateIdentity=await lockIdentity(tx,before,data,o.id);const v=expected+1;updateIdentity();tx.set(ref,{...data,version:v,auditId,updatedAt:Date.now()});tx.set(ref.collection('history').doc(auditId),{actorUid:actor.id,actorName:actor.name,at:firebase.firestore.FieldValue.serverTimestamp(),version:v,action:snap.exists?'updated':'created',changes});return {version:v,auditId,written:true,previousReport:data.col==='reports'?before:null};
       });o.version=result.version;o.auditId=result.auditId;o.uniqueKey=data.uniqueKey;for(const key of ['reviewRequestId','reviewRequestedAt','reviewRequestedBy','reviewRequestedByUid']){if(data[key]===undefined)delete o[key];else o[key]=data[key];}if(isWorkspaceEntry(data))for(const key of ['createdByUid','createdBy','createdAt','by','ts'])o[key]=data[key];if(data.col==='warrants'){o.requestType=data.requestType;o.workflow=data.workflow;if(data.legacyWorkflow)o.legacyWorkflow=data.legacyWorkflow;}saveStates[o.id]={phase:editableJSON(o)===editableJSON({...data,auditId:result.auditId})?'saved':'pending'};
       if(user.value?.id===actor.id){markNotificationRead(o,false);
-        if(result.written&&data.col==='reports'&&level('weapons')!=='none'){
+        if(data.col==='reports'&&level('weapons')!=='none'){
           weaponReportNotice.value={reportId:data.id,title:searchLabel(data),report:clean(data),previousReport:result.previousReport,phase:'checking',matches:[]};
           checkReportWeapons();
         }
@@ -1530,7 +1530,7 @@ const app=createApp({
       if(!user.value||level('weapons')==='none'||level('reports')==='none'){weaponReportNotice.value=null;return;}
       if(recordLoads.weapons!=='ready'){notice.phase=recordLoads.weapons==='error'?'error':'checking';return;}
       const report=notice.report||recs[notice.reportId];if(!report){weaponReportNotice.value=null;return;}
-      const matches=itemsOf('weapons').filter(w=>!notice.previousReport||!serialMention(notice.previousReport,w)).map(w=>serialMention(report,w)).filter(Boolean);
+      const matches=itemsOf('weapons').map(w=>serialMention(report,w)).filter(Boolean);
       weaponReportNotice.value=matches.length?{...notice,phase:'matched',matches}:null;
     };
     watch(()=>[recordLoads.weapons,user.value?.id,level('weapons'),level('reports')],checkReportWeapons);
