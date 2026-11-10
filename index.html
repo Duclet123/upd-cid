@@ -1490,9 +1490,14 @@ const app=createApp({
           else for(const key of ['reviewRequestId','reviewRequestedAt','reviewRequestedBy','reviewRequestedByUid']){if(before[key]===undefined)delete data[key];else data[key]=before[key];}
         }
         const changes=recordChanges(before,data);if(snap.exists&&!Object.keys(changes).length&&(before.uniqueKey||'')===data.uniqueKey)return {version:expected,auditId:before.auditId||''};
-        const updateIdentity=await lockIdentity(tx,before,data,o.id);const v=expected+1;updateIdentity();tx.set(ref,{...data,version:v,auditId,updatedAt:Date.now()});tx.set(ref.collection('history').doc(auditId),{actorUid:actor.id,actorName:actor.name,at:firebase.firestore.FieldValue.serverTimestamp(),version:v,action:snap.exists?'updated':'created',changes});return {version:v,auditId};
+        const updateIdentity=await lockIdentity(tx,before,data,o.id);const v=expected+1;updateIdentity();tx.set(ref,{...data,version:v,auditId,updatedAt:Date.now()});tx.set(ref.collection('history').doc(auditId),{actorUid:actor.id,actorName:actor.name,at:firebase.firestore.FieldValue.serverTimestamp(),version:v,action:snap.exists?'updated':'created',changes});return {version:v,auditId,written:true,previousReport:data.col==='reports'?before:null};
       });o.version=result.version;o.auditId=result.auditId;o.uniqueKey=data.uniqueKey;for(const key of ['reviewRequestId','reviewRequestedAt','reviewRequestedBy','reviewRequestedByUid']){if(data[key]===undefined)delete o[key];else o[key]=data[key];}if(isWorkspaceEntry(data))for(const key of ['createdByUid','createdBy','createdAt','by','ts'])o[key]=data[key];if(data.col==='warrants'){o.requestType=data.requestType;o.workflow=data.workflow;if(data.legacyWorkflow)o.legacyWorkflow=data.legacyWorkflow;}saveStates[o.id]={phase:editableJSON(o)===editableJSON({...data,auditId:result.auditId})?'saved':'pending'};
-      if(user.value?.id===actor.id)markNotificationRead(o,false);
+      if(user.value?.id===actor.id){markNotificationRead(o,false);
+        if(result.written&&data.col==='reports'&&level('weapons')!=='none'){
+          weaponReportNotice.value={reportId:data.id,title:searchLabel(data),report:clean(data),previousReport:result.previousReport,phase:'checking',matches:[]};
+          checkReportWeapons();
+        }
+      }
       }catch(e){saveStates[o.id]={phase:'error',error:e.message};throw e;}
     };
     const addCitizenVehicle=()=>{if(!busy.value&&level('vehicles')==='edit')citizenVehicleDrafts.value.push({id:uid(),plate:'',model:'',color:'',saved:false,record:null});};
@@ -1524,8 +1529,8 @@ const app=createApp({
       const notice=weaponReportNotice.value;if(!notice)return;
       if(!user.value||level('weapons')==='none'||level('reports')==='none'){weaponReportNotice.value=null;return;}
       if(recordLoads.weapons!=='ready'){notice.phase=recordLoads.weapons==='error'?'error':'checking';return;}
-      const report=recs[notice.reportId];if(!report){weaponReportNotice.value=null;return;}
-      const matches=itemsOf('weapons').map(w=>serialMention(report,w)).filter(Boolean);
+      const report=notice.report||recs[notice.reportId];if(!report){weaponReportNotice.value=null;return;}
+      const matches=itemsOf('weapons').filter(w=>!notice.previousReport||!serialMention(notice.previousReport,w)).map(w=>serialMention(report,w)).filter(Boolean);
       weaponReportNotice.value=matches.length?{...notice,phase:'matched',matches}:null;
     };
     watch(()=>[recordLoads.weapons,user.value?.id,level('weapons'),level('reports')],checkReportWeapons);
@@ -1539,7 +1544,7 @@ const app=createApp({
       if(busy.value||!rec.value?.isNew)return;recErr.value='';const o=rec.value.obj,c=cfg.collections[o.col];
       if(o.col==='warrants' ? (o.requestType==='Authorization'?!String(o.reason||'').trim():(!(o.targets||[]).length&&!String(o.otherTargets||'').trim())) : !String(o[c.fields[0].k]||'').trim()){recErr.value=o.col==='warrants'?(o.requestType==='Authorization'?'Describe the authorization you are requesting.':'Select a citizen or describe the target / scope of the request.'):'"'+c.fields[0].l+'" is required.';return;}
       if(o.col==='warrants'&&user.value)Object.assign(o,{issuedBy:user.value.name,issuedRank:user.value.rank,issuedBadge:user.value.badge});
-      busy.value=true;try{if(o.col==='citizens')validateCitizenVehicles();await saveRaw(o);recs[o.id]=o;if(rec.value?.obj===o){rec.value={obj:recs[o.id],isNew:false};}if(o.col==='citizens')await persistCitizenVehicles(o);recMode.value='preview';if(o.col==='reports'&&level('weapons')!=='none'){weaponReportNotice.value={reportId:o.id,title:searchLabel(o),phase:'checking',matches:[]};checkReportWeapons();}}catch(e){if(!rec.value?.isNew){recMode.value='edit';recErr.value='Citizen saved. Some vehicles are still pending: '+e.message;}else recErr.value=e.code==='permission-denied'?'Saving was denied. Publish the current firestore.rules and check your rank permissions. Your draft is still here.':e.message;fail(e);}finally{busy.value=false;}
+      busy.value=true;try{if(o.col==='citizens')validateCitizenVehicles();await saveRaw(o);recs[o.id]=o;if(rec.value?.obj===o){rec.value={obj:recs[o.id],isNew:false};}if(o.col==='citizens')await persistCitizenVehicles(o);recMode.value='preview';}catch(e){if(!rec.value?.isNew){recMode.value='edit';recErr.value='Citizen saved. Some vehicles are still pending: '+e.message;}else recErr.value=e.code==='permission-denied'?'Saving was denied. Publish the current firestore.rules and check your rank permissions. Your draft is still here.':e.message;fail(e);}finally{busy.value=false;}
     };
     const editableJSON=o=>JSON.stringify(Object.fromEntries(Object.entries(o).filter(([k])=>!['version','updatedAt','auditId','uniqueKey'].includes(k))));
     watch(()=>rec.value&&!rec.value.isNew?editableJSON(rec.value.obj):null,(s,old)=>{if(s===null||old===null||!canEditRec.value||recMode.value!=='edit')return;clearTimeout(watch.r);const o=rec.value.obj;saveStates[o.id]={phase:'pending'};watch.r=setTimeout(()=>saveRaw(o).catch(e=>{recErr.value=e.message;fail(e);}),800);});
