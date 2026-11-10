@@ -514,6 +514,20 @@ state.recordLoads.reports='ready';state.openRec(detectedWeapon);assert(state.wea
 serialReport.summary='Serial removed';await state.saveTarget(serialReport);assert(!state.weaponReportReferences.value.some(m=>m.report.id===serialReport.id));
 state.recordLoads.weapons='loading';state.newRec('reports');Object.assign(state.rec.value.obj,{title:'Deferred serial check',summary:'WPN-123'});await state.saveNew();assert.equal(state.weaponReportNotice.value.phase,'checking');
 state.recordLoads.weapons='ready';await tick();assert.equal(state.weaponReportNotice.value.phase,'matched');
+const weaponTimerBefore=ctx.setTimeout;let expireWeaponNotice=null;
+ctx.setTimeout=(callback,delay)=>{if(delay===10000){expireWeaponNotice=callback;return {unref(){}};}return weaponTimerBefore(callback,delay);};
+state.checkReportWeapons();assert(expireWeaponNotice);
+const serialNotice=state.notifications.value.find(n=>n.record._weaponAlertKey&&n.record.id===state.rec.value.obj.id);assert(serialNotice);
+assert(serialNotice.weaponMatches.some(w=>w.id===detectedWeapon.id));
+const serialAlertCount=state.notifications.value.filter(n=>n.record._weaponAlertKey).length;
+state.checkReportWeapons();assert.equal(state.notifications.value.filter(n=>n.record._weaponAlertKey).length,serialAlertCount);
+expireWeaponNotice();ctx.setTimeout=weaponTimerBefore;assert.equal(state.weaponReportNotice.value,null);
+assert(state.notifications.value.some(n=>n.record._weaponAlertKey===serialNotice.record._weaponAlertKey));
+const storedWeaponActivity=JSON.parse(activityStorage.get('cid-personal-activity-v1:weapon-test-admin'));assert(storedWeaponActivity.weaponAlerts.some(a=>a.key===serialNotice.record._weaponAlertKey));
+state.markNotificationRead(serialNotice.record);assert(!state.notifications.value.some(n=>n.record._weaponAlertKey===serialNotice.record._weaponAlertKey));
+assert(!JSON.parse(activityStorage.get('cid-personal-activity-v1:weapon-test-admin')).weaponAlerts.some(a=>a.key===serialNotice.record._weaponAlertKey));
+console.log('PASS: 10-second weapon notice expiry retains browser-persisted notifications, serial links, deduplication and mark-as-read persistence.');
+
 state.user.value=null;await tick();assert.equal(state.weaponReportNotice.value,null);assert.equal(state.weaponReportReferences.value.length,0);
 console.log('PASS: MDT-only serial notices after creation, exact token/escaped/whitespace matching, persistent edit/no-op save alerts, reactive weapon references, deferred registry loading and logout privacy.');
 
