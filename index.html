@@ -1633,14 +1633,14 @@ const app=createApp({
         const citizen=recs[id];
         if(citizen?.col!=='citizens')return [];
         const uniqueName=citizen.fullName&&citizens.filter(person=>norm(person.fullName)===norm(citizen.fullName)).length===1;
-        const properties=propertiesOf(citizen,true).map(property=>[property.name,property.street].filter(hasPrintValue).join(' · '));
+        const properties=propertiesOf(citizen,true).map(property=>({record:property,label:[property.name,property.street].filter(hasPrintValue).join(' · ')||'Property'}));
         const cars=vehicles.filter(vehicle=>{
           if(vehicle.links?.some(link=>link.id===id&&link.c==='citizens')||citizen.links?.some(link=>link.id===vehicle.id&&link.c==='vehicles'))return true;
           if(vehicle.ownerCid)return citizen.citizenId&&norm(vehicle.ownerCid)===norm(citizen.citizenId);
           return uniqueName&&norm(vehicle.owner)===norm(citizen.fullName);
-        }).map(vehicle=>[vehicle.plate,vehicle.model,vehicle.color].filter(hasPrintValue).join(' · '));
+        }).map(vehicle=>({record:vehicle,label:[vehicle.plate,vehicle.model,vehicle.color].filter(hasPrintValue).join(' · ')||'Vehicle'}));
         const groups=[{key:'properties',label:'properties',entries:properties},{key:'vehicles',label:'vehicles',entries:cars}]
-          .map(group=>({...group,entries:[...new Set(group.entries.filter(Boolean))],included:record.targetAssets?.[id]?.[group.key]===true}))
+          .map(group=>({...group,items:group.entries,entries:[...new Set(group.entries.map(item=>item.label))],included:record.targetAssets?.[id]?.[group.key]===true}))
           .filter(group=>group.entries.length&&(editing||group.included));
         return groups.length?[{id,label:citizenLabel(id),groups}]:[];
       });
@@ -1922,10 +1922,17 @@ const app=createApp({
       const c=cfg.collections[o.col];
       const printPriority=f=>o.col==='cases'&&['summary','operationalTimeline','recoveredEvidence'].includes(f.k)?3+['summary','operationalTimeline','recoveredEvidence'].indexOf(f.k):f.k==='lead'?0:['c','s'].includes(f.t)?1:2;
       const rows=[...fieldsForRecord(o)].sort((a,b)=>printPriority(a)-printPriority(b)).filter(f=>!['infoReliability','reliability'].includes(f.k)&&f.t!=='r'&&hasPrintValue(o[f.k])&&!(o.col==='citizens'&&f.k==='profilePhoto')&&!(o.col==='interrogations'&&recs[o.subjectCitizen]?.col==='citizens'&&f.k==='suspect')&&!(o.col==='interrogations'&&f.k==='subjectCitizen'&&recs[o.subjectCitizen]?.col!=='citizens')&&!(o.col==='interrogations'&&(f.k==='caseId'||(f.t==='d'&&f.k!=='infoDate')||['date','createdAt','updatedAt','ts','gang','affiliation','affiliations'].includes(f.k)))&&!(o.col==='interrogations'&&['transcript','videoUrl','videoLink','recordingUrl','recordingLink','video','recordings'].includes(f.k))).map(f=>[f.l,printField(Array.isArray(o[f.k])?{...o,[f.k]:o[f.k].filter(hasPrintValue)}:o,f),f.t==='a']);
+      const assetPhotos=[];
       for(const assets of warrantCitizenAssets(o)){
         for(const group of assets.groups){
           const label=group.key==='properties'?'Properties':'Vehicles';
           rows.push([label+' · '+assets.label,group.entries.join('\n'),false]);
+          for(const item of group.items){
+            for(const photo of printPhotos(item.record)){
+              assetPhotos.push({...photo,id:'warrant-asset-photo-'+assetPhotos.length,
+                title:[item.label,photo.title].filter(Boolean).join(' · ')});
+            }
+          }
         }
       }
       if(o.col==='warrants'&&recordCharges(o).length)rows.push(['Charges',recordCharges(o).map(charge=>[charge.code,charge.title].filter(Boolean).join(' · ')).join('\n'),false]);
@@ -1934,7 +1941,7 @@ const app=createApp({
       if(o.col==='warrants'&&!(o.targets||[]).some(hasPrintValue)&&[o.citizenName,o.citizenId].some(hasPrintValue))rows.push(['Legacy target',[o.citizenName,o.citizenId].filter(hasPrintValue).join(' · '),false]);
       const now=new Date();const ts=now.getDate().toString().padStart(2,'0')+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear()+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
       const sigs=makeSignatures(o).filter(sig=>hasPrintValue(sig.name)),profileUrl=o.col==='citizens'&&citizenPhoto(o)!==DEFAULT_AVATAR?citizenPhoto(o):'';
-      pdoc.value={sourceRecordId:o.id,routing:o.col==='warrants'?{to:"Department of Justice (DOJ) - District Attorney's Office",cc:'Judges'}:null,transcript:o.col==='interrogations'&&hasPrintValue(o.transcript)?{label:c.fields.find(f=>f.k==='transcript')?.l||'Transcript',text:o.transcript}:null,profile:o.col==='citizens'&&[profileUrl,o.fullName,o.citizenId].some(hasPrintValue)?citizenPrintProfile(o):null,title:o.col==='warrants'?requestTypeLabel(o):o.col==='interrogations'?recTitle(o):o.col==='vehicles'?c.label+': '+printReferenceLabel(o):['cases','organizations'].includes(o.col)?recordName(o):c.label+': '+recTitle(o),kind:'',ts,rows,links:(o.col==='interrogations'?[]:linkedFor(o)).map(l=>cfg.collections[l.rec.col].label+': '+printReferenceLabel(l.rec)),files:(o.files||[]).filter(f=>hasPrintValue(f.url)).map(f=>[...new Set([f.name,f.url].filter(hasPrintValue).map(value=>String(value).trim()))].join(' — ')).filter(hasPrintValue),photos:printPhotos(o),properties:o.col==='citizens'?propertiesOf(o,true).map(p=>({id:p.id,name:p.name,street:p.street,photos:(p.gallery||[]).filter(photo=>hasPrintValue(photo.url)).map(photo=>({...photo}))})):[],sigs};
+      pdoc.value={sourceRecordId:o.id,routing:o.col==='warrants'?{to:"Department of Justice (DOJ) - District Attorney's Office",cc:'Judges'}:null,transcript:o.col==='interrogations'&&hasPrintValue(o.transcript)?{label:c.fields.find(f=>f.k==='transcript')?.l||'Transcript',text:o.transcript}:null,profile:o.col==='citizens'&&[profileUrl,o.fullName,o.citizenId].some(hasPrintValue)?citizenPrintProfile(o):null,title:o.col==='warrants'?requestTypeLabel(o):o.col==='interrogations'?recTitle(o):o.col==='vehicles'?c.label+': '+printReferenceLabel(o):['cases','organizations'].includes(o.col)?recordName(o):c.label+': '+recTitle(o),kind:'',ts,rows,links:(o.col==='interrogations'?[]:linkedFor(o)).map(l=>cfg.collections[l.rec.col].label+': '+printReferenceLabel(l.rec)),files:(o.files||[]).filter(f=>hasPrintValue(f.url)).map(f=>[...new Set([f.name,f.url].filter(hasPrintValue).map(value=>String(value).trim()))].join(' — ')).filter(hasPrintValue),photos:[...printPhotos(o),...assetPhotos],properties:o.col==='citizens'?propertiesOf(o,true).map(p=>({id:p.id,name:p.name,street:p.street,photos:(p.gallery||[]).filter(photo=>hasPrintValue(photo.url)).map(photo=>({...photo}))})):[],sigs};
       preparePrintLayout(pdoc.value,o);
       if(['cases','warrants'].includes(o.col)){
         const bundle={...pdoc.value,caseSourceId:o.id,attachmentsIncluded:!!includeAttachments,attachments:[]};

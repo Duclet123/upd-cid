@@ -541,10 +541,10 @@ state.printRecord({...chargedWarrant,penalCharges:[]});assert(!state.pdoc.value.
 state.newRec('reports');Object.assign(state.rec.value.obj,{title:'Charge test MDT report',penalCharges:chargedWarrant.penalCharges});await state.saveNew();
 assert.equal(database.get('records/'+state.rec.value.obj.id).penalCharges[0].title,'Example offence');
 state.recordLoads.citizens='ready';state.recordLoads.vehicles='ready';
-state.newRec('citizens');Object.assign(state.rec.value.obj,{fullName:'Warrant Asset Citizen',citizenId:'ASSET-TEST',properties:[{id:'property-1',name:'Residence',street:'12 Test Street'}]});
+state.newRec('citizens');Object.assign(state.rec.value.obj,{fullName:'Warrant Asset Citizen',citizenId:'ASSET-TEST',properties:[{id:'property-1',name:'Residence',street:'12 Test Street',gallery:[{id:'res-photo',url:'https://example.com/residence.jpg',caption:'Front entrance'}]}]});
 await state.saveNew();const assetCitizen=state.rec.value.obj;
 for(const [plate,ownerCid] of [['ASSET-PLATE','ASSET-TEST'],['WRONG-OWNER','OTHER-CID']]){
-  state.newRec('vehicles');Object.assign(state.rec.value.obj,{plate,model:'Test Sedan',owner:assetCitizen.fullName,ownerCid});await state.saveNew();
+  state.newRec('vehicles');Object.assign(state.rec.value.obj,{plate,model:'Test Sedan',owner:assetCitizen.fullName,ownerCid,gallery:[{id:'car-photo',url:'https://example.com/'+plate+'.jpg'}]});await state.saveNew();
 }
 state.newRec('warrants');const assetWarrant=state.rec.value.obj;state.setRecordCitizens(assetWarrant,'targets',[assetCitizen.id]);
 assert.equal(state.warrantCitizenAssets(assetWarrant,true)[0].groups.length,2);
@@ -555,6 +555,11 @@ await state.saveNew();assert(database.get('records/'+assetWarrant.id).targetAsse
 state.printRecord(assetWarrant);
 assert(state.pdoc.value.bodyRows.some(row=>row[0].startsWith('Properties · ')&&row[1]==='Residence · 12 Test Street'));
 assert(state.pdoc.value.bodyRows.some(row=>row[0].startsWith('Vehicles · ')&&row[1]==='ASSET-PLATE · Test Sedan'));
+assert(state.pdoc.value.photos.some(photo=>photo.url==='https://example.com/residence.jpg'&&photo.caption==='Front entrance'));
+assert(state.pdoc.value.photos.some(photo=>photo.url==='https://example.com/ASSET-PLATE.jpg'&&photo.title.includes('ASSET-PLATE')));
+assert(!state.pdoc.value.photos.some(photo=>photo.url.includes('WRONG-OWNER')));
+state.printRecord({...assetWarrant,targetAssets:{}});assert(!state.pdoc.value.photos.some(photo=>photo.url.includes('residence.jpg')||photo.url.includes('ASSET-PLATE')));
+
 state.setRecordCitizens(assetWarrant,'targets',[]);assert.equal(Object.keys(assetWarrant.targetAssets).length,0);
 console.log('Expected handled errors:',errors.length);
 })().catch(e=>{console.error(e);process.exitCode=1});
