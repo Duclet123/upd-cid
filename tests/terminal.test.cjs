@@ -531,5 +531,14 @@ console.log('PASS: 10-second weapon notice expiry retains browser-persisted noti
 state.user.value=null;await tick();assert.equal(state.weaponReportNotice.value,null);assert.equal(state.weaponReportReferences.value.length,0);
 console.log('PASS: MDT-only serial notices after creation, exact token/escaped/whitespace matching, persistent edit/no-op save alerts, reactive weapon references, deferred registry loading and logout privacy.');
 
+state.user.value={id:'charge-test-admin',name:'Charge Tester',rank:'Director'};await tick();
+state.rec.value=null;state.newRec('warrants');
+Object.assign(state.rec.value.obj,{otherTargets:'Charge test target',penalCharges:[{id:'pc-101',code:'PC 101',title:'Example offence'}]});
+await state.saveNew();const chargedWarrant=state.rec.value.obj;
+assert.equal(database.get('records/'+chargedWarrant.id).penalCharges[0].code,'PC 101');
+state.printRecord(chargedWarrant);assert(state.pdoc.value.bodyRows.some(row=>row[0]==='Charges'&&row[1]==='PC 101 · Example offence'));
+state.printRecord({...chargedWarrant,penalCharges:[]});assert(!state.pdoc.value.bodyRows.some(row=>row[0]==='Charges'));
+state.newRec('reports');Object.assign(state.rec.value.obj,{title:'Charge test MDT report',penalCharges:chargedWarrant.penalCharges});await state.saveNew();
+assert.equal(database.get('records/'+state.rec.value.obj.id).penalCharges[0].title,'Example offence');
 console.log('Expected handled errors:',errors.length);
 })().catch(e=>{console.error(e);process.exitCode=1});
