@@ -93,10 +93,10 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
 .sheet .print-warrant-citizen .print-citizen-identity{margin:0;border-radius:3pt 3pt 0 0;break-after:avoid}
 .sheet .print-warrant-properties{padding:10pt 12pt 12pt}
 .sheet .print-warrant-properties-heading{margin:0 0 7pt;font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#465567;break-after:avoid}
-.sheet .print-warrant-property{margin:0 0 9pt;padding:9pt 10pt;border:.5pt solid #d1d5db;border-radius:3pt;break-inside:avoid}
-.sheet .print-warrant-property:last-child{margin-bottom:0}
+.sheet .print-warrant-property-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9pt;align-items:start}
+.sheet .print-warrant-property{min-width:0;margin:0;padding:9pt 10pt;border:.5pt solid #d1d5db;border-radius:3pt;break-inside:avoid}
 .sheet .print-warrant-property h5{font-size:11pt;font-weight:700;margin:0;break-after:avoid}
-.sheet .print-warrant-property .print-photo-grid{gap:8pt}
+.sheet .print-warrant-property .print-photo-grid{grid-template-columns:minmax(0,1fr);gap:8pt}
 .sheet .print-warrant-property .print-photo{padding:5pt}
 .sheet .print-warrant-property .print-photo img{height:42mm!important;margin-bottom:0}
 
@@ -870,19 +870,21 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
       <print-citizen-card :profile="person"></print-citizen-card>
       <div v-if="person.properties?.length" class="print-warrant-properties">
         <h4 class="print-warrant-properties-heading">Properties</h4>
-        <article v-for="(property,index) in person.properties" :key="index" class="print-warrant-property">
-          <h5 class="font-bold">{{ property.label }}</h5>
-          <div v-if="property.photos.length" class="print-photo-grid mt-2">
-            <figure v-for="(photo,photoIndex) in property.photos" :key="photoIndex" class="print-photo">
-              <img :src="photo.url" class="w-full h-64 object-contain" style="object-fit:contain;object-position:center">
-              <figcaption v-if="[photo.title,photo.caption,photo.desc].some(hasPrintValue)" class="text-xs mt-2">
-                <p v-if="hasPrintValue(photo.title)" class="font-bold">{{ photo.title }}</p>
-                <p v-if="hasPrintValue(photo.caption)&&photo.caption!==photo.title" class="whitespace-pre-line">{{ photo.caption }}</p>
-                <div v-if="hasPrintValue(photo.desc)&&photo.desc!==photo.caption" class="rich-text" v-html="renderText(photo.desc)"></div>
-              </figcaption>
-            </figure>
-          </div>
-        </article>
+        <div class="print-warrant-property-grid">
+          <article v-for="(property,index) in person.properties" :key="index" class="print-warrant-property">
+            <h5 class="font-bold">{{ property.label }}</h5>
+            <div v-if="property.photos.length" class="print-photo-grid mt-2">
+              <figure v-for="(photo,photoIndex) in property.photos" :key="photoIndex" class="print-photo">
+                <img :src="photo.url" class="w-full h-64 object-contain" style="object-fit:contain;object-position:center">
+                <figcaption v-if="[photo.title,photo.caption,photo.desc].some(hasPrintValue)" class="text-xs mt-2">
+                  <p v-if="hasPrintValue(photo.title)" class="font-bold">{{ photo.title }}</p>
+                  <p v-if="hasPrintValue(photo.caption)&&photo.caption!==photo.title" class="whitespace-pre-line">{{ photo.caption }}</p>
+                  <div v-if="hasPrintValue(photo.desc)&&photo.desc!==photo.caption" class="rich-text" v-html="renderText(photo.desc)"></div>
+                </figcaption>
+              </figure>
+            </div>
+          </article>
+        </div>
       </div>
     </section><p v-for="(reference,index) in printDoc.citizenReferences||[]" :key="'citizen-reference-'+index" class="mb-2">{{ reference }}</p><template v-if="!(printDoc.citizenProfiles||[]).length&&!(printDoc.citizenReferences||[]).length"><p v-for="(row,index) in printDoc.citizenRows||[]" :key="'citizen-'+index" class="mb-2"><strong>{{ row[0] }}:</strong> {{ row[1] }}</p></template><h3 v-if="printDoc.routing&&(printDoc.citizenProfiles||[]).length&&(printDoc.otherLinks||printDoc.links||[]).length" class="print-section-title">Attached records</h3><p v-for="(l,index) in (printDoc.otherLinks||printDoc.links||[])" :key="'link-'+index" class="mb-1">{{ l }}</p></div>
     <div v-if="(printDoc.files||[]).length" class="mb-6 mt-8"><p class="print-section-title">Files on record</p><p v-for="l in printDoc.files" :key="l" class="mb-1 text-sm text-blue-700 underline break-all">• {{ l }}</p></div>
