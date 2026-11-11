@@ -717,7 +717,21 @@ input:checked+.sl{background:#a855f7}input:checked+.sl:before{transform:translat
           </select>
           
           <div v-else-if="f.t==='c'||f.t==='s'||(rec.obj.col==='warrants'&&f.k==='targets')">
-            <citizen-picker :model-value="rec.obj[f.k]" :multiple="f.t!=='s'" :empty-label="rec.obj.col==='interrogations'&&f.k==='subjectCitizen'?'Select suspect…':''" :citizens="itemsOf('citizens')" :disabled="recMode!=='edit'||!canEditRec" :loading="recordLoads.citizens==='loading'" :error="level('citizens')==='none'?'Citizen Registry view permission is required.':recordLoads.citizens==='error'?'Citizen Registry failed to load.':''" :photo="citizenPhoto" @update:model-value="rec.obj[f.k]=$event"></citizen-picker>
+            <citizen-picker :model-value="rec.obj[f.k]" :multiple="f.t!=='s'" :empty-label="rec.obj.col==='interrogations'&&f.k==='subjectCitizen'?'Select suspect…':''" :citizens="itemsOf('citizens')" :disabled="recMode!=='edit'||!canEditRec" :loading="recordLoads.citizens==='loading'" :error="level('citizens')==='none'?'Citizen Registry view permission is required.':recordLoads.citizens==='error'?'Citizen Registry failed to load.':''" :photo="citizenPhoto" @update:model-value="setRecordCitizens(rec.obj,f.k,$event)"></citizen-picker>
+            <div v-if="rec.obj.col==='warrants'&&f.k==='targets'" class="space-y-3 mt-3">
+              <section v-for="assets in warrantCitizenAssets(rec.obj,recMode==='edit')" :key="assets.id" class="rounded-lg border border-purple-950 p-3 space-y-2">
+                <h5 class="text-sm font-bold text-white">{{ assets.label }}</h5>
+                <template v-for="group in assets.groups" :key="group.key">
+                  <label v-if="recMode==='edit'&&canEditRec" class="flex gap-2 items-center text-sm cursor-pointer">
+                    <input type="checkbox" :checked="group.included" @change="setWarrantAssets(rec.obj,assets.id,group.key,$event.target.checked)">
+                    Include {{ group.label }} ({{ group.entries.length }})
+                  </label>
+                  <ul v-if="group.included" class="text-xs space-y-1 pl-5 list-disc">
+                    <li v-for="entry in group.entries" :key="entry">{{ entry }}</li>
+                  </ul>
+                </template>
+              </section>
+            </div>
           </div>
           <record-selector v-else-if="f.t==='k'" :model-value="rec.obj[f.k]" :records="itemsOf('cases')" :disabled="recMode!=='edit'||!canEditRec" :error="level('cases')==='none'?'Case Files view permission is required.':''" @update:model-value="rec.obj[f.k]=$event"></record-selector>
           <select v-else-if="f.t==='r'" v-model="rec.obj[f.k]" :disabled="recMode!=='edit'||!canEditRec" class="inp"><option value="">Not specified</option><option v-for="status in RELIABILITY" :key="status">{{ status }}</option></select>
@@ -1601,6 +1615,36 @@ const app=createApp({
     const zp=computed(()=>zoom.value?zoom.value.obj.gallery[zoom.value.i]:null);
 
     const propertiesOf=(citizen,filledOnly=false)=>(Array.isArray(citizen?.properties)?citizen.properties:[]).filter(p=>p&&typeof p==='object'&&!Array.isArray(p)&&(!filledOnly||String(p.name||'').trim()||String(p.street||'').trim()||(Array.isArray(p.gallery)&&p.gallery.some(photo=>String(photo?.url||'').trim()))));
+    const setRecordCitizens=(record,key,value)=>{
+      record[key]=value;
+      if(record.col==='warrants'&&key==='targets'&&record.targetAssets){
+        record.targetAssets=Object.fromEntries(Object.entries(record.targetAssets).filter(([id])=>value.includes(id)));
+      }
+    };
+    const setWarrantAssets=(record,id,key,included)=>{
+      if(!canEditRec.value||record.col!=='warrants'||!record.targets?.includes(id))return;
+      record.targetAssets={...record.targetAssets,[id]:{...record.targetAssets?.[id],[key]:included}};
+    };
+    const warrantCitizenAssets=(record,editing=false)=>{
+      if(record.col!=='warrants'||level('citizens')==='none'||!Array.isArray(record.targets))return [];
+      const citizens=itemsOf('citizens');
+      const vehicles=level('vehicles')==='none'?[]:itemsOf('vehicles');
+      return [...new Set(record.targets)].flatMap(id=>{
+        const citizen=recs[id];
+        if(citizen?.col!=='citizens')return [];
+        const uniqueName=citizen.fullName&&citizens.filter(person=>norm(person.fullName)===norm(citizen.fullName)).length===1;
+        const properties=propertiesOf(citizen,true).map(property=>[property.name,property.street].filter(hasPrintValue).join(' · '));
+        const cars=vehicles.filter(vehicle=>{
+          if(vehicle.links?.some(link=>link.id===id&&link.c==='citizens')||citizen.links?.some(link=>link.id===vehicle.id&&link.c==='vehicles'))return true;
+          if(vehicle.ownerCid)return citizen.citizenId&&norm(vehicle.ownerCid)===norm(citizen.citizenId);
+          return uniqueName&&norm(vehicle.owner)===norm(citizen.fullName);
+        }).map(vehicle=>[vehicle.plate,vehicle.model,vehicle.color].filter(hasPrintValue).join(' · '));
+        const groups=[{key:'properties',label:'properties',entries:properties},{key:'vehicles',label:'vehicles',entries:cars}]
+          .map(group=>({...group,entries:[...new Set(group.entries.filter(Boolean))],included:record.targetAssets?.[id]?.[group.key]===true}))
+          .filter(group=>group.entries.length&&(editing||group.included));
+        return groups.length?[{id,label:citizenLabel(id),groups}]:[];
+      });
+    };
     const citizenProperties=computed(()=>rec.value?.obj.col==='citizens'?propertiesOf(rec.value.obj,recMode.value!=='edit'):[]);
     const addCitizenProperty=()=>{const citizen=rec.value?.obj;if(!citizen||citizen.col!=='citizens'||recMode.value!=='edit'||!canEditRec.value)return;if(citizen.properties!==undefined&&!Array.isArray(citizen.properties)){recErr.value='Existing property data has an unsupported format. It was kept unchanged.';return;}if(!citizen.properties)citizen.properties=[];citizen.properties.push({id:uid(),name:'',street:'',gallery:[]});saveTarget(citizen);};
     const removeCitizenProperty=id=>{const citizen=rec.value?.obj;if(!citizen||citizen.col!=='citizens'||recMode.value!=='edit'||!canEditRec.value||!confirm('Remove this property and its linked photos from this citizen?'))return;citizen.properties=citizen.properties.filter(p=>p?.id!==id);saveTarget(citizen);};
@@ -1878,6 +1922,12 @@ const app=createApp({
       const c=cfg.collections[o.col];
       const printPriority=f=>o.col==='cases'&&['summary','operationalTimeline','recoveredEvidence'].includes(f.k)?3+['summary','operationalTimeline','recoveredEvidence'].indexOf(f.k):f.k==='lead'?0:['c','s'].includes(f.t)?1:2;
       const rows=[...fieldsForRecord(o)].sort((a,b)=>printPriority(a)-printPriority(b)).filter(f=>!['infoReliability','reliability'].includes(f.k)&&f.t!=='r'&&hasPrintValue(o[f.k])&&!(o.col==='citizens'&&f.k==='profilePhoto')&&!(o.col==='interrogations'&&recs[o.subjectCitizen]?.col==='citizens'&&f.k==='suspect')&&!(o.col==='interrogations'&&f.k==='subjectCitizen'&&recs[o.subjectCitizen]?.col!=='citizens')&&!(o.col==='interrogations'&&(f.k==='caseId'||(f.t==='d'&&f.k!=='infoDate')||['date','createdAt','updatedAt','ts','gang','affiliation','affiliations'].includes(f.k)))&&!(o.col==='interrogations'&&['transcript','videoUrl','videoLink','recordingUrl','recordingLink','video','recordings'].includes(f.k))).map(f=>[f.l,printField(Array.isArray(o[f.k])?{...o,[f.k]:o[f.k].filter(hasPrintValue)}:o,f),f.t==='a']);
+      for(const assets of warrantCitizenAssets(o)){
+        for(const group of assets.groups){
+          const label=group.key==='properties'?'Properties':'Vehicles';
+          rows.push([label+' · '+assets.label,group.entries.join('\n'),false]);
+        }
+      }
       if(o.col==='warrants'&&recordCharges(o).length)rows.push(['Charges',recordCharges(o).map(charge=>[charge.code,charge.title].filter(Boolean).join(' · ')).join('\n'),false]);
       if(o.col==='interrogations'){const recordings=interrogationRecordings(o);if(recordings.length)rows.push(['Recordings',recordings.map(item=>item.url).join('\n'),false]);}
       if(isLongCase(o)&&(o.caseTeam||[]).length)rows.push(['Investigation team',o.caseTeam.map(id=>{const person=accounts.value.find(p=>p.id===id);return person?[person.name,person.badge].filter(Boolean).join(' · '):o.caseTeamLabels?.[id]||id;}).join(', '),false]);
@@ -2074,7 +2124,7 @@ const app=createApp({
     watch(tab,t=>{if(cfg.collections[t]&&level(t)==='none')go('map');});
     onMounted(()=>{tick();setInterval(tick,1000);nextTick(buildMap);if(!configured)return;startPublic();fauth.onAuthStateChanged(setUser);});
 
-    return{recordCharges,weaponReportNotice,weaponReportReferences,checkReportWeapons,openMatchedWeapon,serialMention,searchTitle,searchLabel,mdtReviewIssues,recentRecords,notificationsOpen,notifications,notificationTitle,openNotification,markNotificationRead,markNotificationsRead,historyRestore,restoreBusy,restoreError,canRestoreField,prepareHistoryRestore,restoreHistoryField,publicHomepageStats,homepageCount,organisationEvents,organisationCitizens,myTasks,taskOverdue,taskParentLabel,openTask,photoLocations,uniqueEvidencePhotos,openEvidencePhoto,openPhotoLocation,photoEditable,detachPhotoLocation,historyValue,formatDate,changeZoomPhoto,photoInfoState,showError,closeErrorToast,galleryPickerOpen,galleryPickerSearch,galleryChoices,selectGalleryPhoto,rememberRegistry,saveConfig,configSaveState,printOfficer,printPhotos,openRegistryPhoto,changePhotoZoom,citizenVehicleDrafts,addCitizenVehicle,removeCitizenVehicle,retryCitizenVehicles,requestTypeLabel,cardCategory,cardStatus,cardStatusClass,cardCode,cardSummary,cardFields,emptyTrash,recordName,documentDetails,togglePrintAttachments,deleteCaseEntry,citizenProperties,addCitizenProperty,removeCitizenProperty,isLongCase,isWorkspaceEntry,wideRecord,caseWorkspace,caseWorkspaceTab,caseEntries,caseLinkChoices,caseRelatedRecords,saveCaseEntry,loadCaseEntryHistory,openCaseRelated,printCaseEntry,hasPrintValue,recordingSource,interrogationRecordings,recordFormSections,scrollCitizenTimeline,fieldsForRecord,penalCategory,penalClass,penalSort,penalCollapsed,penalCategories,penalClasses,penalGroups,penalAmount,penalClassStyle,resetPenalFilters,penalEditorOpen,penalEditorSearch,penalEditorCategory,penalDraft,penalDirty,penalSaving,penalEditorError,penalEditorMessage,penalEditorItems,openPenalEditor,closePenalEditor,selectPenalDraft,newPenalDraft,resetPenalDraft,savePenalDraft,deletePenalDraft,trapPenalFocus,penal,preparedImport,importRunning,importMessage,validatePreparedImport,readPreparedImport,runPreparedImport,chargeData,RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
+    return{warrantCitizenAssets,setRecordCitizens,setWarrantAssets,recordCharges,weaponReportNotice,weaponReportReferences,checkReportWeapons,openMatchedWeapon,serialMention,searchTitle,searchLabel,mdtReviewIssues,recentRecords,notificationsOpen,notifications,notificationTitle,openNotification,markNotificationRead,markNotificationsRead,historyRestore,restoreBusy,restoreError,canRestoreField,prepareHistoryRestore,restoreHistoryField,publicHomepageStats,homepageCount,organisationEvents,organisationCitizens,myTasks,taskOverdue,taskParentLabel,openTask,photoLocations,uniqueEvidencePhotos,openEvidencePhoto,openPhotoLocation,photoEditable,detachPhotoLocation,historyValue,formatDate,changeZoomPhoto,photoInfoState,showError,closeErrorToast,galleryPickerOpen,galleryPickerSearch,galleryChoices,selectGalleryPhoto,rememberRegistry,saveConfig,configSaveState,printOfficer,printPhotos,openRegistryPhoto,changePhotoZoom,citizenVehicleDrafts,addCitizenVehicle,removeCitizenVehicle,retryCitizenVehicles,requestTypeLabel,cardCategory,cardStatus,cardStatusClass,cardCode,cardSummary,cardFields,emptyTrash,recordName,documentDetails,togglePrintAttachments,deleteCaseEntry,citizenProperties,addCitizenProperty,removeCitizenProperty,isLongCase,isWorkspaceEntry,wideRecord,caseWorkspace,caseWorkspaceTab,caseEntries,caseLinkChoices,caseRelatedRecords,saveCaseEntry,loadCaseEntryHistory,openCaseRelated,printCaseEntry,hasPrintValue,recordingSource,interrogationRecordings,recordFormSections,scrollCitizenTimeline,fieldsForRecord,penalCategory,penalClass,penalSort,penalCollapsed,penalCategories,penalClasses,penalGroups,penalAmount,penalClassStyle,resetPenalFilters,penalEditorOpen,penalEditorSearch,penalEditorCategory,penalDraft,penalDirty,penalSaving,penalEditorError,penalEditorMessage,penalEditorItems,openPenalEditor,closePenalEditor,selectPenalDraft,newPenalDraft,resetPenalDraft,savePenalDraft,deletePenalDraft,trapPenalFocus,penal,preparedImport,importRunning,importMessage,validatePreparedImport,readPreparedImport,runPreparedImport,chargeData,RELIABILITY,assignLead,myAssignments,citizenTimeline,timelineLimit,duplicateOf,duplicateWarning,identityKey,renderText,inlineText,closeZoom,dismissTop,officerMatch,officerBadge,updateOfficer,directorSignature,makeSignatures,formFields,citizenLabel,printBusy,purgeStatus,permanentDelete,DEFAULT_AVATAR,citizenPhoto,imageFallback,citizenSearch,pickerCitizens,toggleCitizen,recordLoads,normalizeConfig,CASE_STATUSES,saveStates,saveLabel,statusFilter,leadFilter,sortOrder,globalOpen,globalQuery,globalResults,openGlobalResult,comparison,compareImage,citizenSections,openRelated,historyOpen,historyRows,historyError,historyBusy,toggleHistory,historyField,requestState,trashRows,trashError,loadTrash,restoreTrash,LOGO,CATS,ICONS,RANKS,configured,cfg,mapLocs,accounts,user,tab,atab,showLogin,loginError,q,busy,msg,time,date,isMobile,mobileNavOpen,auth,na,nt,nr,nl,rec,recErr,recMode,gal,zoom,zs,pdoc,lightboxSrc,lkCol,lkId,evSrc,
       mImg,mUrlInput,mBusy,mStatus,mResults,mUnavailable,msOpen,msq,mOpen,layerOn,norm,isTop,isAdmin,rankLevel,level,setPerm,permKeys,permLabel,col,go,nav,subFields,rowsFor,recTitle,shown,listItems,penalList,tplCols,tplFor,
       agentNav,itemsOf,fmt,mapZoomIn,mapZoomOut,mapResetView,login,logout,addAgent,saveAcc,pwInfo,changePw,delAcc,canEditRec,openRec,newRec,closeRec,saveNew,delRec,applyTpl,saveTarget,matched,linkedFor,lkChoices,lkSearch,attach,detach,
       zp,openZoom,persistZoom,editPhotoLink,photoLinkBusy,delPhoto,allPhotos,evidenceList,openOwner,printNow,downloadPrintPng,printRecord,savePenal,addPenal,delPenal,importPenal,

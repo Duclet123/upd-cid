@@ -540,5 +540,21 @@ state.printRecord(chargedWarrant);assert(state.pdoc.value.bodyRows.some(row=>row
 state.printRecord({...chargedWarrant,penalCharges:[]});assert(!state.pdoc.value.bodyRows.some(row=>row[0]==='Charges'));
 state.newRec('reports');Object.assign(state.rec.value.obj,{title:'Charge test MDT report',penalCharges:chargedWarrant.penalCharges});await state.saveNew();
 assert.equal(database.get('records/'+state.rec.value.obj.id).penalCharges[0].title,'Example offence');
+state.recordLoads.citizens='ready';state.recordLoads.vehicles='ready';
+state.newRec('citizens');Object.assign(state.rec.value.obj,{fullName:'Warrant Asset Citizen',citizenId:'ASSET-TEST',properties:[{id:'property-1',name:'Residence',street:'12 Test Street'}]});
+await state.saveNew();const assetCitizen=state.rec.value.obj;
+for(const [plate,ownerCid] of [['ASSET-PLATE','ASSET-TEST'],['WRONG-OWNER','OTHER-CID']]){
+  state.newRec('vehicles');Object.assign(state.rec.value.obj,{plate,model:'Test Sedan',owner:assetCitizen.fullName,ownerCid});await state.saveNew();
+}
+state.newRec('warrants');const assetWarrant=state.rec.value.obj;state.setRecordCitizens(assetWarrant,'targets',[assetCitizen.id]);
+assert.equal(state.warrantCitizenAssets(assetWarrant,true)[0].groups.length,2);
+assert.equal(state.warrantCitizenAssets(assetWarrant).length,0);
+state.setWarrantAssets(assetWarrant,assetCitizen.id,'properties',true);
+state.setWarrantAssets(assetWarrant,assetCitizen.id,'vehicles',true);
+await state.saveNew();assert(database.get('records/'+assetWarrant.id).targetAssets[assetCitizen.id].vehicles);
+state.printRecord(assetWarrant);
+assert(state.pdoc.value.bodyRows.some(row=>row[0].startsWith('Properties · ')&&row[1]==='Residence · 12 Test Street'));
+assert(state.pdoc.value.bodyRows.some(row=>row[0].startsWith('Vehicles · ')&&row[1]==='ASSET-PLATE · Test Sedan'));
+state.setRecordCitizens(assetWarrant,'targets',[]);assert.equal(Object.keys(assetWarrant.targetAssets).length,0);
 console.log('Expected handled errors:',errors.length);
 })().catch(e=>{console.error(e);process.exitCode=1});
